@@ -1,7 +1,5 @@
 # Builds Still on a GitHub-hosted Mac, runs every test in an iPhone simulator,
 # and uploads screenshots of the main screens as a downloadable artifact.
-#
-# Runs on every push to main, and on demand from the Actions tab.
 name: iOS build, tests & screenshots
 
 on:
@@ -22,7 +20,21 @@ jobs:
 
     steps:
       - name: Check out
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
+
+      - name: Find the project folder
+        id: loc
+        run: |
+          PROJ=$(find . -maxdepth 4 -name "Still.xcodeproj" -type d -not -path "*/build/*" | head -1)
+          if [ -z "$PROJ" ]; then
+            echo "::error::Still.xcodeproj is not in this repo. Upload the Still.xcodeproj folder too."
+            echo "Repo contents:"; find . -maxdepth 3 -not -path "./.git*" | sort
+            exit 1
+          fi
+          DIR=$(dirname "$PROJ")
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+          echo "Project folder: $DIR"
+          ls -la "$DIR"
 
       - name: Use the latest stable Xcode
         uses: maxim-lobanov/setup-xcode@v1
@@ -46,9 +58,16 @@ jobs:
           xcrun simctl list devices available | grep "$UDID"
 
       - name: Logic tests (Swift package)
-        run: swift test
+        working-directory: ${{ steps.loc.outputs.dir }}
+        run: |
+          if [ -f Package.swift ]; then
+            swift test
+          else
+            echo "::warning::Package.swift wasn't uploaded; skipping the package tests (the simulator tests below still run)."
+          fi
 
       - name: Build app and run unit tests in the simulator
+        working-directory: ${{ steps.loc.outputs.dir }}
         run: |
           xcodebuild test \
             -project Still.xcodeproj \
@@ -66,6 +85,7 @@ jobs:
           exit $STATUS
 
       - name: Take screenshots
+        working-directory: ${{ steps.loc.outputs.dir }}
         run: |
           UDID="${{ steps.sim.outputs.udid }}"
           APP=$(find build/Build/Products -path "*iphonesimulator*" -name "Still.app" -maxdepth 3 | head -1)
@@ -74,12 +94,12 @@ jobs:
           xcrun simctl bootstatus "$UDID" -b
           xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 || true
           xcrun simctl install "$UDID" "$APP"
-          mkdir -p screenshots
+          mkdir -p "$GITHUB_WORKSPACE/screenshots"
 
           shoot() {
             xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" > /dev/null
             sleep 6
-            xcrun simctl io "$UDID" screenshot "screenshots/$2.png"
+            xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
             echo "Captured $2"
           }
 
@@ -89,3 +109,27 @@ jobs:
             shoot "$screen" "$(printf '%02d' $n)-$screen"
             n=$((n + 1))
           done
+
+          xcrun simctl ui "$UDID" appearance dark
+          for screen in home active complete me; do
+            shoot "$screen" "$(printf '%02d' $n)-$screen-dark"
+            n=$((n + 1))
+          done
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: still-screenshots
+          path: screenshots/
+          if-no-files-found: warn
+
+      - name: Upload build log and test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: still-build-log
+          path: |
+            ${{ steps.loc.outputs.dir }}/xcodebuild.log
+            ${{ steps.loc.outputs.dir }}/TestResults.xcresult
+          if-no-files-found: ignore

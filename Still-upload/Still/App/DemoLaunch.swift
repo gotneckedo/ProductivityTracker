@@ -1,0 +1,61 @@
+#if DEBUG
+import Foundation
+
+/// Debug-only: opens the app on a specific screen with sample data, so CI can
+/// take simulator screenshots. Never compiled into Release builds.
+///
+///   xcrun simctl launch booted com.cocomedia.still -still-demo home
+///
+/// Screens: onboarding, home, calm, active, complete, break, sudoku, picross,
+/// breathing, read, me, scenes, card.
+enum DemoLaunch {
+    static let argument = "-still-demo"
+
+    static var requestedScreen: String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: argument), index + 1 < arguments.count else { return nil }
+        return arguments[index + 1]
+    }
+
+    static func appState() -> AppState? {
+        guard let screen = requestedScreen else { return nil }
+        switch screen {
+        case "onboarding":
+            return PreviewSupport.appState(onboarded: false)
+        case "home":
+            return PreviewSupport.appState(populated: true)
+        case "calm":
+            return PreviewSupport.appState(goal: .calmerPhone, renderMode: .calm)
+        case "active":
+            return PreviewSupport.appState(populated: true, activeSession: true)
+        case "complete":
+            // bootstrap() reopens the pending completion screen.
+            return PreviewSupport.completedSession().state
+        case "break":
+            return routed(.breakShelf)
+        case "sudoku":
+            return routed(.breakActivity(.sudoku, .shelf))
+        case "picross":
+            return routed(.breakActivity(.picross, .shelf))
+        case "breathing":
+            return routed(.breakActivity(.boxBreathing, .shelf))
+        case "read":
+            return routed(.breakActivity(.shortRead, .shelf))
+        case "me":
+            return routed(.me)
+        case "scenes":
+            return routed(.sceneCollection)
+        case "card":
+            return routed(.nfcSetup)
+        default:
+            return nil
+        }
+    }
+
+    private static func routed(_ route: AppRoute) -> AppState {
+        let state = PreviewSupport.appState(populated: true)
+        state.router.go(to: route)
+        return state
+    }
+}
+#endif

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Merged with the generated Info.plist (GENERATE_INFOPLIST_FILE = YES). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.cocomedia.still.focus-links</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>still</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Ambient sound keeps playing when the screen locks during a session. -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
+	<!-- Only used once the StillLiveActivity extension is added (see README). -->
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+</dict>
+</plist>

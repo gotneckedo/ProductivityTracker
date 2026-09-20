@@ -238,9 +238,10 @@ final class GuidedActivityTests: XCTestCase {
         XCTAssertNotEqual(today.id, tomorrow.id)
     }
 
-    func testCatalogHasEveryV1Activity() {
+    func testCatalogHasEveryActivity() {
         let ids = Set(ActivityCatalog.available.map(\.id))
-        XCTAssertEqual(ids, [.sudoku, .picross, .wordSearch, .shortRead, .creativePrompt, .brainDump, .guidedStretch, .boxBreathing, .doNothing])
+        XCTAssertEqual(ids, [.sudoku, .picross, .wordSearch, .shortRead, .creativePrompt, .pixelDoodle,
+                             .brainDump, .guidedStretch, .boxBreathing, .doNothing])
         XCTAssertEqual(ActivityCatalog.grouped().map(\.category), [.puzzle, .quiet, .reset])
     }
 }
@@ -1498,5 +1499,559 @@ final class ProgressionTests: XCTestCase {
         XCTAssertEqual(evaluator.plantStage(completedSessions: 0, growthEnabled: false), .full)
         XCTAssertEqual(evaluator.plantStage(completedSessions: 0, growthEnabled: true), .sprout)
         XCTAssertEqual(evaluator.plantStage(completedSessions: 12, growthEnabled: true), .full)
+    }
+}
+
+
+// MARK: - V1.1+ features
+
+final class FeatureFlagTests: XCTestCase {
+    func testCurrentFlagsShipJournalPlantAndWidgetsButNotBlocking() {
+        let flags = FeatureFlags.current
+        XCTAssertTrue(flags.journalTab)
+        XCTAssertTrue(flags.plantGrowthStages)
+        XCTAssertTrue(flags.liveActivities)
+        XCTAssertFalse(flags.appBlocking, "Blocking stays off until Apple approves the entitlement.")
+        XCTAssertEqual(AppTab.visibleTabs(flags: flags), [.focus, .breakShelf, .journal, .me])
+    }
+
+    func testNewRoutesResolve() {
+        let resolver = RouteResolver(flags: .current)
+        XCTAssertEqual(resolver.destination(for: .presets, currentTab: .focus), RouteDestination(tab: .me, stack: [.presets], sheet: nil, completionSessionID: nil))
+        XCTAssertEqual(resolver.destination(for: .dayTimeline, currentTab: .breakShelf).sheet, .dayTimeline)
+        XCTAssertEqual(resolver.destination(for: .dayTimeline, currentTab: .breakShelf).tab, .breakShelf)
+        XCTAssertEqual(resolver.destination(for: .habits, currentTab: .focus).tab, .journal)
+        XCTAssertEqual(RouteResolver(flags: .v1).destination(for: .habits, currentTab: .focus).stack, [.habits])
+        XCTAssertEqual(resolver.destination(for: .doodleGallery, currentTab: .focus).stack, [.doodleGallery])
+    }
+
+    func testRouterKeepsAJournalStack() {
+        let router = AppRouter(flags: .current)
+        router.go(to: .journal)
+        XCTAssertEqual(router.selectedTab, .journal)
+        XCTAssertEqual(router.journalPath, [])
+    }
+}
+
+final class JournalControllerTests: XCTestCase {
+    func testOneLinePerDayReplacesRatherThanAppends() {
+        let clock = ManualClock(referenceDate)
+        let container = makeContainer(clock: clock)
+        let journal = container.journalController
+        journal.saveToday(text: "  First   try\nat a line ", mood: nil)
+        journal.saveToday(text: "Better line", mood: .calm)
+        XCTAssertEqual(container.journal.allEntries().count, 1)
+        XCTAssertEqual(journal.todaysEntry()?.text, "Better line")
+        XCTAssertEqual(journal.todaysEntry()?.mood, .calm)
+        XCTAssertEqual(container.events.recentEvents.filter { $0.name == .journalEntrySaved }.count, 1)
+    }
+
+    func testBlankLineWithoutMoodRemovesToday() {
+        let container = makeContainer()
+        container.journalController.saveToday(text: "Something", mood: nil)
+        container.journalController.saveToday(text: "   ", mood: nil)
+        XCTAssertNil(container.journalController.todaysEntry())
+        XCTAssertTrue(container.journal.allEntries().isEmpty)
+    }
+
+    func testNormalizationCollapsesAndCaps() {
+        XCTAssertEqual(JournalController.normalized("a\n\n b   c"), "a b c")
+        XCTAssertEqual(JournalController.normalized(String(repeating: "x", count: 400)).count, JournalEntry.maximumLength)
+    }
+
+    func testPastEntriesAreNewestFirstAndRunCountsDays() {
+        let clock = ManualClock(referenceDate)
+        let container = makeContainer(clock: clock)
+        for offset in [3, 2, 1] {
+            clock.set(testCalendar.date(byAdding: .day, value: -offset, to: referenceDate)!)
+            container.journalController.saveToday(text: "Day \(offset)", mood: nil)
+        }
+        clock.set(referenceDate)
+        XCTAssertEqual(container.journalController.pastEntries().map(\.text), ["Day 1", "Day 2", "Day 3"])
+        XCTAssertEqual(container.journalController.currentRun(), 3)
+        container.journalController.saveToday(text: "Today", mood: .bright)
+        XCTAssertEqual(container.journalController.currentRun(), 4)
+        XCTAssertEqual(container.journalController.pastEntries().count, 3, "Today is not in Earlier.")
+    }
+
+    func testJournalTextNeverReachesAnalytics() {
+        let container = makeContainer()
+        container.journalController.saveToday(text: "private thought", mood: .heavy)
+        for event in container.events.recentEvents {
+            XCTAssertFalse(event.properties.values.values.contains { $0.description.contains("private") })
+        }
+    }
+}
+
+final class HabitControllerTests: XCTestCase {
+    func testCreateToggleAndRun() {
+        let clock = ManualClock(referenceDate)
+        let container = makeContainer(clock: clock)
+        let habits = container.habitController
+        let water = habits.create(title: "  Water   the plants ")!
+        XCTAssertEqual(water.title, "Water the plants")
+        habits.setDone(habitID: water.id, on: testCalendar.date(byAdding: .day, value: -1, to: referenceDate)!, true)
+        habits.toggleToday(habitID: water.id)
+        let day = habits.today().first!
+        XCTAssertTrue(day.isDoneToday)
+        XCTAssertEqual(day.currentRun, 2)
+        XCTAssertEqual(day.lastSevenDays, [false, false, false, false, false, true, true])
+        habits.toggleToday(habitID: water.id)
+        XCTAssertFalse(habits.today().first!.isDoneToday)
+        XCTAssertEqual(habits.today().first!.currentRun, 1, "Yesterday still counts until today ends.")
+    }
+
+    func testCheckingInTwiceIsIdempotent() {
+        let container = makeContainer()
+        let habit = container.habitController.create(title: "Stretch")!
+        container.habitController.setDone(habitID: habit.id, on: referenceDate, true)
+        container.habitController.setDone(habitID: habit.id, on: referenceDate.addingTimeInterval(3600), true)
+        XCTAssertEqual(container.habits.checkIns(habitID: habit.id).count, 1)
+    }
+
+    func testLimitArchiveAndDelete() {
+        let container = makeContainer()
+        let habits = container.habitController
+        let created = (1...6).compactMap { habits.create(title: "Habit \($0)") }
+        XCTAssertEqual(created.count, HabitDefinition.maximumActive)
+        XCTAssertFalse(habits.canAddHabit)
+        XCTAssertNil(habits.create(title: "   "))
+        habits.archive(id: created[0].id)
+        XCTAssertEqual(habits.today().count, 4)
+        XCTAssertTrue(habits.canAddHabit)
+        habits.setDone(habitID: created[1].id, on: referenceDate, true)
+        habits.delete(id: created[1].id)
+        XCTAssertTrue(container.habits.checkIns(habitID: created[1].id).isEmpty)
+    }
+
+    func testRunLineIsOnlyKind() {
+        XCTAssertNil(HabitController.runLine(0))
+        XCTAssertNil(HabitController.runLine(1))
+        XCTAssertEqual(HabitController.runLine(3), "3 days in a row")
+    }
+}
+
+final class PresetManagementTests: XCTestCase {
+    func testBuiltInsIncludeDeepWorkAndQuickFocus() {
+        let container = makeContainer()
+        let ids = container.presets.allPresets().map(\.id)
+        XCTAssertEqual(ids, [.defaultPreset, .study, .deepWork, .quickFocus])
+        XCTAssertEqual(PresetCatalog.deepWork.timer.focusDuration, 90 * 60)
+        XCTAssertEqual(PresetCatalog.quickFocus.timer.focusDuration, 15 * 60)
+    }
+
+    func testCreateRenameDeleteCustomPreset() {
+        let container = makeContainer()
+        let prefs = container.preferences
+        let base = prefs.preset(.study)
+        let custom = prefs.createPreset(named: "  Morning   pages ", basedOn: base)!
+        XCTAssertTrue(custom.id.rawValue.hasPrefix("custom-"))
+        XCTAssertEqual(custom.name, "Morning pages")
+        XCTAssertFalse(custom.isBuiltIn)
+        XCTAssertEqual(custom.timer, base.timer)
+        XCTAssertEqual(DeepLinkParser().parse(custom.startURL), .startFocus(presetID: custom.id), "Custom presets get working card links.")
+
+        prefs.renamePreset(custom.id, to: "Pages")
+        XCTAssertEqual(prefs.preset(custom.id).name, "Pages")
+
+        prefs.setDefaultPreset(custom.id)
+        prefs.deletePreset(custom.id)
+        XCTAssertNil(container.presets.preset(id: custom.id))
+        XCTAssertEqual(prefs.current.defaultPresetID, .defaultPreset, "Deleting the default falls back to Default.")
+    }
+
+    func testBuiltInsCannotBeDeletedAndCountIsCapped() {
+        let container = makeContainer()
+        let prefs = container.preferences
+        prefs.deletePreset(.study)
+        XCTAssertNotNil(container.presets.preset(id: .study))
+        var made = 0
+        while prefs.createPreset(named: "P\(made)", basedOn: prefs.preset(.defaultPreset)) != nil { made += 1 }
+        XCTAssertEqual(container.presets.allPresets().count, PresetCatalog.maximumPresets)
+        XCTAssertNil(prefs.createPreset(named: "One more", basedOn: prefs.preset(.defaultPreset)))
+    }
+
+    func testCustomPresetsAreAnonymizedInEvents() {
+        let props = EventProperties().preset(FocusPresetID("custom-abc123"))
+        XCTAssertEqual(props.values[.presetID]?.description, "custom")
+        XCTAssertEqual(EventProperties().preset(.deepWork).values[.presetID]?.description, "deepWork")
+    }
+
+    func testStartingACustomPresetUsesItsTimer() {
+        let container = makeContainer()
+        var base = container.preferences.preset(.defaultPreset)
+        base.timer.focusDuration = 40 * 60
+        let custom = container.preferences.createPreset(named: "Forty", basedOn: base)!
+        let session = container.focus.start(presetID: custom.id, taskID: nil, source: .deepLink).session
+        XCTAssertEqual(session.presetID, custom.id)
+        XCTAssertEqual(session.configuration.focusDuration, 40 * 60)
+    }
+}
+
+final class TaskScheduleTests: XCTestCase {
+    private func day(_ offset: Int, hour: Int = 9) -> Date {
+        let start = testCalendar.startOfDay(for: referenceDate)
+        return testCalendar.date(byAdding: .hour, value: offset * 24 + hour, to: start)!
+    }
+
+    func testDueDateWording() {
+        let describer = DueDateDescriber(calendar: testCalendar)
+        // referenceDate is Tuesday, March 10, 2026.
+        XCTAssertEqual(describer.describe(day(0), now: referenceDate), "Due today")
+        XCTAssertEqual(describer.describe(day(1), now: referenceDate), "Due tomorrow")
+        XCTAssertEqual(describer.describe(day(3), now: referenceDate), "Due Friday")
+        XCTAssertEqual(describer.describe(day(9), now: referenceDate), "Due Mar 19")
+        XCTAssertEqual(describer.describe(day(-1), now: referenceDate), "Was due yesterday")
+        XCTAssertEqual(describer.describe(day(-3), now: referenceDate), "Was due Saturday")
+        XCTAssertEqual(describer.describe(day(-20), now: referenceDate), "Was due Feb 18")
+        XCTAssertTrue(describer.isOverdue(day(-1), now: referenceDate))
+        XCTAssertFalse(describer.isOverdue(day(0, hour: 1), now: referenceDate))
+        XCTAssertEqual(describer.shortTime(day(0, hour: 16)), "4 PM")
+        XCTAssertEqual(describer.shortTime(testCalendar.date(byAdding: .minute, value: 5, to: day(0, hour: 0))!), "12:05 AM")
+    }
+
+    func testUpdateDetailsAndUpcoming() {
+        let container = makeContainer()
+        let tasks = container.taskController
+        let lab = tasks.create(title: "Lab report")!
+        let read = tasks.create(title: "Read chapter")!
+        _ = tasks.create(title: "No dates")
+        tasks.updateDetails(id: lab.id, dueAt: day(2), scheduledAt: nil, course: "  Chemistry ")
+        tasks.updateDetails(id: read.id, dueAt: nil, scheduledAt: day(0, hour: 15), course: nil)
+        XCTAssertEqual(tasks.task(id: lab.id)?.homework?.course, "Chemistry")
+        XCTAssertEqual(tasks.upcomingTasks().map(\.title), ["Read chapter", "Lab report"])
+        tasks.updateDetails(id: lab.id, dueAt: nil, scheduledAt: nil, course: " ")
+        XCTAssertNil(tasks.task(id: lab.id)?.homework)
+        XCTAssertEqual(tasks.upcomingTasks().map(\.title), ["Read chapter"])
+    }
+
+    func testTimelineOrdersTasksSessionsAndEvents() {
+        let due = TaskItem(title: "Due today", createdAt: day(-1), dueAt: day(0, hour: 23))
+        let scheduled = TaskItem(title: "At three", createdAt: day(-1), scheduledAt: day(0, hour: 15))
+        let tomorrow = TaskItem(title: "Tomorrow", createdAt: day(-1), scheduledAt: day(1, hour: 10))
+        let engine = FocusTimerEngine()
+        var session = engine.makeSession(id: UUID(), configuration: .countdown(25), taskID: nil, sceneID: .rainyBedroom,
+                                         renderMode: .scene, presetID: .defaultPreset, source: .manual, at: day(0, hour: 11))
+        session = engine.advance(session, to: day(0, hour: 12)).0
+        let event = ExternalCalendarEvent(id: "e1", title: "Dentist", startsAt: day(0, hour: 8), endsAt: day(0, hour: 9), sourceIdentifier: "cal")
+        let result = DayTimelineBuilder(calendar: testCalendar).items(for: referenceDate, tasks: [due, scheduled, tomorrow],
+                                                                       sessions: [session], events: [event])
+        XCTAssertEqual(result.dueToday.map(\.title), ["Due today"])
+        XCTAssertEqual(result.timed.map(\.title), ["Dentist", "Focus", "At three"])
+    }
+
+    func testSpokenTaskParsing() {
+        let parser = SpokenTaskParser(calendar: testCalendar)
+        let friday = parser.draft(from: "finish the lab report by Friday", now: referenceDate)
+        XCTAssertEqual(friday?.title, "Finish the lab report")
+        XCTAssertEqual(friday?.dueAt, testCalendar.startOfDay(for: day(3)))
+        let tomorrow = parser.draft(from: "call Sam tomorrow.", now: referenceDate)
+        XCTAssertEqual(tomorrow?.title, "Call Sam")
+        XCTAssertEqual(tomorrow?.dueAt, testCalendar.startOfDay(for: day(1)))
+        let dueBy = parser.draft(from: "essay outline due by Tuesday", now: referenceDate)
+        XCTAssertEqual(dueBy?.title, "Essay outline")
+        XCTAssertEqual(dueBy?.dueAt, testCalendar.startOfDay(for: day(7)), "Same weekday means next week.")
+        let plain = parser.draft(from: "water the plants", now: referenceDate)
+        XCTAssertEqual(plain?.title, "Water the plants")
+        XCTAssertNil(plain?.dueAt)
+        XCTAssertEqual(parser.draft(from: "tomorrow", now: referenceDate)?.title, "Tomorrow")
+        XCTAssertNil(parser.draft(from: "   ", now: referenceDate))
+    }
+
+    func testVoiceDraftBecomesSelectedTask() {
+        let state = AppState(container: makeContainer())
+        let draft = state.draftTask(fromTranscript: "read chapter four today")!
+        let task = state.createTask(from: draft, source: .voice)
+        XCTAssertEqual(task?.captureSource, .voice)
+        XCTAssertEqual(state.selectedTask?.id, task?.id)
+        XCTAssertEqual(state.dueLine(for: task!), "Due today")
+    }
+
+    func testCalendarEventsOnlyWhenAllowed() {
+        let event = ExternalCalendarEvent(id: "e", title: "Class", startsAt: referenceDate, endsAt: referenceDate.addingTimeInterval(3600), sourceIdentifier: "c")
+        let adapter = NoCalendarAdapter(access: .granted, events: [event])
+        let container = DependencyContainer.inMemory(clock: ManualClock(referenceDate), calendar: testCalendar, calendarAdapter: adapter)
+        let state = AppState(container: container)
+        XCTAssertTrue(state.timeline(for: referenceDate).timed.isEmpty, "Off until the person turns it on.")
+        state.setShowsCalendarEvents(true)
+        XCTAssertEqual(state.timeline(for: referenceDate).timed.map(\.title), ["Class"])
+    }
+}
+
+final class PixelDoodleTests: XCTestCase {
+    func testPaintFillAndBlank() {
+        var doodle = PixelDoodle()
+        XCTAssertTrue(doodle.isBlank)
+        XCTAssertTrue(doodle.paint(x: 2, y: 3, color: 4))
+        XCTAssertFalse(doodle.paint(x: 2, y: 3, color: 4), "Same color is not a change.")
+        XCTAssertFalse(doodle.paint(x: 16, y: 0, color: 1), "Out of bounds is ignored.")
+        XCTAssertEqual(doodle.color(x: 2, y: 3), 4)
+        // A closed ring, then fill outside it: the inside stays empty.
+        var ring = PixelDoodle()
+        for i in 5...9 { ring.paint(x: i, y: 5, color: 1); ring.paint(x: i, y: 9, color: 1); ring.paint(x: 5, y: i, color: 1); ring.paint(x: 9, y: i, color: 1) }
+        ring.fill(x: 0, y: 0, color: 2)
+        XCTAssertEqual(ring.color(x: 7, y: 7), 0)
+        XCTAssertEqual(ring.color(x: 15, y: 15), 2)
+        XCTAssertEqual(ring.paintedCount, 256 - 9)
+        ring.clear()
+        XCTAssertTrue(ring.isBlank)
+    }
+
+    func testDecodingRejectsWrongSizesAndClampsColors() {
+        XCTAssertTrue(PixelDoodle(pixels: [1, 2, 3]).isBlank)
+        let clamped = PixelDoodle(pixels: Array(repeating: 200, count: 256))
+        XCTAssertEqual(clamped.color(x: 0, y: 0), UInt8(DoodlePalette.colors.count))
+        XCTAssertNil(DoodlePalette.hex(for: 0))
+        XCTAssertEqual(DoodlePalette.hex(for: 1), DoodlePalette.colors[0])
+    }
+
+    func testAutosaveCreatesUpdatesAndRemovesBlank() {
+        let state = AppState(container: makeContainer())
+        var doodle = PixelDoodle()
+        doodle.paint(x: 1, y: 1, color: 2)
+        let id = state.autosaveDoodle(doodle, existingID: nil)
+        XCTAssertNotNil(id)
+        doodle.paint(x: 2, y: 2, color: 3)
+        XCTAssertEqual(state.autosaveDoodle(doodle, existingID: id), id)
+        XCTAssertEqual(state.doodles.count, 1)
+        XCTAssertEqual(state.doodles.first?.doodle?.paintedCount, 2)
+        XCTAssertNil(state.autosaveDoodle(PixelDoodle(), existingID: id))
+        XCTAssertTrue(state.doodles.isEmpty)
+    }
+
+    func testDoodleIsOnTheShelf() {
+        XCTAssertEqual(ActivityCatalog.activity(.pixelDoodle)?.category, .quiet)
+    }
+}
+
+let deflateDynamicFixture = "7czRCcAgDEXRVd4EncYFAgYiNSo2Rdy+pQt0gfd7uZxkiiml4dQREFyhkjem7TBHb4h3WKXlvrCsVP1CFR+w213zgUSCBAkSJEiQIEGCxB/xAA=="
+let deflateFixedFixture = "KyzNTC1RKEQi0/KTS4sB"
+let deflateStoredFixture = "ARwA4/9zdG9yZWQgYmxvY2ssIG5vIGNvbXByZXNzaW9u"
+let epubFixture = "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"
+
+final class EPUBReaderTests: XCTestCase {
+    private func bytes(_ base64: String) -> [UInt8] { [UInt8](Data(base64Encoded: base64)!) }
+
+    func testInflateAllBlockTypes() throws {
+        let expected = String(repeating: "The rain kept a steady rhythm on the window while the lamp hummed. ", count: 40)
+        XCTAssertEqual(String(bytes: try Inflate.decompress(bytes(deflateDynamicFixture)), encoding: .utf8), expected)
+        XCTAssertEqual(String(bytes: try Inflate.decompress(bytes(deflateFixedFixture)), encoding: .utf8), "quiet quiet quiet focus")
+        XCTAssertEqual(String(bytes: try Inflate.decompress(bytes(deflateStoredFixture)), encoding: .utf8), "stored block, no compression")
+    }
+
+    func testInflateRejectsGarbageAndBombs() {
+        XCTAssertThrowsError(try Inflate.decompress([0xFF, 0xFF, 0xFF]))
+        XCTAssertThrowsError(try Inflate.decompress(bytes(deflateDynamicFixture), limit: 100)) { error in
+            XCTAssertEqual(error as? Inflate.Failure, .tooLarge)
+        }
+        XCTAssertThrowsError(try Inflate.decompress(Array(bytes(deflateDynamicFixture).prefix(10))))
+    }
+
+    func testParsesEPUBChaptersTitlesAndEntities() throws {
+        let book = try EPUBParser.parse(data: Data(base64Encoded: epubFixture)!)
+        XCTAssertEqual(book.title, "A Quiet Test Book")
+        XCTAssertEqual(book.author, "Still Tests")
+        XCTAssertEqual(book.rights, "Public domain")
+        XCTAssertEqual(book.chapters.map(\.title), ["Chapter One", "Chapter Two"], "Non-linear nav is skipped; %20 paths resolve.")
+        XCTAssertEqual(book.chapters[0].paragraphs.first, "It was a small room\u{2014}small enough to feel held. Nothing needed doing.")
+        XCTAssertEqual(book.chapters[0].paragraphs.last, "The end of the first part & a quiet close.")
+        XCTAssertFalse(book.chapters[0].paragraphs.contains { $0.contains("Chapter") }, "The heading isn't repeated as a paragraph.")
+        XCTAssertFalse(book.chapters.flatMap(\.paragraphs).contains { $0.contains("margin") }, "Styles are dropped.")
+        XCTAssertEqual(book.chapters[1].paragraphs.count, 6)
+    }
+
+    func testRejectsNonBooks() {
+        XCTAssertThrowsError(try EPUBParser.parse(data: Data("not a zip".utf8)))
+    }
+
+    func testPathResolution() {
+        XCTAssertEqual(EPUBParser.resolve("text/chapter%201.xhtml#p2", relativeTo: "OEBPS"), "OEBPS/text/chapter 1.xhtml")
+        XCTAssertEqual(EPUBParser.resolve("../images/a.png", relativeTo: "OEBPS/text"), "OEBPS/images/a.png")
+        XCTAssertEqual(EPUBParser.resolve("ch.xhtml", relativeTo: ""), "ch.xhtml")
+    }
+
+    func testHTMLEntitiesBecomeXMLSafe() {
+        XCTAssertEqual(XHTMLText.xmlSafe("a&nbsp;b &amp; c &unknown; d"), "a&#160;b &amp; c   d")
+        XCTAssertEqual(XHTMLText.fallbackParagraphs("<p>One &amp; two</p><div>Three<br/>four</div><script>x()</script>"),
+                       ["One & two", "Three", "four"])
+    }
+
+    func testSittingsSplitLongChaptersAtParagraphs() {
+        let paragraph = String(repeating: "word ", count: 100).trimmingCharacters(in: .whitespaces)
+        let parts = SittingPlanner.split(Array(repeating: paragraph, count: 17))
+        XCTAssertEqual(parts.map(\.count), [7, 7, 3], "About 700 words each; a 300-word tail stands on its own.")
+        let tail = SittingPlanner.split(Array(repeating: paragraph, count: 8))
+        XCTAssertEqual(tail.map(\.count), [8], "A tail under 250 words joins the part before it.")
+        let book = EPUBBook(title: "T", author: "A", rights: nil, chapters: [
+            EPUBBook.Chapter(title: "One", paragraphs: Array(repeating: paragraph, count: 17)),
+            EPUBBook.Chapter(title: "Two", paragraphs: [paragraph])
+        ])
+        let sittings = SittingPlanner.sittings(for: book)
+        XCTAssertEqual(sittings.map(\.displayTitle), ["One · Part 1 of 3", "One · Part 2 of 3", "One · Part 3 of 3", "Two"])
+        XCTAssertEqual(sittings.map(\.index), [0, 1, 2, 3])
+    }
+
+    func testImportReadAndBookmarkABook() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("still-books-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let source = directory.appendingPathComponent("incoming.epub")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try Data(base64Encoded: epubFixture)!.write(to: source)
+
+        let clock = ManualClock(referenceDate)
+        let library = FileBookLibrary(directory: directory.appendingPathComponent("Books"), bundledURLs: [], clock: clock)
+        let container = DependencyContainer.inMemory(clock: clock, calendar: testCalendar, bookLibrary: library)
+        let state = AppState(container: container)
+        state.importBook(from: source)
+        let book = try XCTUnwrap(state.books.first)
+        XCTAssertEqual(book.title, "A Quiet Test Book")
+        XCTAssertEqual(book.origin, .imported)
+        XCTAssertEqual(book.license, .userProvided)
+        XCTAssertEqual(book.sittingCount, 2)
+
+        XCTAssertEqual(state.nextSitting(bookID: book.id)?.chapterTitle, "Chapter One")
+        state.finishSitting(bookID: book.id, index: 0)
+        XCTAssertEqual(state.nextSitting(bookID: book.id)?.chapterTitle, "Chapter Two")
+        state.finishSitting(bookID: book.id, index: 0)
+        XCTAssertEqual(state.readingProgress(bookID: book.id).finishedSittings, 1, "Re-finishing an earlier sitting doesn't move the bookmark.")
+        state.finishSitting(bookID: book.id, index: 1)
+        XCTAssertNil(state.nextSitting(bookID: book.id), "Finished.")
+        state.restartBook(book.id)
+        XCTAssertEqual(state.nextSitting(bookID: book.id)?.index, 0)
+
+        // A fresh library reads the saved index from disk.
+        let reopened = FileBookLibrary(directory: directory.appendingPathComponent("Books"), bundledURLs: [], clock: clock)
+        XCTAssertEqual(reopened.books().map(\.title), ["A Quiet Test Book"])
+        XCTAssertEqual(try reopened.sittings(bookID: book.id).count, 2)
+
+        let item = BookReadingController.readingItem(try reopened.sittings(bookID: book.id)[1], book: book)
+        XCTAssertEqual(item.format, .epub)
+        XCTAssertEqual(item.source, "A Quiet Test Book")
+
+        state.removeBook(book.id)
+        XCTAssertTrue(state.books.isEmpty)
+    }
+
+    func testImportingSomethingElseFailsCalmly() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("still-books-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let bogus = directory.appendingPathComponent("notes.epub")
+        try Data("hello".utf8).write(to: bogus)
+        let library = FileBookLibrary(directory: directory.appendingPathComponent("Books"), bundledURLs: [], clock: ManualClock(referenceDate))
+        XCTAssertThrowsError(try library.importBook(from: bogus)) { error in
+            XCTAssertEqual(error as? BookLibraryError, .unreadable)
+        }
+        XCTAssertTrue(library.books().isEmpty)
+    }
+
+    func testBundledBooksAreListedAsPublicDomain() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("still-bundle-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appendingPathComponent("A Quiet Book.epub")
+        try Data(base64Encoded: epubFixture)!.write(to: url)
+        let library = FileBookLibrary(directory: directory.appendingPathComponent("Books"), bundledURLs: [url], clock: ManualClock(referenceDate))
+        let book = try XCTUnwrap(library.books().first)
+        XCTAssertEqual(book.id, "bundled-a-quiet-book")
+        XCTAssertEqual(book.license, .publicDomain)
+        XCTAssertThrowsError(try library.removeBook(id: book.id), "Bundled books can't be removed.")
+    }
+}
+
+final class MorningStartAndWidgetTests: XCTestCase {
+    func testPlanSummaryAndValidation() {
+        var plan = MorningStartPlan.standard
+        XCTAssertEqual(plan.summary, "Weekdays at 8:00 AM")
+        plan.weekdays = [1, 7]
+        plan.hour = 21
+        plan.minute = 5
+        XCTAssertEqual(plan.summary, "Weekends at 9:05 PM")
+        plan.weekdays = [2, 4]
+        XCTAssertEqual(plan.summary, "Mon, Wed at 9:05 PM")
+        plan.weekdays = []
+        XCTAssertEqual(plan.summary, "No days chosen")
+        let wild = MorningStartPlan(isEnabled: true, hour: 40, minute: -3, weekdays: [0, 3, 9], presetID: .study).validated()
+        XCTAssertEqual(wild.hour, 23)
+        XCTAssertEqual(wild.minute, 0)
+        XCTAssertEqual(wild.weekdays, [3])
+    }
+
+    func testRecordingSchedulerOnlyKeepsEnabledPlans() {
+        let scheduler = RecordingMorningStartScheduler()
+        scheduler.scheduleMorningStart(MorningStartPlan.standard)
+        XCTAssertNil(scheduler.scheduledPlan, "Disabled plans aren't scheduled.")
+        var plan = MorningStartPlan.standard
+        plan.isEnabled = true
+        scheduler.scheduleMorningStart(plan)
+        XCTAssertEqual(scheduler.scheduledPlan, plan)
+        scheduler.cancelMorningStart()
+        XCTAssertNil(scheduler.scheduledPlan)
+    }
+
+    func testPreferencesWithoutNewKeysStillDecode() throws {
+        let old = #"{"hasCompletedOnboarding":true,"defaultPresetID":"study"}"#
+        let prefs = try RecordCoding.decoder().decode(UserPreferences.self, from: Data(old.utf8))
+        XCTAssertEqual(prefs.morningStart, .standard)
+        XCTAssertFalse(prefs.showsCalendarEvents)
+        XCTAssertEqual(prefs.defaultPresetID, .study)
+    }
+
+    func testAppPublishesAWidgetSnapshot() throws {
+        let container = makeContainer()
+        PreviewFixtures.populate(container)
+        let state = AppState(container: container)
+        let writer = try XCTUnwrap(container.widgetSnapshots as? RecordingWidgetSnapshotWriter)
+        let snapshot = try XCTUnwrap(writer.lastSnapshot)
+        XCTAssertEqual(snapshot.completedSessions, state.stats.completedSessions)
+        XCTAssertEqual(snapshot.defaultPresetName, "Default")
+        XCTAssertEqual(snapshot.defaultPresetMinutes, 25)
+        XCTAssertEqual(snapshot.lastSevenDays.count, 7)
+        XCTAssertEqual(snapshot.focus(on: referenceDate, calendar: testCalendar), state.stats.todayFocus)
+        XCTAssertEqual(snapshot.focus(on: referenceDate.addingTimeInterval(86_400), calendar: testCalendar), 0, "Yesterday's number isn't shown tomorrow.")
+    }
+
+    func testWidgetSnapshotRoundTripsThroughDefaults() throws {
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "still-tests-\(UUID().uuidString)"))
+        WidgetSnapshotStore.save(.placeholder, to: defaults)
+        XCTAssertEqual(WidgetSnapshotStore.load(from: defaults), .placeholder)
+    }
+}
+
+final class PlantGrowthTests: XCTestCase {
+    func testPlantGrowsWithSessionsAndOnlyForward() {
+        let fresh = AppState(container: makeContainer())
+        XCTAssertEqual(fresh.plantStage, .sprout)
+        XCTAssertEqual(fresh.sessionsToNextPlantStage, 3)
+
+        let container = makeContainer()
+        PreviewFixtures.populate(container, completedSessions: 9)
+        let grown = AppState(container: container)
+        XCTAssertEqual(grown.plantStage, .leafy)
+        XCTAssertEqual(grown.sessionsToNextPlantStage, 1)
+
+        let v1 = AppState(container: DependencyContainer.inMemory(clock: ManualClock(referenceDate), calendar: testCalendar, flags: .v1))
+        XCTAssertEqual(v1.plantStage, .full, "With growth off, the plant is always full.")
+        XCTAssertNil(v1.sessionsToNextPlantStage)
+    }
+}
+
+final class BlockingBoundaryTests: XCTestCase {
+    func testMockNeverClaimsShieldingAndOverrideIsSafe() {
+        let state = AppState(container: makeContainer())
+        XCTAssertFalse(state.isShieldingApps)
+        XCTAssertEqual(state.blockingCapability, .simulationOnly)
+        state.endBlockingNow()
+        XCTAssertFalse(state.isShieldingApps)
+        XCTAssertEqual(state.container.events.recentEvents.last?.name, .blockingOverride)
+    }
+
+    func testSelectionsAreStoredPerPreset() {
+        let store = KeyValueBlockingSelectionStore(store: InMemoryKeyValueStore())
+        store.setSelectionData(Data([1, 2]), for: .study)
+        XCTAssertEqual(store.selectionData(for: .study), Data([1, 2]))
+        XCTAssertNil(store.selectionData(for: .defaultPreset))
+        store.setSelectionData(nil, for: .study)
+        XCTAssertNil(store.selectionData(for: .study))
     }
 }

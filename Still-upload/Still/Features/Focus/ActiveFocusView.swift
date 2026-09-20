@@ -4,6 +4,7 @@ import SwiftUI
 struct ActiveFocusView: View {
     @Environment(AppState.self) private var appState
     @State private var isConfirmingEnd = false
+    @State private var isConfirmingUnblock = false
 
     var body: some View {
         Group {
@@ -31,6 +32,14 @@ struct ActiveFocusView: View {
         } message: {
             Text("It won't count toward your stats or scenes.")
         }
+        .confirmationDialog("End blocking for this session?", isPresented: $isConfirmingUnblock, titleVisibility: .visible) {
+            Button("End blocking now", role: .destructive) {
+                appState.endBlockingNow()
+            }
+            Button("Keep blocking", role: .cancel) {}
+        } message: {
+            Text("Your apps open again right away. The session keeps going.")
+        }
     }
 
     @ViewBuilder
@@ -43,7 +52,8 @@ struct ActiveFocusView: View {
             background.ignoresSafeArea()
             ScrollView {
                 VStack(spacing: StillTheme.Spacing.l) {
-                    PixelSceneView(scene: scene, mode: session.renderMode, intensity: appState.animationIntensity)
+                    PixelSceneView(scene: scene, mode: session.renderMode, intensity: appState.animationIntensity,
+                                   plantStage: appState.plantStage)
                         .aspectRatio(PixelSceneView.preferredAspectRatio, contentMode: .fit)
                         .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.scene, style: .continuous))
                         // The scene's floor matches the screen color, so a faint edge
@@ -121,6 +131,12 @@ struct ActiveFocusView: View {
             Button("End session") { isConfirmingEnd = true }
                 .buttonStyle(QuietTextButtonStyle(foreground: tertiaryText))
                 .accessibilityHint("Asks before ending. Ended sessions don't count toward stats.")
+
+            if appState.isShieldingApps {
+                Button("End blocking now") { isConfirmingUnblock = true }
+                    .buttonStyle(QuietTextButtonStyle(foreground: tertiaryText))
+                    .accessibilityHint("Lifts app shields for this session. The timer keeps running.")
+            }
         }
     }
 

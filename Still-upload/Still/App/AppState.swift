@@ -24,6 +24,13 @@ final class AppState {
     private(set) var sessions: [FocusSession] = []
     private(set) var usages: [ActivityUsage] = []
     private(set) var stats: FocusStats = .empty
+    private(set) var journalToday: JournalEntry? = nil
+    private(set) var journalPast: [JournalEntry] = []
+    private(set) var habitDays: [HabitDay] = []
+    private(set) var doodles: [ActivityArtifact] = []
+    private(set) var books: [BookSummary] = []
+    /// Read-only calendar events for today's timeline (empty unless allowed).
+    private(set) var calendarAccess: CalendarAccess = .unavailable
     /// Mute toggled on the active screen. Transient: the preset mix is unchanged.
     private(set) var isAudioMuted = false
     var notice: StillNotice? = nil
@@ -44,6 +51,9 @@ final class AppState {
         container.breaks.onPersistenceError = reportError
         container.taskController.onPersistenceError = reportError
         container.preferences.onPersistenceError = reportError
+        container.journalController.onPersistenceError = reportError
+        container.habitController.onPersistenceError = reportError
+        container.books.onPersistenceError = reportError
         if let storageNotice = container.storageNotice {
             notice = StillNotice(text: storageNotice)
         }
@@ -97,6 +107,13 @@ final class AppState {
         usages = container.usages.allUsages()
         stats = StatsCalculator(calendar: container.calendar)
             .stats(sessions: sessions, usages: usages, now: container.clock.now)
+        journalToday = container.journalController.todaysEntry()
+        journalPast = container.journalController.pastEntries()
+        habitDays = container.habitController.today()
+        doodles = container.artifacts.artifacts(kind: .doodle)
+        books = container.books.books()
+        calendarAccess = container.calendarAdapter.access
+        publishWidgetSnapshot()
     }
 
     private func handle(_ events: [FocusFlowEvent]) {
@@ -365,7 +382,11 @@ final class AppState {
         if activeSession != nil {
             container.focus.endEarly()
         }
+        for book in container.books.books() where book.origin == .imported {
+            container.books.removeBook(id: book.id)
+        }
         container.preferences.resetAllData()
+        container.morningStart.cancelMorningStart()
         suggestionCache.removeAll()
         isAudioMuted = false
         router.completion = nil
@@ -373,6 +394,7 @@ final class AppState {
         router.focusPath = []
         router.breakPath = []
         router.mePath = []
+        router.journalPath = []
         router.selectedTab = .focus
         reload()
     }

@@ -7,7 +7,8 @@ import Foundation
 ///   xcrun simctl launch booted com.cocomedia.still -still-demo home
 ///
 /// Screens: onboarding, home, calm, active, complete, break, sudoku, wordsearch,
-/// picross, breathing, read, me, scenes, card.
+/// picross, breathing, read, me, scenes, card, journal, presets, tasks,
+/// timeline, doodle, gallery, morning.
 enum DemoLaunch {
     static let argument = "-still-demo"
 
@@ -49,6 +50,20 @@ enum DemoLaunch {
             return routed(.sceneCollection)
         case "card":
             return routed(.nfcSetup)
+        case "journal":
+            return routed(.journal)
+        case "presets":
+            return routed(.presets)
+        case "tasks":
+            return routed(.tasks)
+        case "timeline":
+            return routed(.dayTimeline)
+        case "doodle":
+            return routed(.breakActivity(.pixelDoodle, .shelf))
+        case "gallery":
+            return routed(.doodleGallery)
+        case "morning":
+            return routed(.morningStart)
         default:
             return nil
         }

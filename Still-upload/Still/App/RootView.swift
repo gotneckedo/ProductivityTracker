@@ -40,6 +40,12 @@ struct MainTabView: View {
                     SessionOptionsView()
                 case .tasks:
                     TasksSheet()
+                case .dayTimeline:
+                    NavigationStack {
+                        DayTimelineView()
+                    }
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
                 }
             }
             .environment(appState)
@@ -60,8 +66,7 @@ struct MainTabView: View {
         case .me:
             MeTab()
         case .journal:
-            // V1.1: hidden by FeatureFlags.journalTab, so this is never shown.
-            EmptyView()
+            JournalTab()
         }
     }
 }
@@ -100,6 +105,20 @@ struct BreakTab: View {
     }
 }
 
+struct JournalTab: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        let router = appState.router
+        NavigationStack(path: Binding(get: { router.journalPath }, set: { router.journalPath = $0 })) {
+            JournalView()
+                .navigationDestination(for: AppRoute.self) { route in
+                    RouteView(route: route)
+                }
+        }
+    }
+}
+
 struct MeTab: View {
     @Environment(AppState.self) private var appState
 
@@ -126,10 +145,36 @@ struct RouteView: View {
             FocusCardView()
         case .sceneCollection:
             SceneCollectionView()
-        case .focusHome, .focusConfiguration, .activeSession, .sessionComplete, .breakShelf, .tasks, .me, .journal:
+        case .presets:
+            PresetsView()
+        case .doodleGallery:
+            DoodleGalleryView()
+        case .morningStart:
+            MorningStartView()
+        case .blockingSetup:
+            BlockingSetupView()
+        case .habits:
+            HabitsScreen()
+        case .focusHome, .focusConfiguration, .activeSession, .sessionComplete, .breakShelf, .tasks, .me, .journal, .dayTimeline:
             // These are tab roots or modals, never pushed.
             EmptyView()
         }
+    }
+}
+
+/// Habits on their own screen, for when the Journal tab is off.
+struct HabitsScreen: View {
+    var body: some View {
+        StillScreen {
+            ScrollView {
+                HabitsSection()
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.vertical, StillTheme.Spacing.m)
+            }
+        }
+        .navigationTitle("Habits")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
     }
 }
 

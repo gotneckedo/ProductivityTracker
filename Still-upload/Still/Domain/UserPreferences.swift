@@ -42,6 +42,9 @@ struct UserPreferences: Codable, Equatable {
     var pendingCompletionSessionID: UUID?
     /// Number of scenes the user has already been shown as unlocked.
     var acknowledgedUnlockedSceneCount: Int = 1
+    var morningStart: MorningStartPlan = .standard
+    /// Whether the day timeline may show Apple Calendar events.
+    var showsCalendarEvents: Bool = false
     var schemaVersion: Int = UserPreferences.currentSchemaVersion
 
     static let currentSchemaVersion = 1
@@ -51,7 +54,7 @@ struct UserPreferences: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case hasCompletedOnboarding, onboardingGoal, defaultPresetID, selectedTaskID
         case animationIntensity, hasRequestedNotificationPermission, notificationPermissionGranted
-        case pendingCompletionSessionID, acknowledgedUnlockedSceneCount, schemaVersion
+        case pendingCompletionSessionID, acknowledgedUnlockedSceneCount, morningStart, showsCalendarEvents, schemaVersion
     }
 
     init(from decoder: Decoder) throws {
@@ -66,6 +69,8 @@ struct UserPreferences: Codable, Equatable {
         notificationPermissionGranted = try c.decodeIfPresent(Bool.self, forKey: .notificationPermissionGranted)
         pendingCompletionSessionID = try c.decodeIfPresent(UUID.self, forKey: .pendingCompletionSessionID)
         acknowledgedUnlockedSceneCount = try c.decodeIfPresent(Int.self, forKey: .acknowledgedUnlockedSceneCount) ?? 1
+        morningStart = (try? c.decodeIfPresent(MorningStartPlan.self, forKey: .morningStart)) ?? .standard
+        showsCalendarEvents = (try? c.decodeIfPresent(Bool.self, forKey: .showsCalendarEvents)) ?? false
         schemaVersion = try c.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? UserPreferences.currentSchemaVersion
     }
 }

@@ -11,8 +11,24 @@ struct FeatureFlags: Equatable {
     var plantGrowthStages: Bool
     /// V2 Family Controls shielding. Requires Apple entitlement approval.
     var appBlocking: Bool
+    /// V3 speech-to-task capture (needs microphone and speech permission).
+    var voiceCapture: Bool = false
+    /// V3 read-only Apple Calendar events on the day timeline.
+    var calendarEvents: Bool = false
 
+    /// The original V1 surface. Kept so tests can pin V1 behavior.
     static let v1 = FeatureFlags(journalTab: false, liveActivities: false, plantGrowthStages: false, appBlocking: false)
+
+    /// What ships today. App blocking stays off until Apple approves the
+    /// Family Controls entitlement; see FUTURE_CAPABILITIES.md.
+    static let current = FeatureFlags(
+        journalTab: true,
+        liveActivities: true,
+        plantGrowthStages: true,
+        appBlocking: false,
+        voiceCapture: true,
+        calendarEvents: true
+    )
 }
 
 enum AppTab: String, CaseIterable, Hashable {
@@ -58,11 +74,18 @@ enum AppRoute: Hashable {
     case nfcSetup
     case sceneCollection
     case journal
+    case presets
+    case doodleGallery
+    case dayTimeline
+    case morningStart
+    case blockingSetup
+    case habits
 }
 
 enum SheetRoute: String, Identifiable, Hashable {
     case focusConfiguration
     case tasks
+    case dayTimeline
 
     var id: String { rawValue }
 }
@@ -98,8 +121,15 @@ struct RouteResolver {
             return RouteDestination(tab: currentTab, stack: [], sheet: .tasks, completionSessionID: nil)
         case .me:
             return RouteDestination(tab: .me, stack: [], sheet: nil, completionSessionID: nil)
-        case .nfcSetup, .sceneCollection:
+        case .nfcSetup, .sceneCollection, .presets, .doodleGallery, .morningStart, .blockingSetup:
             return RouteDestination(tab: .me, stack: [route], sheet: nil, completionSessionID: nil)
+        case .dayTimeline:
+            return RouteDestination(tab: currentTab, stack: [], sheet: .dayTimeline, completionSessionID: nil)
+        case .habits:
+            // Habits live on the Journal tab; without it they sit under Me.
+            return flags.journalTab
+                ? RouteDestination(tab: .journal, stack: [], sheet: nil, completionSessionID: nil)
+                : RouteDestination(tab: .me, stack: [route], sheet: nil, completionSessionID: nil)
         case .journal:
             // Hidden in V1: fall back to Me rather than show a placeholder.
             return flags.journalTab

@@ -6,6 +6,9 @@ import UIKit
 struct FocusCardView: View {
     @Environment(AppState.self) private var appState
     @State private var copiedPresetID: FocusPresetID?
+    #if canImport(CoreNFC) && os(iOS) && STILL_CORENFC
+    @State private var writer = CoreNFCTagWriter()
+    #endif
 
     var body: some View {
         StillScreen {
@@ -99,6 +102,21 @@ struct FocusCardView: View {
                     .buttonStyle(QuietSecondaryButtonStyle())
                     .accessibilityHint("Starts \(preset.name) exactly as a tag with this link would.")
                 }
+                #if canImport(CoreNFC) && os(iOS) && STILL_CORENFC
+                if CoreNFCTagWriter.isAvailable {
+                    Button("Write to a tag") {
+                        writer.write(preset.startURL) { result in
+                            switch result {
+                            case .written: appState.notice = StillNotice(text: "\(preset.name) is on your Focus Card.")
+                            case .cancelled: break
+                            default: appState.notice = StillNotice(text: "The tag wasn't written. Try holding it still near the top of your iPhone.")
+                            }
+                        }
+                    }
+                    .buttonStyle(QuietPrimaryButtonStyle())
+                    .accessibilityHint("Writes this preset's link to a blank NFC tag.")
+                }
+                #endif
             }
         }
     }

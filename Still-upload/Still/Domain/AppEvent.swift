@@ -16,6 +16,13 @@ enum AppEventName: String, CaseIterable, Hashable {
     case returnedToFocus = "returned_to_focus"
     case nfcPresetRouted = "nfc_preset_routed"
     case notificationPermissionResult = "notification_permission_result"
+    case journalEntrySaved = "journal_entry_saved"
+    case habitCheckedIn = "habit_checked_in"
+    case presetCreated = "preset_created"
+    case doodleSaved = "doodle_saved"
+    case bookImported = "book_imported"
+    case morningStartScheduled = "morning_start_scheduled"
+    case blockingOverride = "blocking_override"
 }
 
 enum EventPropertyKey: String, CaseIterable, Hashable {
@@ -87,7 +94,7 @@ struct EventProperties: Hashable {
 
     /// Built-in presets are reported by ID; any user-made preset becomes `custom`.
     func preset(_ id: FocusPresetID) -> EventProperties {
-        let known: Set<FocusPresetID> = [.defaultPreset, .study]
+        let known = Set(PresetCatalog.builtInIDs)
         return setting(.presetID, .token(SafeToken(known.contains(id) ? id.rawValue : "custom")))
     }
 

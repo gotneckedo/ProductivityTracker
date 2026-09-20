@@ -1,6 +1,7 @@
 import Foundation
 
-/// Fast, typed task capture. No projects, tags, or due dates in V1.
+/// Fast, typed task capture. Due dates, a scheduled time, and a class name are
+/// optional details added after the fact, so capture stays one line.
 final class TaskController {
     private let clock: Clock
     private let calendar: Calendar
@@ -19,6 +20,40 @@ final class TaskController {
         guard let title = TaskItem.normalizedTitle(raw) else { return nil }
         let task = TaskItem(title: title, createdAt: clock.now)
         return persist(task) ? task : nil
+    }
+
+    /// Creates a task from a spoken or parsed draft.
+    @discardableResult
+    func create(from draft: CapturedTaskDraft, source: TaskCaptureSource) -> TaskItem? {
+        guard let title = TaskItem.normalizedTitle(draft.title) else { return nil }
+        let task = TaskItem(title: title, createdAt: clock.now, captureSource: source,
+                            scheduledAt: draft.scheduledAt, dueAt: draft.dueAt)
+        return persist(task) ? task : nil
+    }
+
+    /// Optional details. Pass nil to clear a date. A blank course clears homework.
+    func updateDetails(id: UUID, dueAt: Date?, scheduledAt: Date?, course: String?) {
+        guard var task = tasks.task(id: id) else { return }
+        task.dueAt = dueAt
+        task.scheduledAt = scheduledAt
+        let trimmedCourse = course.flatMap(TaskItem.normalizedTitle).map { String($0.prefix(40)) }
+        if let trimmedCourse {
+            var homework = task.homework ?? HomeworkMetadata(course: nil, assignmentKind: nil)
+            homework.course = trimmedCourse
+            task.homework = homework
+        } else {
+            task.homework = nil
+        }
+        persist(task)
+    }
+
+    /// Open tasks with a due date or scheduled time, soonest first.
+    func upcomingTasks(limit: Int = 20) -> [TaskItem] {
+        tasks.allTasks()
+            .filter { !$0.isCompleted && ($0.dueAt != nil || $0.scheduledAt != nil) }
+            .sorted { ($0.scheduledAt ?? $0.dueAt ?? .distantFuture) < ($1.scheduledAt ?? $1.dueAt ?? .distantFuture) }
+            .prefix(limit)
+            .map { $0 }
     }
 
     func rename(id: UUID, to raw: String) {

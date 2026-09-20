@@ -8,6 +8,10 @@ enum RecordKind: String, CaseIterable {
     case activityNote
     case journalEntry
     case puzzleProgress
+    case habit
+    case habitCheckIn
+    case activityArtifact
+    case readingProgress
 }
 
 struct StoredRecord: Equatable {

@@ -18,6 +18,9 @@ struct SessionOptionsView: View {
                             timerSection
                             environmentSection(preset)
                             soundSection
+                            if appState.container.flags.appBlocking {
+                                blockingSection
+                            }
                         }
                         .padding(.horizontal, StillTheme.Spacing.screen)
                         .padding(.vertical, StillTheme.Spacing.m)
@@ -63,18 +66,18 @@ struct SessionOptionsView: View {
 
     private func presetSection(_ preset: FocusPreset) -> some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Preset", detail: "Focus starts with this preset. Changes below apply to it.")
-            SelectionPill(
-                options: appState.presets.map(\.id),
-                selection: Binding(
-                    get: { preset.id },
-                    set: { id in
-                        appState.setDefaultPreset(id)
-                        draft = appState.presets.first { $0.id == id }
-                    }
-                ),
-                title: { id in appState.presets.first { $0.id == id }?.name ?? id.rawValue }
-            )
+            HStack(alignment: .firstTextBaseline) {
+                SectionHeader(title: "Preset", detail: "Focus starts with this preset. Changes below apply to it.")
+                Button("Manage") {
+                    appState.router.go(to: .presets)
+                }
+                .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
+                .accessibilityHint("Opens your presets to add, rename, or delete them.")
+            }
+            PresetChips(presets: appState.presets, selectedID: preset.id) { id in
+                appState.setDefaultPreset(id)
+                draft = appState.presets.first { $0.id == id }
+            }
         }
     }
 
@@ -153,6 +156,19 @@ struct SessionOptionsView: View {
             AmbientMixEditor(mix: binding(\.ambientMix, fallback: .silent), status: appState.audioStatus) { source in
                 appState.container.audio.isAssetAvailable(source)
             }
+        }
+    }
+
+    private var blockingSection: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            SectionHeader(title: "Blocking", detail: "What this preset shields while a session runs. You can end blocking early at any time.")
+            SelectionPill(options: BlockerIntent.allCases, selection: binding(\.blockerIntent, fallback: .none), title: { $0.displayName })
+            Button {
+                appState.router.go(to: .blockingSetup)
+            } label: {
+                SettingRow(symbol: "shield", title: "Choose apps", value: nil)
+            }
+            .buttonStyle(.plain)
         }
     }
 

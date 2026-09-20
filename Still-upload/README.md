@@ -7,8 +7,31 @@ The loop: **Tap → Focus → Finish → choose a finite activity → Reflect �
 The heart of the product is the session-complete moment, where a finished
 focus session is followed by three appealing, finite alternatives to scrolling.
 
-V1 is native SwiftUI, iOS 17+, Apple frameworks only, fully offline and
+Native SwiftUI, iOS 17+, Apple frameworks only, fully offline and
 local-first. Data stays on the device.
+
+**This version** is V1 plus everything from the roadmap that doesn't need
+Apple's approval or special hardware:
+
+- **Journal tab:** one line a day with an optional feeling, and up to five small
+  daily habits (tap to mark today; missing a day is never mentioned).
+- **Growing plant:** in Calm mode the plant grows from sprout to leafy to full
+  as you complete sessions. It never wilts.
+- **Presets:** Default, Study, Deep Work (90 min) and Quick Focus (15 min),
+  plus up to ten of your own. Each one has its own Focus Card link.
+- **Tasks with details:** optional due date, a time to do it, and a class name
+  for homework. A **day timeline** shows timed tasks, finished sessions and
+  (if you allow it) Apple Calendar events, read-only.
+- **Say a task:** speech-to-task capture ("finish the lab report by Friday").
+- **Pixel Doodle:** a 16×16 drawing break activity, saved to a gallery in Me.
+- **Books in Short Read:** import a DRM-free EPUB; it's read in 3–4 minute
+  sittings and your place is kept.
+- **Morning Start:** a gentle weekday notification with a session ready.
+- **Widgets:** a home-screen and Lock Screen summary with one-tap start, and
+  the session timer on the Lock Screen and in the Dynamic Island.
+- **App blocking:** fully written (Screen Time shields per preset, plus "End
+  blocking now"), but switched off until Apple grants the Family Controls
+  entitlement. The app never claims apps are blocked when they aren't.
 
 ---
 
@@ -42,11 +65,14 @@ change it if it collides with one you already use.
     -destination 'platform=iOS Simulator,name=iPhone 16'
   ```
 
-The suite has 120 tests covering timer math (countdown, count-up, Pomodoro,
+The suite has 165 tests covering timer math (countdown, count-up, Pomodoro,
 pause/resume, backgrounding, relaunch), completion vs. abandonment, streaks,
 scene unlocks, the three-suggestion engine, task/session association, deep
-links, event redaction, puzzle validity and uniqueness, persistence, and the
-end-to-end Focus → Break → Focus loop at the app-state level.
+links, event redaction, puzzle validity and uniqueness, persistence, the
+end-to-end Focus → Break → Focus loop at the app-state level, and the newer
+features: journal and habits, custom presets, due dates and the day timeline,
+spoken-task parsing, doodles, DEFLATE/ZIP/EPUB parsing and book bookmarks,
+Morning Start plans, widget snapshots, and plant growth.
 
 ### See it without a Mac (GitHub Actions)
 
@@ -119,13 +145,18 @@ Still/
                   puzzles, readings, preview fixtures)
   Services/       Timer/, Notifications/, Audio/, Analytics/, ScreenTime/, NFC/,
                   LiveActivity/, Suggestions/, Stats/, Flow/ (controllers),
-                  Future/ (V2–V3 protocols only)
+                  Tasks/ (due dates, timeline, spoken-task parser),
+                  Reading/ (DEFLATE, ZIP, EPUB parser, book library),
+                  Calendar/ (EventKit), Speech/, Widgets/,
+                  Future/ (boundaries that need hardware or approval)
   DesignSystem/   StillTheme, StillTypography, StillMotion, StillComponents,
                   PixelSceneView (+ Scenes/ artwork)
-  Features/       Onboarding/, Focus/, Break/ (+ Activities/), Tasks/, Me/
-  Resources/      AmbientAudio/ (4 generated loops + README)
+  Features/       Onboarding/, Focus/, Break/ (shelf + every activity), Tasks/,
+                  Journal/, Me/
+  Shared/         WidgetSnapshot (compiled into the app and the widgets)
+  Resources/      AmbientAudio/ (4 generated loops)
+StillWidgets/     Widget extension: home/Lock Screen summary + Live Activity
 StillTests/       Unit tests (run in Xcode and with `swift test`)
-StillLiveActivity/  Optional widget extension source (not in the project)
 Package.swift     StillCore package for fast, simulator-free tests
 ```
 
@@ -270,24 +301,25 @@ check this. No SDKs, no network.
 
 ## Hardware and entitlement caveats
 
-| Capability | V1 status | What's needed for the real thing |
+| Capability | Status in this version | What's needed for the real thing |
 |---|---|---|
-| **App shielding** (Screen Time) | `MockFocusBlockingService`: records the preset's blocker intent, never shields. UI says "Blocking setup is ready… Nothing is blocked today." | Apple's **Family Controls** entitlement (`com.apple.developer.family-controls`, Distribution approval for the App Store), user authorization, a persisted `FamilyActivitySelection`, `ManagedSettingsStore` shielding, and a DeviceActivity monitor extension. Scaffold: `FamilyControlsBlockingService.swift`. |
-| **NFC tags** | URL routing (`still://start-focus?preset=…`) and an in-app simulator. | A writable tag (e.g. NTAG213) with an **NDEF URI record** containing the preset link. Blank tags do nothing. iPhone XS+ reads URL tags in the background and shows a banner to open Still; test on your device. For direct launch without the banner, use a Universal Link (Associated Domains + `apple-app-site-association`). In-app scanning/writing needs the NFC Tag Reading capability, `NFCReaderUsageDescription`, and a physical device (scaffold: `CoreNFCTagReader.swift`, compiled with `-DSTILL_CORENFC`). |
-| **Live Activities / Dynamic Island** | Mapping (`LiveActivityMapper`) and `LiveActivityUpdating` boundary; app uses `NoopLiveActivityUpdater`. | Add the widget extension (below) and set `FeatureFlags.v1.liveActivities = true`. Lock Screen content deliberately omits task titles. Test on a device with Dynamic Island. |
-| **Notifications** | Fully working. | Nothing. Time-sensitive delivery would need the Time Sensitive Notifications capability (not used). |
+| **App shielding** (Screen Time) | `FamilyControlsBlockingService` is complete: per-preset `FamilyActivitySelection` (from `FamilyActivityPicker`), `ManagedSettingsStore` shields while a session runs, and "End blocking now". It's off: `FeatureFlags.current.appBlocking == false`, so the app uses the honest mock and says "Nothing is blocked today." | Apple's **Family Controls** entitlement (`com.apple.developer.family-controls`; development use with a paid account, Distribution approval for the App Store). Then add it to `Still.entitlements`, set `appBlocking: true`, and add the DeviceActivity monitor extension described in FUTURE_CAPABILITIES.md so shields lift even if Still is closed. Test on a device; the simulator can't shield. |
+| **NFC tags** | URL routing (`still://start-focus?preset=…`), an in-app simulator, and in-app tag **reading and writing** (`CoreNFCTagReader`, `CoreNFCTagWriter`), compiled only with `-DSTILL_CORENFC`. | A writable tag (e.g. NTAG213). Any NFC app can write the link today. For in-app writing: a paid account, the NFC Tag Reading capability, the `-DSTILL_CORENFC` Swift flag, and a physical iPhone. For direct launch without the banner, use a Universal Link (Associated Domains + `apple-app-site-association`). |
+| **Live Activities / Dynamic Island** | On. The `StillWidgets` extension renders the running timer; the app starts and updates it. | Test on a device with Dynamic Island. Lock Screen content deliberately omits task titles. |
+| **Home-screen widget** | On. The app writes a small summary to the App Group `group.com.cocomedia.still`; the widget reads it. | Signing with a **paid** account (free accounts can't use App Groups). Without the group the widget shows "Ready" and still starts a session when tapped. |
+| **Apple Calendar** | On, read-only, asked for from the day timeline (never at launch). | Nothing. Google Calendar needs OAuth and a privacy review. |
+| **Say a task** | On. On-device recognition where supported; audio isn't stored. | Test on a device; simulator speech is unreliable. |
+| **Morning Start** | On, as a repeating local notification. | A true alarm that rings through silent mode needs AlarmKit (iOS 26+); see FUTURE_CAPABILITIES.md. |
+| **Books** | EPUB import from Files, parsed on device (pure-Swift DEFLATE + ZIP + XML). No books are bundled. | To bundle books, add verified public-domain `.epub` files to `Still/Resources/` (see ASSET_AND_CONTENT_POLICY.md). DRM-protected books can't be read. |
+| **Notifications** | Fully working. | Nothing. |
 
-### Enabling Live Activities
+### Running on your own iPhone
 
-1. File → New → Target → **Widget Extension**, name it `StillLiveActivity`,
-   check "Include Live Activity", uncheck "Include Configuration App Intent".
-2. Replace the generated Swift files with
-   `StillLiveActivity/StillLiveActivityWidget.swift`.
-3. Add `Still/Services/LiveActivity/LiveActivityShared.swift` to the extension
-   target too (File Inspector → Target Membership).
-4. Set the extension's iOS deployment target to 17.0.
-5. In `Domain/Navigation/AppRoute.swift`, set `liveActivities: true` in
-   `FeatureFlags.v1`. `Info.plist` already has `NSSupportsLiveActivities`.
+Select each target (**Still** and **StillWidgets**) → Signing & Capabilities →
+choose your Team. Xcode registers the App Group automatically with a paid
+account. The bundle IDs are `com.cocomedia.still` and
+`com.cocomedia.still.widgets`; change both (and the App Group in both
+`.entitlements` files and `WidgetSnapshotStore.appGroup`) if they collide.
 
 ---
 
@@ -305,8 +337,9 @@ with text. Colors are warm paper and navy-charcoal with dark-mode variants.
 SwiftUI previews exist for: Onboarding; Focus home in Scene and Calm mode and
 at an accessibility text size; Active focus (Scene and Calm); Session complete
 with three suggestions; Break shelf; Sudoku unfinished; Picross finished; Short
-Read; Box Breathing; Tasks; Session options; Me empty and with history; Scenes;
-Focus Card. All use in-memory data via `PreviewSupport`.
+Read; Box Breathing; Pixel Doodle; Tasks; Day timeline; Session options;
+Presets; Journal; Morning Start; Me empty and with history; Scenes; Focus Card.
+All use in-memory data via `PreviewSupport`.
 
 ---
 
@@ -315,8 +348,9 @@ Focus Card. All use in-memory data via `PreviewSupport`.
 Built in a Linux environment without Xcode:
 
 - The platform-neutral core (domain, data, services, controllers, app state,
-  router) compiles with Swift 5.10 with zero warnings, and all 120 tests pass
-  via `swift test`.
+  router) compiles with Swift 5.10 with zero warnings, and all 165 tests pass
+  via `swift test`, including DEFLATE, ZIP and EPUB parsing against real
+  fixtures.
 - Every SwiftUI file was syntax-checked with the Swift parser, then
   type-checked against a stand-in SwiftUI/UIKit interface. That catches
   mistakes in this code's own types, labels, and view builders, but not
@@ -324,19 +358,21 @@ Built in a Linux environment without Xcode:
 - The Xcode project file was parsed with the `pbxproj` library, and every
   object reference resolves.
 
-**The first build in Xcode is the real SDK check.** If Xcode reports an error,
-it will most likely be a single SwiftUI API signature; they're isolated to the
-views, and the logic underneath is tested.
+**The GitHub Actions build is the real SDK check** (Xcode on a Mac, tests in
+an iPhone simulator, and screenshots of every main screen). Code that needs a
+device or Apple's approval (Screen Time shielding, NFC writing, speech on real
+hardware) compiles there but can only be exercised on an iPhone.
 
 ## Next steps
 
 See `FUTURE_CAPABILITIES.md`. The two recommended next steps:
 
 1. **Apply for the Family Controls entitlement now.** Approval is the long pole
-   for real blocking (V2), and the protocol, mock, copy, and scaffold are ready.
-2. **Put V1 on a device and measure the loop.** Check the funnel in the debug
+   for real blocking, and the implementation is ready behind a flag.
+2. **Put it on a device and measure the loop.** Check the funnel in the debug
    event log (focus completed → suggestion opened → activity completed →
-   returned to focus), then replace the generated audio with recorded or
+   returned to focus), try the widget, Live Activity, a Focus Card and voice
+   capture on hardware, then replace the generated audio with recorded or
    licensed loops.
 
 See also `ASSET_AND_CONTENT_POLICY.md` for provenance rules.

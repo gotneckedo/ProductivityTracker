@@ -36,6 +36,8 @@ protocol PresetRepository: AnyObject {
     func allPresets() -> [FocusPreset]
     func preset(id: FocusPresetID) -> FocusPreset?
     func save(_ preset: FocusPreset)
+    /// Removes a preset the user made. Built-ins can't be deleted.
+    func delete(id: FocusPresetID)
     /// Restores built-ins, e.g. after onboarding personalizes defaults.
     func resetToBuiltIns(personalization: Personalization)
 }
@@ -71,6 +73,11 @@ final class StoredPresetRepository: PresetRepository {
             stored.append(copy)
         }
         persist(stored)
+    }
+
+    func delete(id: FocusPresetID) {
+        guard !PresetCatalog.builtInIDs.contains(id) else { return }
+        persist(loadStored().filter { $0.id != id })
     }
 
     func resetToBuiltIns(personalization: Personalization) {

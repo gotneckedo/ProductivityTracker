@@ -19,8 +19,17 @@
 	<array>
 		<string>audio</string>
 	</array>
-	<!-- Only used once the StillLiveActivity extension is added (see README). -->
+	<!-- The session timer on the Lock Screen and in the Dynamic Island (StillWidgets). -->
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<!-- Permission prompts. Each is asked in context, never at launch. -->
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Still shows your calendar events beside your tasks on the day timeline. It only reads them and never changes your calendar.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Still turns what you say into a task. Your voice isn't saved.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Still listens only while you're saying a task.</string>
+	<key>NFCReaderUsageDescription</key>
+	<string>Still writes a preset's link to your Focus Card.</string>
 </dict>
 </plist>

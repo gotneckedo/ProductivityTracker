@@ -24,6 +24,7 @@ struct MeView: View {
                     BreakUsageSection(stats: appState.stats)
                     scenesSection
                     focusSection
+                    dailySection
                     AppearanceSection()
                     SoundDefaultsSection()
                     cardAndBlockingSection
@@ -43,7 +44,7 @@ struct MeView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Sessions, tasks, notes, puzzle progress, and settings will be deleted from this device. This can't be undone.")
+            Text("Sessions, tasks, notes, journal lines, habits, doodles, imported books, and settings will be deleted from this device. This can't be undone.")
         }
     }
 
@@ -76,11 +77,50 @@ struct MeView: View {
             }
             .buttonStyle(.plain)
             Button {
+                appState.router.go(to: .presets)
+            } label: {
+                SettingRow(symbol: "square.stack", title: "Presets", value: "\(appState.presets.count)")
+            }
+            .buttonStyle(.plain)
+            Button {
                 appState.router.go(to: .tasks)
             } label: {
                 SettingRow(symbol: "checklist", title: "Today's tasks", value: "\(appState.todaysTasks.filter { !$0.isCompleted }.count) open")
             }
             .buttonStyle(.plain)
+            Button {
+                appState.router.go(to: .dayTimeline)
+            } label: {
+                SettingRow(symbol: "calendar.day.timeline.left", title: "Day timeline")
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var dailySection: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            SectionHeader(title: "Your days")
+            Button {
+                appState.router.go(to: .morningStart)
+            } label: {
+                SettingRow(symbol: "sunrise", title: "Morning Start",
+                           value: appState.preferences.morningStart.isEnabled ? appState.preferences.morningStart.summary : "Off")
+            }
+            .buttonStyle(.plain)
+            Button {
+                appState.router.go(to: .doodleGallery)
+            } label: {
+                SettingRow(symbol: "paintbrush.pointed", title: "Doodles", value: appState.doodles.isEmpty ? "None yet" : "\(appState.doodles.count) saved")
+            }
+            .buttonStyle(.plain)
+            if !appState.container.flags.journalTab {
+                Button {
+                    appState.router.go(to: .habits)
+                } label: {
+                    SettingRow(symbol: "checkmark.circle", title: "Small habits", value: "\(appState.habitDays.count)")
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 
@@ -94,6 +134,14 @@ struct MeView: View {
                 SettingRow(symbol: "wave.3.right", title: "Set up a Focus Card", value: "NFC")
             }
             .buttonStyle(.plain)
+            if appState.container.flags.appBlocking {
+                Button {
+                    appState.router.go(to: .blockingSetup)
+                } label: {
+                    SettingRow(symbol: "shield", title: "Choose apps to block")
+                }
+                .buttonStyle(.plain)
+            }
             StillCard {
                 VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
                     Text(BlockingCopy.title(for: blocking.capability, isShielding: blocking.isShielding))

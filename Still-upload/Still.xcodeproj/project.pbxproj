@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		DB17F62E43977F661A288115 /* StillWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = FF0033E818EB609032DF8EC8 /* StillWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		E54ADC0F0653167D7089C253 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -14,11 +18,33 @@
 			remoteGlobalIDString = 85F1BC6575A2206AB6CBAA37;
 			remoteInfo = Still;
 		};
+		72108BEEC91C8EF7BBA64906 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 15E540AC7D3109B718A9B728 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 35E5BDF5B19963DC414B9ED9;
+			remoteInfo = StillWidgets;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		DB409ABE2501A1155276464B /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				DB17F62E43977F661A288115 /* StillWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		441E97A4420877AB91A73021 /* Still.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Still.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4E010D854CE355FA32B30BCC /* StillTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = StillTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FF0033E818EB609032DF8EC8 /* StillWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = StillWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -26,8 +52,25 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				Still.entitlements,
 			);
 			target = 85F1BC6575A2206AB6CBAA37 /* Still */;
+		};
+		9ED4E8465AEABBF9C25CDCF6 /* Exceptions for "Still" folder in "StillWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Services/LiveActivity/LiveActivityShared.swift,
+				Shared/WidgetSnapshot.swift,
+			);
+			target = 35E5BDF5B19963DC414B9ED9 /* StillWidgets */;
+		};
+		C5D276FC2CCE8883A7C3DF3A /* Exceptions for "StillWidgets" folder in "StillWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				StillWidgets.entitlements,
+			);
+			target = 35E5BDF5B19963DC414B9ED9 /* StillWidgets */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -36,8 +79,17 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				D56ACAED52E7FA3D21CB2F94 /* Exceptions for "Still" folder in "Still" target */,
+				9ED4E8465AEABBF9C25CDCF6 /* Exceptions for "Still" folder in "StillWidgets" target */,
 			);
 			path = Still;
+			sourceTree = "<group>";
+		};
+		D8A1FC94651F3F38D00D18A0 /* StillWidgets */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				C5D276FC2CCE8883A7C3DF3A /* Exceptions for "StillWidgets" folder in "StillWidgets" target */,
+			);
+			path = StillWidgets;
 			sourceTree = "<group>";
 		};
 		82BC0A3CC6908D50690D3ED5 /* StillTests */ = {
@@ -62,6 +114,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E3B5A21DA9C7C49DC07B10CE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -70,6 +129,7 @@
 			children = (
 				F393BD1E42FABC330AB48893 /* Still */,
 				82BC0A3CC6908D50690D3ED5 /* StillTests */,
+				D8A1FC94651F3F38D00D18A0 /* StillWidgets */,
 				6F4C5FE0333D0FC7967595C9 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -79,6 +139,7 @@
 			children = (
 				441E97A4420877AB91A73021 /* Still.app */,
 				4E010D854CE355FA32B30BCC /* StillTests.xctest */,
+				FF0033E818EB609032DF8EC8 /* StillWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -93,10 +154,12 @@
 				286BB550D76632E389478D25 /* Sources */,
 				936FA5A211E7DF29C16129A9 /* Frameworks */,
 				12724ABE08C48656A2BA1CEB /* Resources */,
+				DB409ABE2501A1155276464B /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C8258413315C0C856B3874F6 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				F393BD1E42FABC330AB48893 /* Still */,
@@ -131,6 +194,28 @@
 			productReference = 4E010D854CE355FA32B30BCC /* StillTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		35E5BDF5B19963DC414B9ED9 /* StillWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E887C53F406D35E256F4EE25 /* Build configuration list for PBXNativeTarget "StillWidgets" */;
+			buildPhases = (
+				A7331E52AB7F3567F5B1C4AA /* Sources */,
+				E3B5A21DA9C7C49DC07B10CE /* Frameworks */,
+				EFB9EEAA0AEF7A341A792695 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D8A1FC94651F3F38D00D18A0 /* StillWidgets */,
+			);
+			name = StillWidgets;
+			packageProductDependencies = (
+			);
+			productName = StillWidgets;
+			productReference = FF0033E818EB609032DF8EC8 /* StillWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -147,6 +232,9 @@
 					58DB897D7C21839E6BECD180 = {
 						CreatedOnToolsVersion = 16.0;
 						TestTargetID = 85F1BC6575A2206AB6CBAA37;
+					};
+					35E5BDF5B19963DC414B9ED9 = {
+						CreatedOnToolsVersion = 16.0;
 					};
 				};
 			};
@@ -166,6 +254,7 @@
 			targets = (
 				85F1BC6575A2206AB6CBAA37 /* Still */,
 				58DB897D7C21839E6BECD180 /* StillTests */,
+				35E5BDF5B19963DC414B9ED9 /* StillWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -179,6 +268,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		B0565DA3C3C69B657CF11038 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EFB9EEAA0AEF7A341A792695 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -202,6 +298,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A7331E52AB7F3567F5B1C4AA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -209,6 +312,11 @@
 			isa = PBXTargetDependency;
 			target = 85F1BC6575A2206AB6CBAA37 /* Still */;
 			targetProxy = E54ADC0F0653167D7089C253 /* PBXContainerItemProxy */;
+		};
+		C8258413315C0C856B3874F6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 35E5BDF5B19963DC414B9ED9 /* StillWidgets */;
+			targetProxy = 72108BEEC91C8EF7BBA64906 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -339,6 +447,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Still/Still.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -374,6 +483,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Still/Still.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -446,6 +556,66 @@
 			};
 			name = Release;
 		};
+		8EF2E8E068D41A98731F2F1F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = StillWidgets/StillWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StillWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Still;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cocomedia.still.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		E63338118184A9623D5F7076 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = StillWidgets/StillWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = StillWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Still;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.cocomedia.still.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -472,6 +642,15 @@
 			buildConfigurations = (
 				48D436386919CA5E2BFB603B /* Debug */,
 				4C6E6C4BA58A1B9A70C7E76B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E887C53F406D35E256F4EE25 /* Build configuration list for PBXNativeTarget "StillWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8EF2E8E068D41A98731F2F1F /* Debug */,
+				E63338118184A9623D5F7076 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -15,6 +15,7 @@ final class AppRouter {
     var focusPath: [AppRoute] = []
     var breakPath: [AppRoute] = []
     var mePath: [AppRoute] = []
+    var journalPath: [AppRoute] = []
     var sheet: SheetRoute? = nil
     var completion: CompletionPresentation? = nil
 
@@ -47,7 +48,7 @@ final class AppRouter {
         case .focus: focusPath = destination.stack
         case .breakShelf: breakPath = destination.stack
         case .me: mePath = destination.stack
-        case .journal: break
+        case .journal: journalPath = destination.stack
         }
     }
 

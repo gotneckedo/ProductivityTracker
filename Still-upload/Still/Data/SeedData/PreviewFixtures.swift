@@ -11,8 +11,12 @@ enum PreviewFixtures {
 
         container.preferences.completeOnboarding(goal: .focusBetter)
 
-        let biology = TaskItem(title: "Biology homework", createdAt: now.addingTimeInterval(-3 * 3600))
-        let essay = TaskItem(title: "Outline the essay", createdAt: now.addingTimeInterval(-2 * 3600))
+        let today = calendar.startOfDay(for: now)
+        let biology = TaskItem(title: "Biology homework", createdAt: now.addingTimeInterval(-3 * 3600),
+                               dueAt: calendar.date(byAdding: .day, value: 1, to: today),
+                               homework: HomeworkMetadata(course: "Biology", assignmentKind: nil))
+        let essay = TaskItem(title: "Outline the essay", createdAt: now.addingTimeInterval(-2 * 3600),
+                             scheduledAt: calendar.date(byAdding: .hour, value: 16, to: today))
         let inbox = TaskItem(title: "Reply to Sam", createdAt: now.addingTimeInterval(-26 * 3600),
                              completedAt: now.addingTimeInterval(-3600))
         [biology, essay, inbox].forEach { try? container.tasks.save($0) }
@@ -49,6 +53,42 @@ enum PreviewFixtures {
                 endedAt: start.addingTimeInterval(180), outcome: outcome, context: .shelf
             ))
         }
+    }
+
+    /// Journal lines, habits with a few check-ins, and a doodle, for previews
+    /// and CI screenshots of the V1.1+ screens.
+    static func populateDailyLife(_ container: DependencyContainer) {
+        let calendar = container.calendar
+        let now = container.clock.now
+        let today = calendar.startOfDay(for: now)
+        let lines: [(Int, String, JournalMood?)] = [
+            (1, "Finished the lab write-up before dinner. Felt lighter after.", .calm),
+            (2, "Too much scrolling in the morning; the afternoon was better.", .okay),
+            (3, "Long walk, short list. Good day.", .bright)
+        ]
+        for (offset, text, mood) in lines {
+            guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { continue }
+            try? container.journal.save(JournalEntry(id: UUID(), day: day, createdAt: day.addingTimeInterval(20 * 3600),
+                                                     text: text, mood: mood))
+        }
+        let habits = ["Water the plants", "Read one page", "Stretch"]
+        for (index, title) in habits.enumerated() {
+            guard let habit = container.habitController.create(title: title) else { continue }
+            for offset in 0..<(index == 0 ? 5 : 2) where !(index == 2 && offset == 0) {
+                if let day = calendar.date(byAdding: .day, value: -offset, to: today) {
+                    container.habitController.setDone(habitID: habit.id, on: day, true)
+                }
+            }
+        }
+        var doodle = PixelDoodle()
+        for (x, y) in [(7, 3), (8, 3), (6, 4), (9, 4), (5, 5), (10, 5), (7, 6), (8, 6)] {
+            doodle.paint(x: x, y: y, color: 2)
+        }
+        for y in 7..<12 { doodle.paint(x: 7, y: y, color: 3); doodle.paint(x: 8, y: y, color: 3) }
+        for x in 5..<11 { doodle.paint(x: x, y: 12, color: 5); doodle.paint(x: x, y: 13, color: 5) }
+        try? container.artifacts.save(ActivityArtifact(id: UUID(), activityID: .pixelDoodle, kind: .doodle,
+                                                       createdAt: now.addingTimeInterval(-7200),
+                                                       updatedAt: now.addingTimeInterval(-7200), doodle: doodle))
     }
 
     /// Starts a running session for "active session" previews.

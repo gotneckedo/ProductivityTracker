@@ -13,7 +13,8 @@ struct FocusHomeView: View {
                 VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
                     header(preset: preset)
 
-                    PixelSceneView(scene: scene, mode: preset.renderMode, intensity: appState.animationIntensity)
+                    PixelSceneView(scene: scene, mode: preset.renderMode, intensity: appState.animationIntensity,
+                                   plantStage: appState.plantStage)
                         .aspectRatio(Self.sceneAspectRatio, contentMode: .fit)
                         .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.scene, style: .continuous))
                         .overlay(
@@ -24,6 +25,8 @@ struct FocusHomeView: View {
 
                     if let unlocked = appState.newlyUnlockedScenes.first {
                         QuietNote(text: "\(unlocked.name) is open now. You'll find it in Me.", symbol: "leaf")
+                    } else if preset.renderMode == .calm, let remaining = appState.sessionsToNextPlantStage, remaining > 0 {
+                        QuietNote(text: "Your plant grows a little after \(remaining) more \(remaining == 1 ? "session" : "sessions").", symbol: "leaf")
                     }
 
                     TaskRow(task: appState.selectedTask, emphasized: appState.personalization.emphasizesTasks) {

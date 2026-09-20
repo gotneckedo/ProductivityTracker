@@ -68,6 +68,8 @@ struct ActivityContainerView: View {
             ShortReadActivityView(onFinished: { finish(.completed) })
         case .creativePrompt:
             CreativePromptActivityView()
+        case .pixelDoodle:
+            PixelDoodleActivityView()
         case .brainDump:
             BrainDumpActivityView()
         case .guidedStretch:

@@ -125,3 +125,18 @@ Nothing breaks. A missing source stays silent; if every file is missing, the UI
 shows "Ambient audio is ready when sound files are added." and the mix controls
 still save. No broken player or fake meters appear.
 
+
+## Things people make or bring
+
+- **Imported books.** EPUBs a person imports from Files are copied into the
+  app's private storage on their device, labeled "From your files," and never
+  uploaded, shared, or redistributed. Still doesn't bundle any imported book.
+  DRM-protected files can't be read and aren't worked around.
+- **Bundled books.** Only verified public-domain EPUBs may be added to
+  `Still/Resources/`. Record the source URL, edition, and public-domain
+  reasoning for each file in this document before shipping it. Modern
+  editions can carry new copyrighted material (introductions, notes, cover
+  art); strip or avoid those.
+- **Doodles, journal lines, habits, notes.** Created by the person, stored
+  only on their device, never sent to analytics (tests enforce this for
+  journal text), and deleted by Reset local data.

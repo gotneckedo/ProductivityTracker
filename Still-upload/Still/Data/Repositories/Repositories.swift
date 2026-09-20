@@ -30,10 +30,36 @@ protocol ActivityNoteRepository: AnyObject {
     func delete(id: UUID) throws
 }
 
-/// V1.1 journal boundary. Implemented and tested; not exposed in the V1 UI.
+/// One line a day.
 protocol JournalRepository: AnyObject {
     func save(_ entry: JournalEntry) throws
     func allEntries() -> [JournalEntry]
+    func delete(id: UUID) throws
+}
+
+/// Things made during breaks (doodles). Local only.
+protocol ArtifactRepository: AnyObject {
+    func save(_ artifact: ActivityArtifact) throws
+    func artifact(id: UUID) -> ActivityArtifact?
+    func artifacts(kind: ActivityArtifactKind) -> [ActivityArtifact]
+    func delete(id: UUID) throws
+}
+
+/// Where a reader is in each book. Keyed by book ID.
+protocol ReadingProgressRepository: AnyObject {
+    func progress(bookID: String) -> ReadingProgress?
+    func save(_ progress: ReadingProgress) throws
+    func delete(bookID: String) throws
+}
+
+protocol HabitRepository: AnyObject {
+    func allHabits() -> [HabitDefinition]
+    func save(_ habit: HabitDefinition) throws
+    func delete(id: UUID) throws
+    func checkIns(habitID: UUID) -> [HabitCheckIn]
+    func allCheckIns() -> [HabitCheckIn]
+    func save(_ checkIn: HabitCheckIn) throws
+    func deleteCheckIn(id: String) throws
 }
 
 /// Saved in-progress puzzle state, so leaving an activity never loses work.
@@ -184,6 +210,10 @@ final class StoredJournalRepository: JournalRepository {
     func allEntries() -> [JournalEntry] {
         collection.all().sorted { $0.day < $1.day }
     }
+
+    func delete(id: UUID) throws {
+        try collection.delete(id: id.uuidString)
+    }
 }
 
 final class StoredPuzzleProgressRepository: PuzzleProgressRepository {
@@ -209,5 +239,92 @@ final class StoredPuzzleProgressRepository: PuzzleProgressRepository {
 
     func clear(puzzleID: String) throws {
         try store.delete(kind: .puzzleProgress, id: puzzleID)
+    }
+}
+
+final class StoredHabitRepository: HabitRepository {
+    private let habits: RecordCollection<HabitDefinition>
+    private let checkInRecords: RecordCollection<HabitCheckIn>
+
+    init(store: RecordStore) {
+        habits = RecordCollection(store: store, kind: .habit)
+        checkInRecords = RecordCollection(store: store, kind: .habitCheckIn)
+    }
+
+    func allHabits() -> [HabitDefinition] {
+        habits.all().sorted { ($0.sortOrder, $0.createdAt) < ($1.sortOrder, $1.createdAt) }
+    }
+
+    func save(_ habit: HabitDefinition) throws {
+        try habits.save(habit, id: habit.id.uuidString, createdAt: habit.createdAt,
+                        updatedAt: habit.archivedAt ?? habit.createdAt)
+    }
+
+    func delete(id: UUID) throws {
+        for checkIn in checkIns(habitID: id) {
+            try checkInRecords.delete(id: checkIn.id)
+        }
+        try habits.delete(id: id.uuidString)
+    }
+
+    func checkIns(habitID: UUID) -> [HabitCheckIn] {
+        allCheckIns().filter { $0.habitID == habitID }
+    }
+
+    func allCheckIns() -> [HabitCheckIn] {
+        checkInRecords.all().sorted { $0.day < $1.day }
+    }
+
+    func save(_ checkIn: HabitCheckIn) throws {
+        try checkInRecords.save(checkIn, id: checkIn.id, createdAt: checkIn.createdAt, updatedAt: checkIn.createdAt)
+    }
+
+    func deleteCheckIn(id: String) throws {
+        try checkInRecords.delete(id: id)
+    }
+}
+
+final class StoredArtifactRepository: ArtifactRepository {
+    private let collection: RecordCollection<ActivityArtifact>
+
+    init(store: RecordStore) {
+        collection = RecordCollection(store: store, kind: .activityArtifact)
+    }
+
+    func save(_ artifact: ActivityArtifact) throws {
+        try collection.save(artifact, id: artifact.id.uuidString, createdAt: artifact.createdAt, updatedAt: artifact.updatedAt)
+    }
+
+    func artifact(id: UUID) -> ActivityArtifact? {
+        collection.element(id: id.uuidString)
+    }
+
+    /// Newest first.
+    func artifacts(kind: ActivityArtifactKind) -> [ActivityArtifact] {
+        collection.all().filter { $0.kind == kind }.sorted { $0.createdAt > $1.createdAt }
+    }
+
+    func delete(id: UUID) throws {
+        try collection.delete(id: id.uuidString)
+    }
+}
+
+final class StoredReadingProgressRepository: ReadingProgressRepository {
+    private let collection: RecordCollection<ReadingProgress>
+
+    init(store: RecordStore) {
+        collection = RecordCollection(store: store, kind: .readingProgress)
+    }
+
+    func progress(bookID: String) -> ReadingProgress? {
+        collection.element(id: bookID)
+    }
+
+    func save(_ progress: ReadingProgress) throws {
+        try collection.save(progress, id: progress.bookID, createdAt: progress.updatedAt, updatedAt: progress.updatedAt)
+    }
+
+    func delete(bookID: String) throws {
+        try collection.delete(id: bookID)
     }
 }

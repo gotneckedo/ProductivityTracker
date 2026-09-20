@@ -1,206 +1,129 @@
 # Future capabilities
 
-How V1.1, V2, and V3 plug into what exists today. Every item lists what V1
-already provides, the missing platform or entitlement work, recommended model
-and service changes, navigation impact, privacy considerations, and the next
-safe step. Nothing below is exposed in the V1 UI.
+Where each roadmap item stands, what's left, and the next safe step. Items are
+grouped by what blocks them: nothing (shipped), Apple approval or hardware
+(built and gated), or decisions and outside setup (remaining).
 
 Quick map of the extension points:
 
 | Boundary | File |
 |---|---|
-| Feature flags | `Domain/Navigation/AppRoute.swift` → `FeatureFlags` |
+| Feature flags | `Domain/Navigation/AppRoute.swift` → `FeatureFlags.current` |
 | Routes and tabs | `AppRoute`, `AppTab.visibleTabs`, `RouteResolver` |
-| Service protocols | `Services/**` (`FocusBlockingService`, `NFCFocusPresetRouting`, `LiveActivityUpdating`, `EventTracking`, `ReadingContentProviding`, `PuzzleProviding`) |
-| Future-only protocols | `Services/Future/FutureBoundaries.swift` |
+| Service protocols | `Services/**` (`FocusBlockingService`, `NFCFocusPresetRouting`, `LiveActivityUpdating`, `EventTracking`, `CalendarAdapter`, `SpeechTaskCapturing`, `MorningStartScheduling`, `WidgetSnapshotWriting`, `BookLibrary`) |
+| Hardware/approval boundaries | `Services/Future/FutureBoundaries.swift` |
 | Persistence | `RecordStore` + repositories in `Data/` |
 | Dependency wiring | `App/DependencyContainer.swift`, `DependencyContainer+Live.swift` |
 
 ---
 
-## V1.1
+## Shipped (on in `FeatureFlags.current`)
 
-### Full EPUB reader
-
-- **In V1:** `ReadingItem` with `format` (`.shortText` / `.epub`), license
-  metadata, `ReadingContentProviding`, the `breakActivity(.shortRead, …)` route.
-- **Missing:** an EPUB parser (Apple frameworks only: unzip with
-  `Compression`/`FileManager`, parse OPF/XHTML with `XMLParser`, render with
-  `AttributedString` or a `WKWebView`). No third-party packages.
-- **Model/service changes:** add `EPUBReadingProvider: ReadingContentProviding`;
-  add `ReadingProgress` (itemID, chapter, offset) stored via `RecordStore`
-  (new `RecordKind.readingProgress`).
-- **Navigation:** Short Read list gains longer items that push a reader view
-  inside the same activity container. Keep a visible end per sitting (chapter
-  end = activity end).
-- **Privacy:** reading progress stays local; never send titles to analytics
-  (activity ID only).
-- **Next safe step:** write the provider against one bundled public-domain EPUB
-  whose status is verified per `ASSET_AND_CONTENT_POLICY.md`.
-
-### Pixel doodle pad + gallery
-
-- **In V1:** activity modules are keyed by `BreakActivityID`; the catalog has an
-  `implementationState` so planned activities never show; `ActivityNote` shows
-  the saved-artifact pattern.
-- **Missing:** a drawing canvas (`Canvas` + gesture, 16×16 grid).
-- **Model/service changes:** add `ActivityArtifact` (id, activityID, createdAt,
-  kind `.doodle`, `pixels: [UInt8]` palette indices) as a new record kind rather
-  than overloading `ActivityNote`. Add `ArtifactRepository`.
-- **Navigation:** new `.doodle` case in the activity switch in
-  `ActivityContainerView`; gallery as a pushed route from Me.
-- **Privacy:** local only; exclude from any future export unless the user opts in.
-- **Next safe step:** add the catalog entry as `.planned`, build the canvas in a
-  preview, then flip to `.available`.
-
-### One-line journal
-
-- **In V1:** `JournalEntry` (day, text, mood), `JournalRepository` with a
-  tested stored implementation, `AppRoute.journal`, `AppTab.journal`, and
-  `FeatureFlags.journalTab` (off). `RouteResolver` already falls back to Me when
-  the flag is off. `StreakCalculator` works on any set of days.
-- **Missing:** the Journal screen only.
-- **Model/service changes:** add `JournalController` (create/edit today's entry,
-  list recent) mirroring `TaskController`.
-- **Navigation:** set `FeatureFlags.journalTab = true` and add `JournalView` in
-  `MainTabView.tabContent(.journal)`. No other navigation change.
-- **Privacy:** journal text is never tracked. Add `journal_entry_saved` with no
-  properties if the funnel needs it.
-- **Next safe step:** build `JournalView` behind the flag with previews; flip the
-  flag when it's complete (no hollow placeholder).
-
-### Plant growth stages
-
-- **In V1:** `PlantGrowthStage`, `ProgressionEvaluator.plantStage(...)`, and
-  `CalmPlantRenderer(plantStage:)`; the calm artwork already draws `.sprout`,
-  `.leafy`, `.full`. `FeatureFlags.plantGrowthStages` is off, so V1 passes `.full`.
-- **Missing:** pass the evaluated stage from `AppState` into `PixelSceneView`.
-- **Rules:** growth only moves forward; nothing wilts, no pet or pressure loop.
-- **Next safe step:** turn the flag on in a debug build and review each stage.
+| Item | Where | Notes |
+|---|---|---|
+| One-line journal | `Features/Journal/`, `JournalController` | One entry per day; saving again replaces it. Optional mood. Text never reaches analytics (tested). |
+| Habit tracking | `HabitController`, `StoredHabitRepository`, Journal tab | Up to five habits. Check-ins are per day; missing days are never shown as failures. Kept separate from `TaskItem`. |
+| Plant growth stages | `ProgressionEvaluator.plantStage`, `CalmPlantArtwork` | Sprout (<3 sessions), leafy (<10), full. Only grows. |
+| Custom presets | `PresetsView`, `PreferencesController.createPreset/rename/delete` | Deep Work and Quick Focus built in; up to 10 total. Custom IDs are `custom-xxxxxxxx`; analytics reports them as `custom`. Deleting the default falls back to Default. |
+| Homework, due dates, day view | `TaskDetailView`, `DayTimelineView`, `DueDateDescriber`, `DayTimelineBuilder` | Capture stays one line; details are optional. |
+| Apple Calendar (read-only) | `EventKitCalendarAdapter` | Asked from the timeline, never at launch. All-day events are skipped. |
+| Voice task capture | `SpeechRecognizerCapture`, `SpokenTaskParser`, `VoiceCaptureView` | On-device when available. Understands "…today/tomorrow/by Friday". Nothing is saved until the person taps Add. |
+| Pixel doodle + gallery | `PixelDoodleActivityView`, `DoodleGalleryView`, `ActivityArtifact` | 16×16, 8-color palette, pen/fill/eraser, autosaves. |
+| EPUB reader | `Services/Reading/` (Inflate, ZipArchive, EPUBParser, FileBookLibrary), Short Read | Pure Swift, no third-party code. Chapters split into ~700-word sittings; a sitting is one activity. Import from Files; no books bundled. |
+| Morning Start | `MorningStartView`, `UserNotificationScheduler.scheduleMorningStart` | Repeating local notification. Phase reminders and Morning Start use separate identifiers so one never clears the other. |
+| Home-screen widget | `StillWidgets/StillFocusSummaryWidget.swift`, `Shared/WidgetSnapshot.swift` | Small, medium, and Lock Screen sizes. Tap starts the default preset. Needs the App Group (paid account) to show real numbers. |
+| Live Activity / Dynamic Island | `StillWidgets/StillLiveActivityWidget.swift` | Now part of the project. No task titles on the Lock Screen. |
 
 ---
 
-## V2
+## Built, waiting on Apple or hardware
 
 ### App/category blocking with emergency override
 
-- **In V1:** `FocusBlockingService` protocol, `MockFocusBlockingService`
-  (labeled SIMULATION ONLY; `isShielding` is always false), `BlockerIntent` on
-  every `FocusPreset`, `BlockingCopy` for honest UI text, and
-  `FamilyControlsBlockingService` scaffold behind
-  `#if canImport(FamilyControls) && os(iOS)` with TODOs.
-- **Missing platform work:**
-  1. Request the **Family Controls (Distribution)** entitlement from Apple
-     (`com.apple.developer.family-controls`). Development builds can use the
-     development entitlement; App Store needs Apple's approval.
-  2. Add a **DeviceActivity monitor extension** so shields lift when a session
-     ends even if the app is killed.
-  3. Authorization via `AuthorizationCenter.shared.requestAuthorization(for: .individual)`.
-- **Model changes:** per-preset `FamilyActivitySelection` (Codable) stored in
-  a new record kind. Design this only after entitlement review; the selection
-  tokens are opaque and device-specific.
-- **Service changes:** complete `FamilyControlsBlockingService` (apply
-  `ManagedSettingsStore(named:)` shields in `sessionDidStart`, clear in
-  `sessionDidEnd`); swap it into `DependencyContainer.live()` when
-  `flags.appBlocking` is on.
-- **Emergency override:** a clearly labeled "End blocking now" that ends
-  shielding and records a local `blocking_override` event (no app names).
-- **Navigation:** a Blocking setup screen pushed from Me and from Session
-  options. Setup is a calm ritual, never punishment.
-- **Privacy:** Screen Time data never leaves the device; tokens are not logged.
-- **Next safe step:** apply for the entitlement now (the wait is the long pole).
+- **Done:** `FamilyControlsBlockingService` (authorization, per-preset
+  `FamilyActivitySelection` stored via `BlockingSelectionStore`,
+  `ManagedSettingsStore` shields on session start, cleared on end),
+  `BlockingSetupView` with `FamilyActivityPicker`, a Blocking section in Session
+  options, and "End blocking now" on the running session (logs
+  `blocking_override`, no app names). All behind `FeatureFlags.appBlocking`.
+- **Needed:**
+  1. Request the **Family Controls (Distribution)** entitlement from Apple.
+     Development builds can use the development entitlement with a paid account.
+  2. Add `com.apple.developer.family-controls` to `Still/Still.entitlements`
+     and set `appBlocking: true` in `FeatureFlags.current`.
+  3. Add a **DeviceActivity monitor extension** (`StillShieldMonitor`) so
+     shields lift when a session's end time passes even if Still was closed:
+     when a session starts, `DeviceActivityCenter().startMonitoring(.init("still.session"), during: DeviceActivitySchedule(intervalStart:intervalEnd:repeats: false))`
+     with the session's end; in the extension's `intervalDidEnd`, call
+     `ManagedSettingsStore(named: .init("still.focus")).clearAllSettings()`.
+     The extension needs the same entitlement.
+- **Privacy:** selections are opaque tokens that stay on the device.
+- **Next safe step:** apply for the entitlement now; the wait is the long pole.
 
-### NFC tap-to-block and multiple NFC presets
+### NFC tag writing in the app
 
-- **In V1:** `FocusPreset` (timer, scene, mix, task behavior, blocker intent),
-  `still://start-focus?preset=<id>` parsing (`DeepLinkParser`),
-  `DeepLinkPresetRouter`, the Focus Card screen with an in-app simulator, and
-  `CoreNFCTagReader` scaffold (compiled only with `-DSTILL_CORENFC`).
-- **How real tags work:** an iPhone does not react to a blank tag. Write an
-  **NDEF URI record** with the preset link. iOS reads URL records in the
-  background and shows a banner that opens Still. A Universal Link
-  (`https://<your-domain>/start-focus?preset=study`) opens the app directly once
-  an associated domain is configured: add the Associated Domains capability,
-  host `apple-app-site-association`, and add the host to
-  `DeepLinkParser.universalLinkHosts`. Test on hardware; background reading
-  requires iPhone XS or later and the screen on.
-- **Missing:** preset editor UI (create/rename/delete), tag writing in-app
-  (Near Field Communication Tag Reading capability +
-  `NFCReaderUsageDescription`), Deep Work and Quick Focus presets.
-- **Next safe step:** ship custom presets (IDs as UUID strings, analytics
-  reports them as `custom`), then tag writing.
+- **Done:** `CoreNFCTagWriter` (checks the tag is writable and big enough,
+  writes an NDEF URI record) and a "Write to a tag" button on the Focus Card
+  screen, both compiled only with `-DSTILL_CORENFC`.
+- **Needed:** a paid account, the NFC Tag Reading capability
+  (`com.apple.developer.nfc.readersession.formats = [NDEF]`), the Swift flag,
+  and a physical iPhone. `NFCReaderUsageDescription` is already in Info.plist.
+- **Next safe step:** write one tag with any NFC app first; that already works
+  through the URL scheme.
 
-### AlarmKit wake-up to tasks and a first session
+### Voice capture on hardware
 
-- **In V1:** `WakeUpPlan` and `WakeUpScheduling` in `FutureBoundaries.swift`;
-  `TimerConfiguration.routineID` reserved.
-- **Missing:** verify the current AlarmKit API (iOS 26+) and any entitlement
-  before implementing. The system owns the stop button, so "can't dismiss until
-  you do X" is not enforceable. Design the morning around pull: the alarm opens
-  Still to today's tasks and a queued session.
-- **Navigation:** a routine editor under Me; the alarm deep-links to Focus.
-- **Next safe step:** a spike app confirming AlarmKit behavior on device.
-
-### Habit tracking
-
-- **In V1:** `HabitDefinition` and `HabitRepository` are reserved separately on
-  purpose. Do not overload `TaskItem`.
-- **Next safe step:** `StoredHabitRepository` over `RecordStore` with tests,
-  then a small Me section. Reuse `StreakCalculator` with the same non-shaming copy.
+Works in code and is on, but should be checked on a real iPhone (simulator
+microphone input is unreliable).
 
 ---
 
-## V3
+## Remaining
 
-### Voice task capture
+### AlarmKit wake-up (a real alarm)
 
-- **In V1:** `TaskItem.captureSource` (`.voice` reserved), `TaskCaptureService`
-  protocol, `CapturedTaskDraft`.
-- **Missing:** Speech framework + microphone permissions
-  (`NSSpeechRecognitionUsageDescription`, `NSMicrophoneUsageDescription`); prefer
-  on-device recognition. Parsing dates can start with `NSDataDetector`.
-- **Privacy:** audio and transcripts stay on device; never tracked.
-- **Next safe step:** a capture sheet that fills the existing task text field.
+- **Today:** Morning Start is a notification, so it follows silent mode.
+- **Needed:** AlarmKit (iOS 26+) and its usage description. The system owns
+  the stop button, so "can't dismiss until you do X" isn't possible; the alarm
+  should open Still to today's tasks and a queued session. Adopt
+  `WakeUpScheduling` with an AlarmKit implementation, gated by
+  `#available(iOS 26, *)`, and keep the notification version for iOS 17–25.
+- **Next safe step:** a small spike app confirming AlarmKit behavior on device.
 
-### Google Calendar sync
+### Google Calendar
 
-- **In V1:** `CalendarAdapter` and `ExternalCalendarEvent`;
-  `TaskItem.calendarEventID`, `scheduledAt`.
-- **Missing:** EventKit adapter first (no backend needed). Google requires OAuth
-  and a privacy review; V1 has no backend by design.
-- **Next safe step:** read-only EventKit adapter behind a flag.
+EventKit covers calendars synced to the iPhone (including Google accounts added
+in Settings). A direct Google integration needs OAuth, a privacy policy, and
+Google's review; V1 has no backend by design.
 
-### Homework tracking and timeline/day view
+### Universal Links and a branded NFC card
 
-- **In V1:** `TaskItem.homework`, `dueAt`, `scheduledAt` (all nil today).
-- **Missing:** a schedule route (`AppRoute` case) and a day view. Keep V1 task
-  capture as fast as it is now; scheduling stays optional.
+Cards should carry `https://<your-domain>/start-focus?preset=…` rather than
+`still://`. Needs a domain, an `apple-app-site-association` file, the
+Associated Domains capability, and the host added to
+`DeepLinkParser.universalLinkHosts`. Card design and printing are separate.
 
-### Home-screen widget grid
+### Bundled public-domain books
 
-- **In V1:** `FocusSummarySnapshot` and `FocusSummaryProviding`.
-- **Missing:** a WidgetKit extension plus an App Group so the widget can read a
-  summary the app writes. Widgets deep-link with `still://start-focus`.
-
-### Branded physical NFC card
-
-- **In V1:** the preset URL scheme and Focus Card guide. Cards should carry a
-  Universal Link, not a custom-scheme URL, once a domain exists.
+The reader is ready; the shelf starts empty. Add verified public-domain EPUBs
+to `Still/Resources/` (each with its source and status recorded per
+`ASSET_AND_CONTENT_POLICY.md`) and they appear as "Public domain".
 
 ### Cosmetics, seasonal scenes, IAP
 
-- **In V1:** `SceneDefinition.entitlementKey` (nil) and scenes-as-data.
-- **Missing:** StoreKit 2 design. Do not add locked paid content until then;
-  keep progression unlocks free and non-punitive.
+`SceneDefinition.entitlementKey` exists (nil). Needs StoreKit 2 design and
+products in App Store Connect. Keep session-earned unlocks free and
+non-punitive; don't add locked paid content before then.
 
 ---
 
 ## Analytics destination (any release)
 
-- **In V1:** `EventTracking` with a bounded local log, typed `AppEventName`,
-  properties that can only come from typed values (`EventProperties`), a token
-  sanitizer (`SafeToken`), anonymized preset/activity IDs, and duration buckets.
-  `EventDestination` exists; none is registered.
+- **In place:** `EventTracking` with a bounded local log, typed
+  `AppEventName`, properties that can only come from typed values
+  (`EventProperties`), a token sanitizer (`SafeToken`), anonymized
+  preset/activity IDs, and duration buckets. `EventDestination` exists; none is
+  registered.
 - **Next safe step:** an opt-in, user-reviewable export (e.g. aggregate weekly
   counts), added as an `EventDestination`. Update the privacy copy in Me first.
 

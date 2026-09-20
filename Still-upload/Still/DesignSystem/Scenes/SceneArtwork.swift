@@ -345,16 +345,20 @@ enum CalmPlantArtwork {
         p.rect(28, 42, 8, 2, c.potShade)
         p.rect(27, 35, 10, 1, c.soil)
 
-        // Plant. Growth stages exist for V1.1; V1 always passes `.full`.
-        let stem: [(Double, Double)] = [(32, 34), (32, 33), (32, 32), (32, 31), (32, 30)]
-        let sprout: [(Double, Double, Int)] = [(31, 29, 0), (33, 29, 0), (30, 28, 1), (34, 28, 1)]
+        // Plant. It grows with completed sessions: sprout, leafy, full.
+        let stem: [(Double, Double)] = stage == .sprout
+            ? [(32, 34), (32, 33), (32, 32)]
+            : [(32, 34), (32, 33), (32, 32), (32, 31), (32, 30)]
+        let sproutLeaves: [(Double, Double, Int)] = stage == .sprout
+            ? [(31, 31, 0), (33, 31, 0), (30, 30, 1), (34, 30, 2)]
+            : [(31, 29, 0), (33, 29, 0), (30, 28, 1), (34, 28, 1)]
         let leafy: [(Double, Double, Int)] = [(29, 31, 0), (35, 31, 0), (28, 30, 1), (36, 30, 1), (30, 27, 2), (34, 27, 2), (32, 27, 0)]
         let full: [(Double, Double, Int)] = [
             (27, 29, 1), (37, 29, 1), (26, 28, 0), (38, 28, 0), (29, 25, 2), (35, 25, 2),
             (31, 24, 0), (33, 24, 1), (32, 23, 2), (28, 26, 0), (36, 26, 0), (30, 22, 1), (34, 22, 1)
         ]
         for (x, y) in stem { p.dot(x, y, c.leafDark) }
-        var leaves = sprout
+        var leaves = sproutLeaves
         if stage.rawValue >= PlantGrowthStage.leafy.rawValue { leaves += leafy }
         if stage == .full { leaves += full }
         let tones = [c.leaf, c.leafDark, c.leafLight]

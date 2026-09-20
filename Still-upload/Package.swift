@@ -28,14 +28,17 @@ let package = Package(
                 "Features",
                 "Resources",
                 "Assets.xcassets",
-                "Info.plist"
+                "Info.plist",
+                "Still.entitlements"
             ],
             sources: [
                 "Domain",
                 "Data",
                 "Services",
+                "Shared",
                 "App/DependencyContainer.swift",
                 "App/AppState.swift",
+                "App/AppState+Features.swift",
                 "App/AppRouter.swift",
                 "App/PreviewSupport.swift"
             ]

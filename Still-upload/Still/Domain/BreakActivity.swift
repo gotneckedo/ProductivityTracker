@@ -10,6 +10,7 @@ extension Identifier where Tag == BreakActivityTag {
     static let guidedStretch: BreakActivityID = "guidedStretch"
     static let boxBreathing: BreakActivityID = "boxBreathing"
     static let doNothing: BreakActivityID = "doNothing"
+    static let pixelDoodle: BreakActivityID = "pixelDoodle"
 }
 
 enum ActivityCategory: String, Codable, CaseIterable, Hashable {

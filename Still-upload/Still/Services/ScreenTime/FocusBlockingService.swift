@@ -18,8 +18,41 @@ protocol FocusBlockingService: AnyObject {
     var capability: BlockingCapability { get }
     /// True only when the operating system is actually shielding apps.
     var isShielding: Bool { get }
-    func sessionDidStart(sessionID: UUID, intent: BlockerIntent)
+    func sessionDidStart(sessionID: UUID, presetID: FocusPresetID, intent: BlockerIntent)
     func sessionDidEnd(sessionID: UUID)
+    /// Lifts shields right away, e.g. from "End blocking now".
+    func endShieldingNow()
+}
+
+extension FocusBlockingService {
+    func endShieldingNow() {}
+}
+
+/// Opaque, device-specific app selections per preset. The Screen Time
+/// selection type is Codable, so the platform layer stores it as `Data`.
+protocol BlockingSelectionStore: AnyObject {
+    func selectionData(for presetID: FocusPresetID) -> Data?
+    func setSelectionData(_ data: Data?, for presetID: FocusPresetID)
+}
+
+final class KeyValueBlockingSelectionStore: BlockingSelectionStore {
+    private let store: KeyValueStore
+
+    init(store: KeyValueStore) {
+        self.store = store
+    }
+
+    func selectionData(for presetID: FocusPresetID) -> Data? {
+        store.data(forKey: key(presetID))
+    }
+
+    func setSelectionData(_ data: Data?, for presetID: FocusPresetID) {
+        store.set(data, forKey: key(presetID))
+    }
+
+    private func key(_ presetID: FocusPresetID) -> String {
+        "still.blocking.selection.\(presetID.rawValue)"
+    }
 }
 
 /// User-facing blocking language. Never claims apps are blocked unless the
@@ -52,7 +85,7 @@ final class MockFocusBlockingService: FocusBlockingService {
     let isShielding = false
     private(set) var recordedIntents: [UUID: BlockerIntent] = [:]
 
-    func sessionDidStart(sessionID: UUID, intent: BlockerIntent) {
+    func sessionDidStart(sessionID: UUID, presetID: FocusPresetID, intent: BlockerIntent) {
         recordedIntents[sessionID] = intent
     }
 
@@ -63,33 +96,32 @@ final class MockFocusBlockingService: FocusBlockingService {
 
 // MARK: - FamilyControlsBlockingService
 
-#if canImport(FamilyControls) && os(iOS)
+#if canImport(FamilyControls) && canImport(ManagedSettings) && os(iOS)
 import FamilyControls
 import Foundation
+import ManagedSettings
 
-/// V2 scaffold for real Screen Time shielding. NOT used in V1: the container
-/// injects `MockFocusBlockingService` until `FeatureFlags.appBlocking` is on.
+/// Real Screen Time shielding. Used only when `FeatureFlags.appBlocking` is on
+/// (see `DependencyContainer.live`), which requires:
+/// 1. The Family Controls entitlement (`com.apple.developer.family-controls`)
+///    in Still.entitlements. Development builds can use it with a paid
+///    account; App Store builds need Apple's approval.
+/// 2. The StillShieldMonitor DeviceActivity extension (see
+///    FUTURE_CAPABILITIES.md) so shields lift even if Still is closed.
 ///
-/// Compiles without the entitlement; it only fails at runtime if called
-/// without it. Before enabling:
-/// 1. Request the Family Controls (Distribution) entitlement from Apple and add
-///    `com.apple.developer.family-controls` to Still.entitlements.
-/// 2. TODO(V2-authorization): call `requestAuthorization()` from a calm,
-///    explained setup screen (never at launch).
-/// 3. TODO(V2-selection): present `FamilyActivityPicker`, then persist the
-///    `FamilyActivitySelection` (it is Codable) per preset.
-/// 4. TODO(V2-shielding): import ManagedSettings and, in `sessionDidStart`,
-///    apply `ManagedSettingsStore(named:)` shields for the preset's selection;
-///    clear them in `sessionDidEnd`. Add a DeviceActivity monitor extension so
-///    shields lift even if the app is killed.
-/// 5. TODO(V2-override): add an emergency override that ends shielding and
-///    records a local audit event.
+/// Each preset keeps its own app/category selection (from
+/// `FamilyActivityPicker`), stored as opaque data on this device.
 final class FamilyControlsBlockingService: FocusBlockingService {
-    private(set) var capability: BlockingCapability = .notAuthorized
-    /// Stays false until shielding is really applied (TODO(V2-shielding)).
-    private(set) var isShielding = false
+    static let storeName = ManagedSettingsStore.Name("still.focus")
 
-    init() {
+    private let selections: BlockingSelectionStore
+    private let store = ManagedSettingsStore(named: FamilyControlsBlockingService.storeName)
+    private(set) var capability: BlockingCapability = .notAuthorized
+    private(set) var isShielding = false
+    private var shieldedSessionID: UUID?
+
+    init(selections: BlockingSelectionStore) {
+        self.selections = selections
         refreshAuthorization()
     }
 
@@ -102,18 +134,54 @@ final class FamilyControlsBlockingService: FocusBlockingService {
         }
     }
 
+    /// Call from the Blocking setup screen, never at launch.
     func requestAuthorization() async throws {
         try await AuthorizationCenter.shared.requestAuthorization(for: .individual)
         refreshAuthorization()
     }
 
-    func sessionDidStart(sessionID: UUID, intent: BlockerIntent) {
+    func selection(for presetID: FocusPresetID) -> FamilyActivitySelection {
+        guard let data = selections.selectionData(for: presetID),
+              let selection = try? JSONDecoder().decode(FamilyActivitySelection.self, from: data) else {
+            return FamilyActivitySelection()
+        }
+        return selection
+    }
+
+    func setSelection(_ selection: FamilyActivitySelection, for presetID: FocusPresetID) {
+        selections.setSelectionData(try? JSONEncoder().encode(selection), for: presetID)
+    }
+
+    func sessionDidStart(sessionID: UUID, presetID: FocusPresetID, intent: BlockerIntent) {
+        refreshAuthorization()
         guard capability == .authorized, intent != .none else { return }
-        // TODO(V2-shielding): apply ManagedSettingsStore shields here, then set isShielding = true.
+        let selection = selection(for: presetID)
+        guard !selection.applicationTokens.isEmpty || !selection.categoryTokens.isEmpty || !selection.webDomainTokens.isEmpty else {
+            return
+        }
+        store.shield.applications = selection.applicationTokens.isEmpty ? nil : selection.applicationTokens
+        store.shield.applicationCategories = selection.categoryTokens.isEmpty
+            ? nil
+            : ShieldSettings.ActivityCategoryPolicy.specific(selection.categoryTokens)
+        store.shield.webDomains = selection.webDomainTokens.isEmpty ? nil : selection.webDomainTokens
+        if intent == .strict {
+            // Strict also covers websites in the chosen categories.
+            store.shield.webDomainCategories = selection.categoryTokens.isEmpty
+                ? nil
+                : ShieldSettings.ActivityCategoryPolicy.specific(selection.categoryTokens)
+        }
+        shieldedSessionID = sessionID
+        isShielding = true
     }
 
     func sessionDidEnd(sessionID: UUID) {
-        // TODO(V2-shielding): clear ManagedSettingsStore shields here.
+        guard shieldedSessionID == nil || shieldedSessionID == sessionID else { return }
+        endShieldingNow()
+    }
+
+    func endShieldingNow() {
+        store.clearAllSettings()
+        shieldedSessionID = nil
         isShielding = false
     }
 }

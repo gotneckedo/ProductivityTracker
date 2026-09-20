@@ -15,6 +15,7 @@ enum PreviewSupport {
         )
         if populated {
             PreviewFixtures.populate(container)
+            PreviewFixtures.populateDailyLife(container)
         } else if onboarded {
             container.preferences.completeOnboarding(goal: goal)
         }

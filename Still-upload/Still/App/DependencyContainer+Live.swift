@@ -2,8 +2,10 @@ import Foundation
 
 extension DependencyContainer {
     /// The on-device container: SwiftData storage, real notifications and
-    /// audio, the honest blocking mock, and Live Activities only when enabled.
-    static func live(flags: FeatureFlags = .v1) -> DependencyContainer {
+    /// audio, Apple Calendar, speech capture, the home-screen widget, and
+    /// Live Activities. Blocking stays the honest mock until
+    /// `flags.appBlocking` is on (it needs Apple's entitlement approval).
+    static func live(flags: FeatureFlags = .current) -> DependencyContainer {
         let recordStore: RecordStore
         var storageNotice: String?
         do {
@@ -14,6 +16,9 @@ extension DependencyContainer {
             storageNotice = "Storage isn't available right now, so this session won't be saved."
         }
 
+        let keyValueStore = UserDefaultsKeyValueStore()
+        let clock = SystemClock()
+
         let liveActivity: LiveActivityUpdating
         #if canImport(ActivityKit) && os(iOS)
         liveActivity = flags.liveActivities ? ActivityKitLiveActivityUpdater() : NoopLiveActivityUpdater()
@@ -21,18 +26,55 @@ extension DependencyContainer {
         liveActivity = NoopLiveActivityUpdater()
         #endif
 
+        let blocking: FocusBlockingService
+        #if canImport(FamilyControls) && canImport(ManagedSettings) && os(iOS)
+        blocking = flags.appBlocking
+            ? FamilyControlsBlockingService(selections: KeyValueBlockingSelectionStore(store: keyValueStore))
+            : MockFocusBlockingService()
+        #else
+        blocking = MockFocusBlockingService()
+        #endif
+
+        let calendarAdapter: CalendarAdapter
+        #if canImport(EventKit) && os(iOS)
+        calendarAdapter = flags.calendarEvents ? EventKitCalendarAdapter() : NoCalendarAdapter()
+        #else
+        calendarAdapter = NoCalendarAdapter()
+        #endif
+
+        let speech: SpeechTaskCapturing?
+        #if canImport(Speech) && os(iOS)
+        speech = SpeechRecognizerCapture()
+        #else
+        speech = nil
+        #endif
+
+        let widgetSnapshots: WidgetSnapshotWriting
+        #if canImport(WidgetKit) && os(iOS)
+        widgetSnapshots = AppGroupWidgetSnapshotWriter()
+        #else
+        widgetSnapshots = RecordingWidgetSnapshotWriter()
+        #endif
+
+        let notifications = UserNotificationScheduler()
+        let bundledBooks = Bundle.main.paths(forResourcesOfType: "epub", inDirectory: nil).map { URL(fileURLWithPath: $0) }
+        let bookLibrary = FileBookLibrary(directory: FileBookLibrary.defaultDirectory(), bundledURLs: bundledBooks, clock: clock)
+
         return DependencyContainer(
             flags: flags,
-            clock: SystemClock(),
+            clock: clock,
             calendar: .autoupdatingCurrent,
             recordStore: recordStore,
-            keyValueStore: UserDefaultsKeyValueStore(),
-            notifications: UserNotificationScheduler(),
+            keyValueStore: keyValueStore,
+            notifications: notifications,
             audio: AVAmbientAudioPlayer(),
-            // V1 is simulation-only by design. Swap in FamilyControlsBlockingService
-            // when the entitlement is approved and flags.appBlocking is on.
-            blocking: MockFocusBlockingService(),
+            blocking: blocking,
             liveActivity: liveActivity,
+            bookLibrary: bookLibrary,
+            calendarAdapter: calendarAdapter,
+            morningStart: notifications,
+            widgetSnapshots: widgetSnapshots,
+            speech: speech,
             storageNotice: storageNotice
         )
     }

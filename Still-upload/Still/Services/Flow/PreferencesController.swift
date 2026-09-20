@@ -70,6 +70,38 @@ final class PreferencesController {
         presets.save(preset)
     }
 
+    var canCreatePreset: Bool {
+        presets.allPresets().count < PresetCatalog.maximumPresets
+    }
+
+    /// Copies `base` into a new, editable preset with its own link.
+    @discardableResult
+    func createPreset(named raw: String, basedOn base: FocusPreset) -> FocusPreset? {
+        guard canCreatePreset, let name = FocusPreset.normalizedName(raw) else { return nil }
+        var preset = base
+        preset.id = FocusPreset.makeCustomID()
+        preset.name = name
+        preset.isBuiltIn = false
+        presets.save(preset)
+        events.track(.presetCreated, EventProperties().timerMode(preset.timer.mode))
+        return preset
+    }
+
+    func renamePreset(_ id: FocusPresetID, to raw: String) {
+        guard var preset = presets.preset(id: id), let name = FocusPreset.normalizedName(raw) else { return }
+        preset.name = name
+        presets.save(preset)
+    }
+
+    /// Deletes a custom preset. If it was the default, Default takes over.
+    func deletePreset(_ id: FocusPresetID) {
+        guard !PresetCatalog.builtInIDs.contains(id) else { return }
+        presets.delete(id: id)
+        if current.defaultPresetID == id {
+            update { $0.defaultPresetID = .defaultPreset }
+        }
+    }
+
     func setDefaultPreset(_ id: FocusPresetID) {
         guard presets.preset(id: id) != nil else { return }
         update { $0.defaultPresetID = id }

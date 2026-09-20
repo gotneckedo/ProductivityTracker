@@ -20,6 +20,10 @@ final class DependencyContainer {
     let puzzleProgress: PuzzleProgressRepository
     let preferencesStore: PreferencesStore
     let presets: PresetRepository
+    let habits: HabitRepository
+    let artifacts: ArtifactRepository
+    let readingProgress: ReadingProgressRepository
+    let blockingSelections: BlockingSelectionStore
 
     // Services
     let timer: FocusTimerService
@@ -31,12 +35,21 @@ final class DependencyContainer {
     let nfcRouter: NFCFocusPresetRouting
     let readingLibrary: ReadingContentProviding
     let puzzles: PuzzleProviding
+    let bookLibrary: BookLibrary
+    let calendarAdapter: CalendarAdapter
+    let morningStart: MorningStartScheduling
+    let widgetSnapshots: WidgetSnapshotWriting
+    /// Nil where speech capture isn't available (tests, Linux, flag off).
+    let speech: SpeechTaskCapturing?
 
     // Controllers
     let focus: FocusFlowController
     let breaks: BreakFlowController
     let taskController: TaskController
     let preferences: PreferencesController
+    let journalController: JournalController
+    let habitController: HabitController
+    let books: BookReadingController
 
     /// A non-nil value means storage fell back to memory; the UI says so calmly.
     let storageNotice: String?
@@ -52,6 +65,11 @@ final class DependencyContainer {
         blocking: FocusBlockingService,
         liveActivity: LiveActivityUpdating,
         events: EventTracking? = nil,
+        bookLibrary: BookLibrary = EmptyBookLibrary(),
+        calendarAdapter: CalendarAdapter = NoCalendarAdapter(),
+        morningStart: MorningStartScheduling = RecordingMorningStartScheduler(),
+        widgetSnapshots: WidgetSnapshotWriting = RecordingWidgetSnapshotWriter(),
+        speech: SpeechTaskCapturing? = nil,
         storageNotice: String? = nil
     ) {
         self.flags = flags
@@ -69,6 +87,10 @@ final class DependencyContainer {
         puzzleProgress = StoredPuzzleProgressRepository(store: recordStore)
         preferencesStore = CodablePreferencesStore(store: keyValueStore)
         presets = StoredPresetRepository(store: keyValueStore)
+        habits = StoredHabitRepository(store: recordStore)
+        artifacts = StoredArtifactRepository(store: recordStore)
+        readingProgress = StoredReadingProgressRepository(store: recordStore)
+        blockingSelections = KeyValueBlockingSelectionStore(store: keyValueStore)
 
         timer = FocusTimerEngine()
         self.notifications = notifications
@@ -80,6 +102,11 @@ final class DependencyContainer {
         nfcRouter = DeepLinkPresetRouter(knownPresetIDs: Set(presets.allPresets().map(\.id)))
         readingLibrary = BundledReadingLibrary()
         puzzles = BundledPuzzleLibrary()
+        self.bookLibrary = bookLibrary
+        self.calendarAdapter = calendarAdapter
+        self.morningStart = morningStart
+        self.widgetSnapshots = widgetSnapshots
+        self.speech = flags.voiceCapture ? speech : nil
 
         focus = FocusFlowController(
             clock: clock,
@@ -104,15 +131,20 @@ final class DependencyContainer {
             notifications: notifications,
             audio: audio
         )
+        journalController = JournalController(clock: clock, calendar: calendar, journal: journal, events: tracker)
+        habitController = HabitController(clock: clock, calendar: calendar, habits: habits, events: tracker)
+        books = BookReadingController(library: bookLibrary, progress: readingProgress, clock: clock)
     }
 
     /// Fully in-memory container for tests and SwiftUI previews.
     static func inMemory(
         clock: Clock = ManualClock(),
         calendar: Calendar = .current,
-        flags: FeatureFlags = .v1,
+        flags: FeatureFlags = .current,
         notifications: LocalNotificationScheduling = RecordingNotificationScheduler(),
-        audio: AmbientAudioPlaying = SilentAmbientAudioPlayer()
+        audio: AmbientAudioPlaying = SilentAmbientAudioPlayer(),
+        calendarAdapter: CalendarAdapter = NoCalendarAdapter(),
+        bookLibrary: BookLibrary = EmptyBookLibrary()
     ) -> DependencyContainer {
         DependencyContainer(
             flags: flags,
@@ -123,7 +155,9 @@ final class DependencyContainer {
             notifications: notifications,
             audio: audio,
             blocking: MockFocusBlockingService(),
-            liveActivity: NoopLiveActivityUpdater()
+            liveActivity: NoopLiveActivityUpdater(),
+            bookLibrary: bookLibrary,
+            calendarAdapter: calendarAdapter
         )
     }
 }

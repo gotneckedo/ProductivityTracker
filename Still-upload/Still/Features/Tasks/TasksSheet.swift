@@ -1,11 +1,14 @@
 import SwiftUI
 
 /// Today's tasks. Type a title, press return, and it's selected for the next
-/// session. Marking done is separate from finishing a session.
+/// session. Marking done is separate from finishing a session. Details (a due
+/// date, a time, a class) are optional and one tap away.
 struct TasksSheet: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
     @State private var newTitle = ""
+    @State private var isCapturingVoice = false
+    @State private var detailTaskID: UUID?
     @FocusState private var isFieldFocused: Bool
 
     var body: some View {
@@ -24,6 +27,16 @@ struct TasksSheet: View {
                         if !newTitle.trimmingCharacters(in: .whitespaces).isEmpty {
                             Button("Add", action: addTask)
                                 .font(StillTypography.callout.weight(.semibold))
+                        } else if appState.canCaptureByVoice {
+                            Button {
+                                isCapturingVoice = true
+                            } label: {
+                                Image(systemName: "mic")
+                                    .frame(minWidth: StillTheme.minimumTapSize, minHeight: StillTheme.minimumTapSize)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(StillTheme.textSecondary)
+                            .accessibilityLabel("Say a task")
                         }
                     }
                     .listRowBackground(StillTheme.surface)
@@ -40,9 +53,11 @@ struct TasksSheet: View {
                         ForEach(appState.todaysTasks) { task in
                             TaskListRow(
                                 task: task,
+                                detailLine: detailLine(for: task),
                                 isSelected: appState.preferences.selectedTaskID == task.id && !task.isCompleted,
                                 onSelect: { toggleSelection(task) },
-                                onToggleDone: { appState.setTaskCompleted(task.id, !task.isCompleted) }
+                                onToggleDone: { appState.setTaskCompleted(task.id, !task.isCompleted) },
+                                onDetails: { detailTaskID = task.id }
                             )
                             .listRowBackground(StillTheme.surface)
                             .swipeActions(edge: .trailing) {
@@ -63,7 +78,17 @@ struct TasksSheet: View {
             .background(StillTheme.background)
             .navigationTitle("Tasks")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(item: $detailTaskID) { taskID in
+                TaskDetailView(taskID: taskID)
+            }
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    NavigationLink {
+                        DayTimelineView(showsDoneButton: false)
+                    } label: {
+                        Label("Day", systemImage: "calendar.day.timeline.left")
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
@@ -71,6 +96,22 @@ struct TasksSheet: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+        .sheet(isPresented: $isCapturingVoice) {
+            VoiceCaptureView()
+                .environment(appState)
+        }
+    }
+
+    /// "Due Friday · Biology · 2 sessions"
+    private func detailLine(for task: TaskItem) -> String? {
+        var parts: [String] = []
+        if let due = appState.dueLine(for: task) { parts.append(due) }
+        if let at = task.scheduledAt, !task.isCompleted { parts.append("At \(appState.timeText(at))") }
+        if let course = task.homework?.course { parts.append(course) }
+        if task.completedSessionCount > 0 {
+            parts.append("\(task.completedSessionCount) \(task.completedSessionCount == 1 ? "session" : "sessions")")
+        }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     private func addTask() {
@@ -88,9 +129,11 @@ struct TasksSheet: View {
 
 private struct TaskListRow: View {
     let task: TaskItem
+    let detailLine: String?
     let isSelected: Bool
     let onSelect: () -> Void
     let onToggleDone: () -> Void
+    let onDetails: () -> Void
 
     var body: some View {
         HStack(spacing: StillTheme.Spacing.s) {
@@ -111,8 +154,8 @@ private struct TaskListRow: View {
                             .font(StillTypography.body)
                             .strikethrough(task.isCompleted, color: StillTheme.textTertiary)
                             .foregroundStyle(task.isCompleted ? StillTheme.textTertiary : StillTheme.textPrimary)
-                        if task.completedSessionCount > 0 {
-                            Text("\(task.completedSessionCount) \(task.completedSessionCount == 1 ? "session" : "sessions")")
+                        if let detailLine {
+                            Text(detailLine)
                                 .font(StillTypography.caption)
                                 .foregroundStyle(StillTheme.textTertiary)
                         }
@@ -131,6 +174,14 @@ private struct TaskListRow: View {
             .accessibilityLabel(task.title)
             .accessibilityValue(isSelected ? "Chosen for the next session" : "")
             .accessibilityHint(task.isCompleted ? "" : "Chooses this task for the next session.")
+
+            Button(action: onDetails) {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(StillTheme.textTertiary)
+                    .frame(minWidth: StillTheme.minimumTapSize, minHeight: StillTheme.minimumTapSize)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Details for \(task.title)")
         }
     }
 }

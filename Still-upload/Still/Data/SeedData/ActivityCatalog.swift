@@ -1,6 +1,6 @@
 import Foundation
 
-/// The finite V1 shelf. Order within a category is `sortOrder`.
+/// The finite shelf. Order within a category is `sortOrder`.
 enum ActivityCatalog {
     static let all: [BreakActivity] = [
         BreakActivity(id: .sudoku, name: "Sudoku", category: .puzzle,
@@ -23,6 +23,10 @@ enum ActivityCatalog {
                       summary: "One small prompt, a few lines back.",
                       estimatedDuration: 5 * 60, implementationState: .available,
                       symbolName: "pencil.line", sortOrder: 1),
+        BreakActivity(id: .pixelDoodle, name: "Pixel Doodle", category: .quiet,
+                      summary: "Draw something small on a 16×16 grid.",
+                      estimatedDuration: 5 * 60, implementationState: .available,
+                      symbolName: "paintbrush.pointed", sortOrder: 2),
         BreakActivity(id: .brainDump, name: "Brain Dump", category: .reset,
                       summary: "Empty your head onto the page.",
                       estimatedDuration: 3 * 60, implementationState: .available,

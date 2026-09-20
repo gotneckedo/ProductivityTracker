@@ -1,38 +1,18 @@
 import Foundation
 
-// Boundaries for later releases. These are protocols and value types only:
-// nothing here is wired into the V1 UI, and nothing pretends to work.
+// Boundaries for capabilities that depend on hardware, permissions, or Apple
+// approval. Each has a real or honest stand-in implementation.
 // See FUTURE_CAPABILITIES.md for the plan behind each one.
 
 // MARK: V2 — AlarmKit wake-up hand-off
 
-/// A wake-up that opens into today's tasks and a queued first session.
-/// Verify the current AlarmKit API and entitlement before implementing.
-struct WakeUpPlan: Codable, Hashable {
-    var id: UUID
-    var hour: Int
-    var minute: Int
-    var weekdays: Set<Int>
-    var firstSessionPresetID: FocusPresetID
-}
-
+/// A true alarm (sound through silent mode) that opens into a Morning Start.
+/// Today, `MorningStartPlan` is delivered as a gentle local notification;
+/// an AlarmKit implementation can adopt this protocol later.
 protocol WakeUpScheduling: AnyObject {
     var isAvailable: Bool { get }
-    func schedule(_ plan: WakeUpPlan) async throws
-    func cancel(planID: UUID) async
-}
-
-// MARK: V2 — Habits (kept separate from TaskItem on purpose)
-
-struct HabitDefinition: Codable, Hashable, Identifiable {
-    var id: UUID
-    var title: String
-    var createdAt: Date
-}
-
-protocol HabitRepository: AnyObject {
-    func allHabits() -> [HabitDefinition]
-    func save(_ habit: HabitDefinition) throws
+    func schedule(_ plan: MorningStartPlan) async throws
+    func cancel() async
 }
 
 // MARK: V3 — Voice task capture
@@ -41,12 +21,6 @@ struct CapturedTaskDraft: Hashable {
     var title: String
     var dueAt: Date?
     var scheduledAt: Date?
-}
-
-/// Speech → parsed task. Requires Speech and microphone permissions later.
-protocol TaskCaptureService: AnyObject {
-    var isAvailable: Bool { get }
-    func captureTask() async throws -> CapturedTaskDraft
 }
 
 // MARK: V3 — Calendar sync
@@ -59,22 +33,35 @@ struct ExternalCalendarEvent: Codable, Hashable, Identifiable {
     var sourceIdentifier: String
 }
 
-/// EventKit or Google Calendar adapter. OAuth and privacy review come first.
+enum CalendarAccess: Equatable {
+    case notDetermined
+    case granted
+    case denied
+    case unavailable
+}
+
+/// Read-only calendar events for the day timeline. V3 ships Apple Calendar
+/// (EventKit, on device). Google Calendar needs OAuth and a privacy review.
 protocol CalendarAdapter: AnyObject {
-    var isConnected: Bool { get }
-    func events(from start: Date, to end: Date) async throws -> [ExternalCalendarEvent]
+    var access: CalendarAccess { get }
+    func requestAccess() async -> CalendarAccess
+    func events(from start: Date, to end: Date) -> [ExternalCalendarEvent]
 }
 
-// MARK: V3 — Widgets
+/// No calendar: tests, previews, and devices without EventKit.
+final class NoCalendarAdapter: CalendarAdapter {
+    var access: CalendarAccess
+    var stubbedEvents: [ExternalCalendarEvent]
 
-/// A compact summary a WidgetKit extension can render without the app running.
-struct FocusSummarySnapshot: Codable, Hashable {
-    var generatedAt: Date
-    var todayFocus: TimeInterval
-    var currentStreak: Int
-    var defaultPresetID: FocusPresetID
-}
+    init(access: CalendarAccess = .unavailable, events: [ExternalCalendarEvent] = []) {
+        self.access = access
+        self.stubbedEvents = events
+    }
 
-protocol FocusSummaryProviding: AnyObject {
-    func currentSummary() -> FocusSummarySnapshot
+    func requestAccess() async -> CalendarAccess { access }
+
+    func events(from start: Date, to end: Date) -> [ExternalCalendarEvent] {
+        guard access == .granted else { return [] }
+        return stubbedEvents.filter { $0.startsAt < end && $0.endsAt > start }
+    }
 }

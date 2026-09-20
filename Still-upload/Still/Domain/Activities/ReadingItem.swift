@@ -7,12 +7,15 @@ enum ContentLicense: String, Codable, Hashable {
     case publicDomain
     /// Licensed from a third party (none bundled in V1).
     case licensed
+    /// A book the reader imported from their own files. Never redistributed.
+    case userProvided
 
     var displayName: String {
         switch self {
         case .originalForStill: return "Original writing for Still"
         case .publicDomain: return "Public domain"
         case .licensed: return "Licensed"
+        case .userProvided: return "From your files"
         }
     }
 }
@@ -20,7 +23,7 @@ enum ContentLicense: String, Codable, Hashable {
 enum ReadingFormat: String, Codable, Hashable {
     /// Plain paragraphs bundled in the app.
     case shortText
-    /// V1.1: EPUB file handled by a reader module. Not parsed in V1.
+    /// One sitting from an EPUB book (see `BookLibrary`).
     case epub
 }
 

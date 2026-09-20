@@ -43,19 +43,19 @@ enum FocusCardGuide {
     static let hardwareNote = "Tag reading depends on your iPhone model and iOS settings, so test your card on your own device. The simulator below runs the same route without a tag."
 }
 
-// MARK: - CoreNFCTagReader
+// MARK: - CoreNFC reading and writing
 
-// V2 scaffold for in-app tag scanning and tag writing.
+// In-app tag scanning and tag writing. Real tags already work without this:
+// a tag written (by any NFC app) with a still:// link opens Still through the
+// URL scheme, which `DeepLinkParser` handles.
 //
 // Compiled only when the `STILL_CORENFC` Swift flag is set (Build Settings →
 // Other Swift Flags → -DSTILL_CORENFC), because it also needs:
 //   • the "Near Field Communication Tag Reading" capability
-//     (com.apple.developer.nfc.readersession.formats = [NDEF])
+//     (com.apple.developer.nfc.readersession.formats = [NDEF]), which needs a
+//     paid developer account
 //   • NFCReaderUsageDescription in Info.plist
 //   • a physical iPhone (the simulator cannot scan)
-//
-// V1 does not need this file: tags written with a still:// URL open the app
-// through the URL scheme, which `DeepLinkParser` already handles.
 #if canImport(CoreNFC) && os(iOS) && STILL_CORENFC
 import CoreNFC
 import Foundation
@@ -95,9 +95,108 @@ final class CoreNFCTagReader: NSObject, NFCNDEFReaderSessionDelegate {
             self?.completion = nil
         }
     }
+}
 
-    // TODO(V2-writing): implement tag writing with `readerSession(_:didDetect:)`,
-    // `connect(to:)`, `queryNDEFStatus`, and `writeNDEF` using
-    // `NFCNDEFPayload.wellKnownTypeURIPayload(url: preset.startURL)`.
+enum NFCWriteResult: Equatable {
+    case written
+    case readOnly
+    case tooSmall
+    case notSupported
+    case failed
+    case cancelled
+}
+
+/// Writes a preset's link to a blank or rewritable NDEF tag (NTAG213 or
+/// similar), so tapping it later starts that preset.
+final class CoreNFCTagWriter: NSObject, NFCNDEFReaderSessionDelegate {
+    private var session: NFCNDEFReaderSession?
+    private var url: URL?
+    private var completion: ((NFCWriteResult) -> Void)?
+
+    static var isAvailable: Bool { NFCNDEFReaderSession.readingAvailable }
+
+    func write(_ url: URL, completion: @escaping (NFCWriteResult) -> Void) {
+        guard Self.isAvailable else {
+            completion(.notSupported)
+            return
+        }
+        self.url = url
+        self.completion = completion
+        session = NFCNDEFReaderSession(delegate: self, queue: nil, invalidateAfterFirstRead: false)
+        session?.alertMessage = "Hold your iPhone near the tag to write your Focus Card."
+        session?.begin()
+    }
+
+    func readerSession(_ session: NFCNDEFReaderSession, didDetectNDEFs messages: [NFCNDEFMessage]) {
+        // Writing uses didDetect tags below.
+    }
+
+    func readerSession(_ session: NFCNDEFReaderSession, didDetect tags: [NFCNDEFTag]) {
+        guard tags.count == 1, let tag = tags.first else {
+            session.alertMessage = "More than one tag found. Hold just one tag near your iPhone."
+            session.restartPolling()
+            return
+        }
+        session.connect(to: tag) { [weak self] error in
+            guard let self else { return }
+            if error != nil {
+                self.finish(session, .failed, message: "Couldn't connect to the tag.")
+                return
+            }
+            tag.queryNDEFStatus { status, capacity, error in
+                guard error == nil else {
+                    self.finish(session, .failed, message: "Couldn't read the tag.")
+                    return
+                }
+                switch status {
+                case .notSupported:
+                    self.finish(session, .notSupported, message: "This tag can't store a link.")
+                case .readOnly:
+                    self.finish(session, .readOnly, message: "This tag is locked and can't be changed.")
+                case .readWrite:
+                    guard let url = self.url, let payload = NFCNDEFPayload.wellKnownTypeURIPayload(url: url) else {
+                        self.finish(session, .failed, message: "Couldn't prepare the link.")
+                        return
+                    }
+                    let message = NFCNDEFMessage(records: [payload])
+                    guard message.length <= capacity else {
+                        self.finish(session, .tooSmall, message: "This tag is too small for the link.")
+                        return
+                    }
+                    tag.writeNDEF(message) { error in
+                        if error != nil {
+                            self.finish(session, .failed, message: "Writing didn't finish. Try again.")
+                        } else {
+                            session.alertMessage = "Your Focus Card is ready."
+                            session.invalidate()
+                            self.complete(.written)
+                        }
+                    }
+                @unknown default:
+                    self.finish(session, .notSupported, message: "This tag isn't supported.")
+                }
+            }
+        }
+    }
+
+    func readerSession(_ session: NFCNDEFReaderSession, didInvalidateWithError error: Error) {
+        if let nfcError = error as? NFCReaderError, nfcError.code == .readerSessionInvalidationErrorUserCanceled {
+            complete(.cancelled)
+        } else {
+            complete(.failed)
+        }
+    }
+
+    private func finish(_ session: NFCNDEFReaderSession, _ result: NFCWriteResult, message: String) {
+        session.invalidate(errorMessage: message)
+        complete(result)
+    }
+
+    private func complete(_ result: NFCWriteResult) {
+        DispatchQueue.main.async { [weak self] in
+            self?.completion?(result)
+            self?.completion = nil
+        }
+    }
 }
 #endif

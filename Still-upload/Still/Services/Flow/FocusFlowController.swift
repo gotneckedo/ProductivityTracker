@@ -148,7 +148,7 @@ final class FocusFlowController {
 
         audio.apply(preset.ambientMix)
         audio.play()
-        blocking.sessionDidStart(sessionID: session.id, intent: preset.blockerIntent)
+        blocking.sessionDidStart(sessionID: session.id, presetID: preset.id, intent: preset.blockerIntent)
         scheduleNotifications()
         updateLiveActivity()
 

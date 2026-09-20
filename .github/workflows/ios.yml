@@ -1,0 +1,91 @@
+# Builds Still on a GitHub-hosted Mac, runs every test in an iPhone simulator,
+# and uploads screenshots of the main screens as a downloadable artifact.
+#
+# Runs on every push to main, and on demand from the Actions tab.
+name: iOS build, tests & screenshots
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      BUNDLE_ID: com.cocomedia.still
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Use the latest stable Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Versions
+        run: |
+          xcodebuild -version
+          swift --version
+
+      - name: Pick an iPhone simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j \
+            | jq -r '[.devices | to_entries[] | select(.key | test("iOS")) | .value[] | select(.name | test("^iPhone"))] | last | .udid')
+          if [ -z "$UDID" ] || [ "$UDID" = "null" ]; then
+            echo "No iPhone simulator found"; xcrun simctl list devices available; exit 1
+          fi
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+          xcrun simctl list devices available | grep "$UDID"
+
+      - name: Logic tests (Swift package)
+        run: swift test
+
+      - name: Build app and run unit tests in the simulator
+        run: |
+          xcodebuild test \
+            -project Still.xcodeproj \
+            -scheme Still \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath build \
+            -resultBundlePath TestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            > xcodebuild.log 2>&1 && STATUS=0 || STATUS=$?
+          grep -E "error:|Test Suite .*(passed|failed)|Executed [0-9]+ tests|\*\* (BUILD|TEST)" xcodebuild.log || true
+          if [ "$STATUS" -ne 0 ]; then
+            echo "::error::xcodebuild failed. Last lines of the log:"
+            tail -80 xcodebuild.log
+          fi
+          exit $STATUS
+
+      - name: Take screenshots
+        run: |
+          UDID="${{ steps.sim.outputs.udid }}"
+          APP=$(find build/Build/Products -path "*iphonesimulator*" -name "Still.app" -maxdepth 3 | head -1)
+          echo "App: $APP"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 || true
+          xcrun simctl install "$UDID" "$APP"
+          mkdir -p screenshots
+
+          shoot() {
+            xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" > /dev/null
+            sleep 6
+            xcrun simctl io "$UDID" screenshot "screenshots/$2.png"
+            echo "Captured $2"
+          }
+
+          xcrun simctl ui "$UDID" appearance light
+          n=1
+          for screen in onboarding home calm active complete break sudoku picross breathing read me scenes card; do
+            shoot "$screen" "$(printf '%02d' $n)-$screen"
+            n=$((n + 1))
+          done

@@ -49,8 +49,12 @@ jobs:
       - name: Pick an iPhone simulator
         id: sim
         run: |
-          UDID=$(xcrun simctl list devices available -j \
-            | jq -r '[.devices | to_entries[] | select(.key | test("iOS")) | .value[] | select(.name | test("^iPhone"))] | last | .udid')
+          # Prefer a current full-size iPhone (e.g. "iPhone 16 Pro"); fall back to any non-SE iPhone.
+          DEVICES=$(xcrun simctl list devices available -j)
+          UDID=$(echo "$DEVICES" | jq -r '[.devices | to_entries[] | select(.key | test("iOS")) | .value[] | select(.name | test("^iPhone [0-9]+ Pro$"))] | last | .udid')
+          if [ -z "$UDID" ] || [ "$UDID" = "null" ]; then
+            UDID=$(echo "$DEVICES" | jq -r '[.devices | to_entries[] | select(.key | test("iOS")) | .value[] | select(.name | test("^iPhone")) | select(.name | test("SE") | not)] | last | .udid')
+          fi
           if [ -z "$UDID" ] || [ "$UDID" = "null" ]; then
             echo "No iPhone simulator found"; xcrun simctl list devices available; exit 1
           fi
@@ -105,7 +109,7 @@ jobs:
 
           xcrun simctl ui "$UDID" appearance light
           n=1
-          for screen in onboarding home calm active complete break sudoku picross breathing read me scenes card; do
+          for screen in onboarding home calm active complete break sudoku wordsearch picross breathing read me scenes card; do
             shoot "$screen" "$(printf '%02d' $n)-$screen"
             n=$((n + 1))
           done

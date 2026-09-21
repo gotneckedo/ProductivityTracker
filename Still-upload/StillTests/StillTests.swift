@@ -2308,8 +2308,17 @@ final class EPUBReaderTests: XCTestCase {
         #else
         let resourceBundle = Bundle(for: EPUBReaderTests.self)
         #endif
-        let urls: [URL] = try XCTUnwrap(resourceBundle.urls(forResourcesWithExtension: "epub", subdirectory: "PublicDomainBooks"))
-            .map { $0 as URL }
+        // SwiftPM places fixtures in the test bundle, while an Xcode unit-test
+        // run may place the same folder in the host app bundle. Consult both
+        // locations by explicit expected stem so target resource layout never
+        // changes the provenance assertion.
+        let bundles = [resourceBundle, Bundle(for: AppState.self), Bundle.main]
+        let urls = expected.keys.compactMap { stem in
+            bundles.lazy.compactMap { bundle in
+                bundle.url(forResource: stem, withExtension: "epub", subdirectory: "PublicDomainBooks")
+                    ?? bundle.url(forResource: stem, withExtension: "epub")
+            }.first
+        }
         XCTAssertEqual(urls.count, expected.count)
         for url in urls {
             let stem = url.deletingPathExtension().lastPathComponent

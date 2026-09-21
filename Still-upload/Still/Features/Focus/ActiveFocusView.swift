@@ -23,11 +23,11 @@ struct ActiveFocusView: View {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
         }
-        .confirmationDialog("End this session early?", isPresented: $isConfirmingEnd, titleVisibility: .visible) {
-            Button("End early", role: .destructive) { appState.endSessionEarly() }
-            Button("Keep going", role: .cancel) {}
+        .confirmationDialog(Copy.Focus.endEarlyTitle, isPresented: $isConfirmingEnd, titleVisibility: .visible) {
+            Button(Copy.Focus.endEarlyAction, role: .destructive) { appState.endSessionEarly() }
+            Button(Copy.Focus.keepGoing, role: .cancel) {}
         } message: {
-            Text("It won't count toward your stats or room progress.")
+            Text(Copy.Focus.endEarlyMessage)
         }
         .confirmationDialog("End blocking for this session?", isPresented: $isConfirmingUnblock, titleVisibility: .visible) {
             Button("End blocking now", role: .destructive) { appState.endBlockingNow() }
@@ -54,11 +54,13 @@ struct ActiveFocusView: View {
 
                     RoomHeroView(
                         sceneName: scene.name,
+                        sceneID: scene.id,
                         phase: .focus,
                         dimmed: true,
                         plantStage: appState.plantStage,
                         bookCount: 2 + appState.books.count,
-                        doodle: appState.doodles.max { $0.updatedAt < $1.updatedAt }?.doodle
+                        doodle: appState.doodles.max { $0.updatedAt < $1.updatedAt }?.doodle,
+                        placedObjects: appState.placedRoomObjects(in: scene.id)
                     )
                     .aspectRatio(160.0 / 132.0, contentMode: .fit)
 
@@ -69,7 +71,7 @@ struct ActiveFocusView: View {
                                 .tracking(1.4)
                                 .textCase(.uppercase)
                                 .foregroundStyle(task?.subject.map { Color(hex: $0.color.hex) } ?? StillDayPhase.focus.secondaryInk)
-                            Text(task?.title ?? "One clear thing")
+                            Text(task?.title ?? Copy.Focus.untitledTask)
                                 .font(StillTypography.title)
                                 .foregroundStyle(StillDayPhase.focus.ink)
                                 .multilineTextAlignment(.center)
@@ -88,7 +90,7 @@ struct ActiveFocusView: View {
                                 Button("+5") { appState.addFiveMinutes() }
                                     .buttonStyle(QuietSecondaryButtonStyle(foreground: StillDayPhase.focus.ink, border: StillDayPhase.focus.glassBorder))
                                     .disabled(snapshot.mode != .countdown || snapshot.phaseKind.isBreak)
-                                    .accessibilityHint("Adds five minutes to this focus session.")
+                                    .accessibilityHint(Copy.Focus.addFiveHint)
                                 controlButton(snapshot)
                             }
                         }
@@ -208,7 +210,7 @@ private struct FocusPlanCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
-            Text("Focus plan")
+            Text(Copy.Focus.plan)
                 .font(StillTypography.caption)
                 .foregroundStyle(StillDayPhase.focus.secondaryInk)
                 .textCase(.uppercase)

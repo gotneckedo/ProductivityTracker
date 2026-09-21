@@ -206,7 +206,7 @@ extension AppState {
             let access = await self.container.calendarAdapter.requestAccess()
             self.container.preferences.update { $0.showsCalendarEvents = access == .granted }
             if access == .denied {
-                self.notice = StillNotice(text: "Calendar access is off. You can turn it on in Settings.")
+                self.notice = StillNotice(text: Copy.Notices.calendarDenied)
             }
             self.reload()
         }
@@ -286,7 +286,7 @@ extension AppState {
                 container.events.track(.doodleSaved, EventProperties())
             }
         } catch {
-            notice = StillNotice(text: "Couldn't save the doodle.")
+            notice = StillNotice(text: Copy.Notices.doodleSaveFailed)
         }
         reload()
         return artifact.id
@@ -328,11 +328,11 @@ extension AppState {
         do {
             let summary = try container.books.importBook(from: url)
             container.events.track(.bookImported, EventProperties())
-            notice = StillNotice(text: "\(summary.title) is on your shelf.")
+            notice = StillNotice(text: Copy.Notices.importedBook(summary.title))
         } catch BookLibraryError.tooLarge {
-            notice = StillNotice(text: "That book is too large to import.")
+            notice = StillNotice(text: Copy.Notices.bookTooLarge)
         } catch {
-            notice = StillNotice(text: "Still couldn't read that file. Try a DRM-free EPUB.")
+            notice = StillNotice(text: Copy.Notices.bookUnreadable)
         }
         reload()
     }
@@ -361,7 +361,7 @@ extension AppState {
                     self.container.morningStart.scheduleMorningStart(validated)
                     self.container.events.track(.morningStartScheduled, EventProperties().count(validated.weekdays.count))
                 } else {
-                    self.notice = StillNotice(text: "Notifications are off, so Morning Start can't appear. You can turn them on in Settings.")
+                    self.notice = StillNotice(text: Copy.Notices.notificationDenied)
                 }
                 self.reload()
             }
@@ -454,9 +454,7 @@ extension AppState {
             container.blocking.endShieldingNow()
         }
         container.events.track(.blockingOverride, EventProperties())
-        notice = StillNotice(text: activeSession == nil
-            ? "Blocking is off. You can turn the schedule back on whenever you like."
-            : "Blocking is off for this session. The timer is still running.")
+        notice = StillNotice(text: Copy.Notices.blockingEnded)
         reload()
     }
 }

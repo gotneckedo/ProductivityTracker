@@ -31,7 +31,7 @@ struct BreakShelfView: View {
                         }
                     }
                     recentSection
-                    Text("That's the whole shelf. Every activity has an ending.")
+                    Text(Copy.BreakShelf.wholeShelf)
                         .font(StillTypography.footnote)
                         .foregroundStyle(StillTheme.textTertiary)
                         .frame(maxWidth: .infinity, alignment: .center)
@@ -46,16 +46,16 @@ struct BreakShelfView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
-            Text("Break")
+            Text(Copy.BreakShelf.eyebrow)
                 .font(StillTypography.caption)
                 .textCase(.uppercase)
                 .tracking(1.4)
                 .foregroundStyle(StillTheme.textTertiary)
-            Text("Pick a small thing.")
+            Text(Copy.BreakShelf.title)
                 .font(StillTypography.display)
                 .foregroundStyle(StillTheme.textPrimary)
                 .accessibilityAddTraits(.isHeader)
-            Text("A quiet activity with a clear ending is here whenever you need a reset.")
+            Text(Copy.BreakShelf.detail)
                 .font(StillTypography.callout)
                 .foregroundStyle(StillTheme.textSecondary)
         }
@@ -80,7 +80,7 @@ struct BreakShelfView: View {
         let recentIDs = Array(appState.usages.sorted { $0.startedAt > $1.startedAt }.prefix(3).map(\.activityID))
         if !recentIDs.isEmpty {
             VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-                Text("Recently opened")
+                Text(Copy.BreakShelf.recent)
                     .font(StillTypography.title3)
                     .foregroundStyle(StillTheme.textPrimary)
                 HStack(spacing: StillTheme.Spacing.xs) {

@@ -73,6 +73,7 @@ enum AppRoute: Hashable {
     case me
     case nfcSetup
     case sceneCollection
+    case roomCollection
     case journal
     case presets
     case doodleGallery
@@ -119,6 +120,8 @@ struct RouteResolver {
             return RouteDestination(tab: .breakShelf, stack: [route], sheet: nil, completionSessionID: nil)
         case .tasks:
             return RouteDestination(tab: currentTab, stack: [], sheet: .tasks, completionSessionID: nil)
+        case .roomCollection:
+            return RouteDestination(tab: .focus, stack: [route], sheet: nil, completionSessionID: nil)
         case .me:
             return RouteDestination(tab: .me, stack: [], sheet: nil, completionSessionID: nil)
         case .nfcSetup, .sceneCollection, .presets, .doodleGallery, .morningStart, .blockingSetup:

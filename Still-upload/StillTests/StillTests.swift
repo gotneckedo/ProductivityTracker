@@ -500,7 +500,7 @@ final class AppFlowTests: XCTestCase {
 
         state.simulateFocusCard(presetID: .defaultPreset)
         XCTAssertEqual(state.activeSession?.presetID, .study, "a running session is left alone")
-        XCTAssertEqual(state.notice?.text, "A session is already running. It's still going.")
+        XCTAssertEqual(state.notice?.text, "A focus session is already running.")
 
         state.endSessionEarly()
         state.simulateFocusCard(presetID: .defaultPreset)
@@ -1348,7 +1348,7 @@ final class LiveActivityAndNotificationTests: XCTestCase {
         XCTAssertEqual(copy.first?.title, "Focus block done")
         XCTAssertEqual(copy.last?.title, "Break's over")
         let session = FocusTimerEngine().upcomingBoundaries(makeSession(.countdown(25)), from: referenceDate)
-        XCTAssertEqual(NotificationCopy.content(for: session[0]).title, "Session complete")
+        XCTAssertEqual(NotificationCopy.content(for: session[0]).title, "Study session complete")
         for (title, body) in copy {
             XCTAssertFalse(title.contains("!") || body.contains("!"))
         }
@@ -1848,6 +1848,155 @@ final class PixelDoodleTests: XCTestCase {
     }
 }
 
+final class RoomCollectionTests: XCTestCase {
+    private let evaluator = RoomUnlockEvaluator()
+
+    func testCatalogHasTwentyOriginalReplaceableObjectsAndEveryFixedSlot() {
+        XCTAssertEqual(RoomObjectCatalog.all.count, 20)
+        XCTAssertEqual(Set(RoomObjectCatalog.all.map(\.id)).count, 20)
+        XCTAssertEqual(Set(RoomObjectCatalog.all.map(\.sortOrder)), Set(0..<20))
+        XCTAssertEqual(Set(RoomObjectCatalog.all.map(\.slot)), Set(RoomSlot.allCases))
+        XCTAssertTrue(RoomObjectCatalog.all.allSatisfy { !$0.name.isEmpty && !$0.unlockRule.plainLanguage.isEmpty })
+        XCTAssertTrue(RoomObjectCatalog.all.allSatisfy { $0.spriteAssetName == nil }, "V1 objects are original code-drawn art with a sprite replacement seam.")
+        XCTAssertEqual(Set(RoomObjectCatalog.all.map(\.unlockRule).map(ruleKind)),
+                       ["sessions", "days", "reads", "doodles", "completedActivities", "triedActivities", "category", "allActivities", "minutes"])
+    }
+
+    func testEveryCatalogUnlockRuleAtItsBoundary() {
+        for object in RoomObjectCatalog.all {
+            let pair = histories(around: object.unlockRule)
+            XCTAssertFalse(evaluator.isSatisfied(object.unlockRule, by: pair.before), "Unlocked too early: \(object.name)")
+            XCTAssertTrue(evaluator.isSatisfied(object.unlockRule, by: pair.at), "Did not unlock: \(object.name)")
+        }
+    }
+
+    func testEarnedObjectsNeverRevokeWhenHistoryShrinks() {
+        let store = InMemoryRecordStore()
+        let repository = StoredRoomCollectionRepository(store: store)
+        let controller = RoomCollectionController(repository: repository, clock: ManualClock(referenceDate))
+        let allHistory = RoomActivityHistory(completedSessions: 100, focusDays: 30, completedReads: 20,
+                                             savedDoodles: 10, completedActivities: 30,
+                                             triedActivityIDs: Set(ActivityCatalog.available.map(\.id)), focusedMinutes: 2_000)
+        let earned = controller.evaluate(allHistory)
+        XCTAssertEqual(earned, Set(RoomObjectCatalog.all.map(\.id)))
+
+        XCTAssertTrue(controller.evaluate(.empty).isEmpty)
+        XCTAssertEqual(controller.state().unlockedObjectIDs, Set(RoomObjectCatalog.all.map(\.id)))
+    }
+
+    func testRoomCollectionMigrationDefaultsMissingKeysAndKeepsEarnedIDs() throws {
+        let legacy = Data(#"{"unlockedObjectIDs":["desk-lamp"]}"#.utf8)
+        let decoded = try RecordCoding.decoder().decode(RoomCollectionState.self, from: legacy)
+        XCTAssertEqual(decoded.unlockedObjectIDs, [.deskLamp])
+        XCTAssertTrue(decoded.acknowledgedObjectIDs.isEmpty)
+        XCTAssertTrue(decoded.placements.isEmpty)
+        XCTAssertEqual(decoded.schemaVersion, RoomCollectionState.currentSchemaVersion)
+
+        let store = InMemoryRecordStore()
+        try store.upsert(StoredRecord(id: "room-collection", kind: .roomCollection,
+                                      createdAt: referenceDate, updatedAt: referenceDate,
+                                      schemaVersion: 0, payload: legacy))
+        let controller = RoomCollectionController(repository: StoredRoomCollectionRepository(store: store),
+                                                  clock: ManualClock(referenceDate))
+        _ = controller.evaluate(.empty)
+        XCTAssertTrue(controller.state().unlockedObjectIDs.contains(.deskLamp))
+    }
+
+    func testPlaceReplaceMoveRemoveAndPersistInFixedSlots() throws {
+        let store = InMemoryRecordStore()
+        let repository = StoredRoomCollectionRepository(store: store)
+        let controller = RoomCollectionController(repository: repository, clock: ManualClock(referenceDate))
+        var state = RoomCollectionState(unlockedObjectIDs: Set(RoomObjectCatalog.all.map(\.id)))
+        try repository.save(state, at: referenceDate)
+
+        let perSlot = Dictionary(grouping: RoomObjectCatalog.all, by: \.slot)
+        for slot in RoomSlot.allCases {
+            let object = try XCTUnwrap(perSlot[slot]?.first)
+            try controller.place(object.id, in: .rainyBedroom, slot: slot)
+        }
+        XCTAssertEqual(controller.state().placements.count, RoomSlot.allCases.count)
+
+        let deskObjects = try XCTUnwrap(perSlot[.desk])
+        XCTAssertGreaterThanOrEqual(deskObjects.count, 2)
+        try controller.place(deskObjects[1].id, in: .rainyBedroom, slot: .desk)
+        state = controller.state()
+        XCTAssertEqual(state.placements.filter { $0.sceneID == .rainyBedroom && $0.slot == .desk }.map(\.objectID), [deskObjects[1].id])
+
+        try controller.place(deskObjects[1].id, in: .libraryLight, slot: .desk)
+        XCTAssertEqual(controller.state().placements.filter { $0.objectID == deskObjects[1].id }.count, 2,
+                       "The same earned object can decorate separate rooms.")
+        controller.remove(from: .rainyBedroom, slot: .desk)
+        XCTAssertNil(controller.state().placements.first { $0.sceneID == .rainyBedroom && $0.slot == .desk })
+        XCTAssertNotNil(controller.state().placements.first { $0.sceneID == .libraryLight && $0.slot == .desk })
+
+        XCTAssertEqual(StoredRoomCollectionRepository(store: store).load(), controller.state(), "Placements persist through a repository reopen.")
+    }
+
+    func testPlacementRejectsLockedUnknownAndWrongSlotObjects() throws {
+        let store = InMemoryRecordStore()
+        let repository = StoredRoomCollectionRepository(store: store)
+        let controller = RoomCollectionController(repository: repository, clock: ManualClock(referenceDate))
+        XCTAssertThrowsError(try controller.place(.deskLamp, in: .rainyBedroom, slot: .desk)) {
+            XCTAssertEqual($0 as? RoomPlacementFailure, .locked)
+        }
+        try repository.save(RoomCollectionState(unlockedObjectIDs: [.deskLamp]), at: referenceDate)
+        XCTAssertThrowsError(try controller.place(.deskLamp, in: .rainyBedroom, slot: .wall)) {
+            XCTAssertEqual($0 as? RoomPlacementFailure, .wrongSlot)
+        }
+        XCTAssertThrowsError(try controller.place("unknown", in: .rainyBedroom, slot: .desk)) {
+            XCTAssertEqual($0 as? RoomPlacementFailure, .unknownObject)
+        }
+    }
+
+    func testUnlockAcknowledgementDoesNotChangeOwnership() throws {
+        let store = InMemoryRecordStore()
+        let repository = StoredRoomCollectionRepository(store: store)
+        let controller = RoomCollectionController(repository: repository, clock: ManualClock(referenceDate))
+        try repository.save(RoomCollectionState(unlockedObjectIDs: [.deskLamp, .globe]), at: referenceDate)
+        controller.acknowledgeUnlocks()
+        let state = controller.state()
+        XCTAssertEqual(state.acknowledgedObjectIDs, [.deskLamp, .globe])
+        XCTAssertEqual(state.unlockedObjectIDs, [.deskLamp, .globe])
+    }
+
+    private func histories(around rule: RoomUnlockRule) -> (before: RoomActivityHistory, at: RoomActivityHistory) {
+        var before = RoomActivityHistory.empty
+        var at = RoomActivityHistory.empty
+        switch rule {
+        case .completedSessions(let value): before.completedSessions = value - 1; at.completedSessions = value
+        case .focusDays(let value): before.focusDays = value - 1; at.focusDays = value
+        case .completedReads(let value): before.completedReads = value - 1; at.completedReads = value
+        case .savedDoodles(let value): before.savedDoodles = value - 1; at.savedDoodles = value
+        case .completedActivities(let value): before.completedActivities = value - 1; at.completedActivities = value
+        case .triedActivities(let value):
+            let ids = ActivityCatalog.available.map(\.id)
+            before.triedActivityIDs = Set(ids.prefix(value - 1)); at.triedActivityIDs = Set(ids.prefix(value))
+        case .triedCategory(let category):
+            let ids = ActivityCatalog.available.filter { $0.category == category }.map(\.id)
+            before.triedActivityIDs = Set(ids.dropLast()); at.triedActivityIDs = Set(ids)
+        case .triedEveryActivity:
+            let ids = ActivityCatalog.available.map(\.id)
+            before.triedActivityIDs = Set(ids.dropLast()); at.triedActivityIDs = Set(ids)
+        case .focusedMinutes(let value): before.focusedMinutes = value - 1; at.focusedMinutes = value
+        }
+        return (before, at)
+    }
+
+    private func ruleKind(_ rule: RoomUnlockRule) -> String {
+        switch rule {
+        case .completedSessions: return "sessions"
+        case .focusDays: return "days"
+        case .completedReads: return "reads"
+        case .savedDoodles: return "doodles"
+        case .completedActivities: return "completedActivities"
+        case .triedActivities: return "triedActivities"
+        case .triedCategory: return "category"
+        case .triedEveryActivity: return "allActivities"
+        case .focusedMinutes: return "minutes"
+        }
+    }
+}
+
 let deflateDynamicFixture = "7czRCcAgDEXRVd4EncYFAgYiNSo2Rdy+pQt0gfd7uZxkiiml4dQREFyhkjem7TBHb4h3WKXlvrCsVP1CFR+w213zgUSCBAkSJEiQIEGCxB/xAA=="
 let deflateFixedFixture = "KyzNTC1RKEQi0/KTS4sB"
 let deflateStoredFixture = "ARwA4/9zdG9yZWQgYmxvY2ssIG5vIGNvbXByZXNzaW9u"
@@ -1855,6 +2004,35 @@ let epubFixture = "UEsDBBQAAAAAAAAAIQBvYassFAAAABQAAAAIAAAAbWltZXR5cGVhcHBsaWNhd
 
 final class EPUBReaderTests: XCTestCase {
     private func bytes(_ base64: String) -> [UInt8] { [UInt8](Data(base64Encoded: base64)!) }
+
+    func testEveryBundledStandardEbookResourceParsesAndIsPublicDomain() throws {
+        let expected: [String: (title: String, author: String)] = [
+            "e-m-forster_short-fiction": ("Short Fiction", "E. M. Forster"),
+            "henry-david-thoreau_essays": ("Essays", "Henry David Thoreau"),
+            "robert-louis-stevenson_travel-essays": ("Travel Essays", "Robert Louis Stevenson"),
+            "saki_short-fiction": ("Short Fiction", "Saki")
+        ]
+        let urls: [URL] = try XCTUnwrap(Bundle.module.urls(forResourcesWithExtension: "epub", subdirectory: "PublicDomainBooks"))
+            .map { $0 as URL }
+        XCTAssertEqual(urls.count, expected.count)
+        for url in urls {
+            let stem = url.deletingPathExtension().lastPathComponent
+            let metadata = try XCTUnwrap(expected[stem], "Unexpected bundled EPUB: \(stem)")
+            let book = try EPUBParser.parse(data: Data(contentsOf: url))
+            XCTAssertEqual(book.title, metadata.title, stem)
+            XCTAssertEqual(book.author, metadata.author, stem)
+            XCTAssertFalse(book.chapters.isEmpty, stem)
+            XCTAssertGreaterThan(SittingPlanner.sittings(for: book).count, 0, stem)
+        }
+
+        let library = FileBookLibrary(directory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
+                                      bundledURLs: urls, clock: ManualClock(referenceDate))
+        let summaries = library.books()
+        XCTAssertEqual(summaries.count, expected.count)
+        XCTAssertTrue(summaries.allSatisfy { summary in
+            summary.origin == .bundled && summary.license == .publicDomain && summary.sittingCount > 0
+        })
+    }
 
     func testInflateAllBlockTypes() throws {
         let expected = String(repeating: "The rain kept a steady rhythm on the window while the lamp hummed. ", count: 40)

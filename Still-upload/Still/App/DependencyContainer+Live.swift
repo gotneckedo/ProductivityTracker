@@ -57,7 +57,10 @@ extension DependencyContainer {
         #endif
 
         let notifications = UserNotificationScheduler()
-        let bundledBooks = Bundle.main.paths(forResourcesOfType: "epub", inDirectory: nil).map { URL(fileURLWithPath: $0) }
+        let bundledBooks = (
+            Bundle.main.paths(forResourcesOfType: "epub", inDirectory: "PublicDomainBooks")
+            + Bundle.main.paths(forResourcesOfType: "epub", inDirectory: nil)
+        ).map { URL(fileURLWithPath: $0) }
         let bookLibrary = FileBookLibrary(directory: FileBookLibrary.defaultDirectory(), bundledURLs: bundledBooks, clock: clock)
 
         return DependencyContainer(

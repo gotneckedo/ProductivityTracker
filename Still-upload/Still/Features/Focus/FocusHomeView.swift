@@ -13,9 +13,11 @@ struct FocusHomeView: View {
                 VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
                     RoomHeroView(
                         sceneName: scene.name,
+                        sceneID: scene.id,
                         plantStage: appState.plantStage,
                         bookCount: 2 + appState.books.count,
                         doodle: appState.doodles.max { $0.updatedAt < $1.updatedAt }?.doodle,
+                        placedObjects: appState.placedRoomObjects(in: scene.id),
                         onPrevious: { cycleScene(from: preset, direction: -1) },
                         onNext: { cycleScene(from: preset, direction: 1) }
                     )
@@ -33,7 +35,7 @@ struct FocusHomeView: View {
                             Button {
                                 appState.startFocus()
                             } label: {
-                                Text("Start focus · \(DurationFormatter.short(preset.timer.focusDuration))")
+                                Text(Copy.Home.startFocus(DurationFormatter.short(preset.timer.focusDuration)))
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.8)
                             }
@@ -55,6 +57,30 @@ struct FocusHomeView: View {
                         }
                     }
 
+                    Button {
+                        appState.router.go(to: .roomCollection)
+                    } label: {
+                        HStack(spacing: StillTheme.Spacing.s) {
+                            Image(systemName: "shippingbox")
+                                .foregroundStyle(StillTheme.accent)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(Copy.Home.yourThings)
+                                    .font(StillTypography.bodyEmphasis)
+                                    .foregroundStyle(StillTheme.textPrimary)
+                                Text(Copy.Home.yourThingsHint)
+                                    .font(StillTypography.footnote)
+                                    .foregroundStyle(StillTheme.textSecondary)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .foregroundStyle(StillTheme.textTertiary)
+                        }
+                        .padding(StillTheme.Spacing.s)
+                        .stillGlass(radius: StillTheme.Radius.medium)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Opens your earned room objects and placement slots.")
+
                     if let unlocked = appState.newlyUnlockedScenes.first {
                         QuietNote(text: "\(unlocked.name) is open now. Visit it whenever you like.", symbol: "sparkles")
                     }
@@ -72,12 +98,12 @@ struct FocusHomeView: View {
 
     private func header(scene: SceneDefinition) -> some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
-            Text(Calendar.autoupdatingCurrent.component(.hour, from: .now) < 12 ? "Good morning." : "Ready when you are.")
+            Text(Calendar.autoupdatingCurrent.component(.hour, from: .now) < 12 ? Copy.Home.morningGreeting : Copy.Home.readyGreeting)
                 .font(StillTypography.display)
                 .foregroundStyle(StillTheme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-            Text("\(scene.name) is here when you need a quiet place to begin.")
+            Text(Copy.Home.roomDetail(scene.name))
                 .font(StillTypography.callout)
                 .foregroundStyle(StillTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -132,11 +158,11 @@ private struct HomeTaskLine: View {
                     .frame(width: 10, height: 10)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(task?.title ?? (emphasized ? "Add one thing to work on" : "Choose a task"))
+                    Text(task?.title ?? (emphasized ? Copy.Home.addHomework : Copy.Home.chooseTask))
                         .font(StillTypography.bodyEmphasis)
                         .foregroundStyle(StillTheme.textPrimary)
                         .lineLimit(2)
-                    Text(task.flatMap { $0.homework?.course }.map { "\($0) · ready when you are" } ?? "A task is optional, but one helps the session feel clear.")
+                    Text(task.flatMap { $0.homework?.course }.map { "\($0) · \(Copy.Home.taskReady)" } ?? Copy.Home.optionalTask)
                         .font(StillTypography.footnote)
                         .foregroundStyle(StillTheme.textSecondary)
                         .lineLimit(2)

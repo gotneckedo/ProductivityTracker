@@ -184,6 +184,8 @@ struct RouteView: View {
             FocusCardView()
         case .sceneCollection:
             SceneCollectionView()
+        case .roomCollection:
+            RoomCollectionView()
         case .presets:
             PresetsView()
         case .doodleGallery:

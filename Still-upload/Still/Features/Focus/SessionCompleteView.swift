@@ -16,12 +16,16 @@ struct SessionCompleteView: View {
                     completionHero(session: session)
                     metrics(session: session)
 
+                    if let object = appState.newlyUnlockedRoomObjects.first {
+                        newUnlock(object)
+                    }
+
                     if let task = appState.task(session?.taskID) {
                         taskLine(task)
                     }
 
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-                        Text("What would feel good next?")
+                        Text(Copy.Completion.next)
                             .font(StillTypography.title)
                             .foregroundStyle(StillTheme.textPrimary)
                             .accessibilityAddTraits(.isHeader)
@@ -36,9 +40,9 @@ struct SessionCompleteView: View {
                     }
 
                     HStack(spacing: StillTheme.Spacing.s) {
-                        Button("Browse shelf") { appState.openShelfFromCompletion() }
+                        Button(Copy.Completion.browseShelf) { appState.openShelfFromCompletion() }
                             .buttonStyle(QuietSecondaryButtonStyle())
-                        Button("Back to room") { appState.returnToFocusFromCompletion() }
+                        Button(Copy.Completion.backToRoom) { appState.returnToFocusFromCompletion() }
                             .buttonStyle(QuietTextButtonStyle())
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -57,11 +61,11 @@ struct SessionCompleteView: View {
                 .frame(width: 250, height: 170)
                 .offset(x: 40, y: -8)
             VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
-                Text("Nice work.")
+                Text(Copy.Completion.title)
                     .font(StillTypography.hero)
                     .foregroundStyle(StillTheme.textPrimary)
                     .accessibilityAddTraits(.isHeader)
-                Text("You gave \(focusedAmount(session)) to what mattered.")
+                Text(Copy.Completion.focused(focusedAmount(session)))
                     .font(StillTypography.callout)
                     .foregroundStyle(StillTheme.textSecondary)
                 Text(usualLine)
@@ -71,6 +75,37 @@ struct SessionCompleteView: View {
             .padding(.top, StillTheme.Spacing.xxl)
         }
         .stillEntrance()
+    }
+
+    private func newUnlock(_ object: RoomObject) -> some View {
+        Button {
+            appState.router.completion = nil
+            appState.router.go(to: .roomCollection)
+        } label: {
+            HStack(spacing: StillTheme.Spacing.s) {
+                Image(systemName: "sparkles")
+                    .font(StillTypography.title3)
+                    .foregroundStyle(StillDayPhase.dusk.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(Copy.Completion.newRoomThing)
+                        .font(StillTypography.caption)
+                        .foregroundStyle(StillTheme.textSecondary)
+                    Text(object.name)
+                        .font(StillTypography.title3)
+                        .foregroundStyle(StillTheme.textPrimary)
+                    Text(Copy.Completion.placeNewThing)
+                        .font(StillTypography.footnote)
+                        .foregroundStyle(StillTheme.textTertiary)
+                }
+                Spacer()
+                Image(systemName: "arrow.right")
+                    .foregroundStyle(StillTheme.textSecondary)
+            }
+            .padding(StillTheme.Spacing.m)
+            .stillGlass(radius: StillTheme.Radius.medium, phase: .dusk)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(Copy.Completion.newRoomThing): \(object.name). \(Copy.Completion.placeNewThing).")
     }
 
     private func metrics(session: FocusSession?) -> some View {
@@ -114,9 +149,9 @@ struct SessionCompleteView: View {
 
     private var usualLine: String {
         let sessions = appState.stats.completedSessions
-        guard sessions > 1 else { return "A small ritual still counts." }
+        guard sessions > 1 else { return Copy.Completion.firstUsual }
         let average = DurationFormatter.short(appState.stats.averageSessionDuration)
-        return "Your usual session is about \(average)."
+        return Copy.Completion.usual(average)
     }
 
     private func focusedAmount(_ session: FocusSession?) -> String {

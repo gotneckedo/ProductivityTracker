@@ -5,11 +5,13 @@ import SwiftUI
 /// its public API. Motion is limited to lamp warmth, rain, steam, dust, and leaves.
 struct RoomHeroView: View {
     let sceneName: String
+    var sceneID: SceneID = .rainyBedroom
     var phase: StillDayPhase? = nil
     var dimmed = false
     var plantStage: PlantGrowthStage = .full
     var bookCount: Int = 2
     var doodle: PixelDoodle? = nil
+    var placedObjects: [RoomPlacement] = []
     var onPrevious: (() -> Void)?
     var onNext: (() -> Void)?
 
@@ -31,12 +33,12 @@ struct RoomHeroView: View {
             Group {
                 if reduceMotion {
                     RoomCanvas(sceneName: sceneName, phase: resolvedPhase, time: 0, dimmed: dimmed,
-                               plantStage: plantStage, bookCount: bookCount, doodle: doodle)
+                               plantStage: plantStage, bookCount: bookCount, doodle: doodle, placedObjects: placedObjects)
                 } else {
                     TimelineView(.animation(minimumInterval: 1.0 / 12.0, paused: false)) { timeline in
                         RoomCanvas(sceneName: sceneName, phase: resolvedPhase,
                                    time: timeline.date.timeIntervalSinceReferenceDate, dimmed: dimmed,
-                                   plantStage: plantStage, bookCount: bookCount, doodle: doodle)
+                                   plantStage: plantStage, bookCount: bookCount, doodle: doodle, placedObjects: placedObjects)
                     }
                 }
             }
@@ -107,6 +109,7 @@ private struct RoomCanvas: View {
     let plantStage: PlantGrowthStage
     let bookCount: Int
     let doodle: PixelDoodle?
+    let placedObjects: [RoomPlacement]
 
     var body: some View {
         Canvas { context, size in
@@ -116,7 +119,8 @@ private struct RoomCanvas: View {
             context.translateBy(x: origin.x, y: origin.y)
             context.scaleBy(x: scale, y: scale)
             RoomArtwork.draw(context: &context, sceneName: sceneName, phase: phase, time: time,
-                             dimmed: dimmed, plantStage: plantStage, bookCount: bookCount, doodle: doodle)
+                             dimmed: dimmed, plantStage: plantStage, bookCount: bookCount, doodle: doodle,
+                             placedObjects: placedObjects)
         }
     }
 }
@@ -126,7 +130,8 @@ private enum RoomArtwork {
     private static let size = CGSize(width: 160, height: 132)
 
     static func draw(context: inout GraphicsContext, sceneName: String, phase: StillDayPhase, time: Double,
-                     dimmed: Bool, plantStage: PlantGrowthStage, bookCount: Int, doodle: PixelDoodle?) {
+                     dimmed: Bool, plantStage: PlantGrowthStage, bookCount: Int, doodle: PixelDoodle?,
+                     placedObjects: [RoomPlacement]) {
         let palette = Palette(phase: phase, sceneName: sceneName)
         context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(palette.sky))
         drawSlab(context: &context, palette: palette)
@@ -136,6 +141,7 @@ private enum RoomArtwork {
         drawDesk(context: &context, palette: palette, time: time, motion: !dimmed, bookCount: bookCount)
         drawPlant(context: &context, palette: palette, stage: plantStage, time: time, motion: !dimmed)
         if let doodle { drawDoodle(context: &context, palette: palette, doodle: doodle) }
+        drawPlacedObjects(context: &context, palette: palette, placements: placedObjects, time: time, motion: !dimmed)
         if dimmed {
             context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(Color(hex: 0x121221, opacity: 0.42)))
         }
@@ -223,6 +229,102 @@ private enum RoomArtwork {
         }
     }
 
+    /// Original tiny sprites selected by catalog render keys. Asset-backed replacements can
+    /// be resolved before this call later without changing persistence or placement rules.
+    private static func drawPlacedObjects(context: inout GraphicsContext, palette: Palette,
+                                          placements: [RoomPlacement], time: Double, motion: Bool) {
+        for placement in placements {
+            guard let object = RoomObjectCatalog.object(placement.objectID) else { continue }
+            drawObject(context: &context, key: object.renderKey, palette: palette, time: time, motion: motion)
+        }
+    }
+
+    private static func drawObject(context: inout GraphicsContext, key: RoomObjectRenderKey,
+                                   palette: Palette, time: Double, motion: Bool) {
+        switch key {
+        case .trailingPlant:
+            box(&context, x: 24, y: 2, z: 20, width: 5, depth: 4, height: 3, top: palette.pot, left: palette.potShade, right: palette.potShade)
+            for index in 0..<5 {
+                let drop = Double(index) * 1.8
+                box(&context, x: 25 + Double(index % 2) * 2, y: 2, z: 19 - drop, width: 2, depth: 1.5, height: 1,
+                    top: palette.leaf, left: palette.leafShade, right: palette.leafShade)
+            }
+        case .deskLamp:
+            box(&context, x: 37, y: 22, z: 18, width: 1, depth: 1, height: 7, top: out, left: out, right: out)
+            box(&context, x: 34, y: 20, z: 24, width: 7, depth: 5, height: 3, top: palette.lamp, left: palette.lamp, right: palette.lamp)
+        case .artPoster:
+            polygon(&context, [iso(5, 0, 23), iso(14, 0, 23), iso(14, 0, 35), iso(5, 0, 35)], palette.bookAlt)
+            polygon(&context, [iso(7, 0, 25), iso(12, 0, 25), iso(12, 0, 33), iso(7, 0, 33)], palette.doodle)
+        case .recordPlayer:
+            box(&context, x: 54, y: 12, z: 11, width: 5, depth: 8, height: 4, top: palette.wood, left: palette.woodShade, right: palette.woodShade)
+            context.stroke(Path(ellipseIn: CGRect(x: 118, y: 55, width: 9, height: 6)), with: .color(out), lineWidth: 1)
+        case .wovenRug:
+            polygon(&context, [iso(27, 37, 0.6), iso(47, 37, 0.6), iso(47, 52, 0.6), iso(27, 52, 0.6)], palette.book)
+            for stripe in 0..<4 { line(&context, iso(30 + Double(stripe * 5), 38, 0.8), iso(30 + Double(stripe * 5), 50, 0.8), palette.highlight, width: 0.7) }
+        case .catBed:
+            context.fill(Path(ellipseIn: CGRect(x: 54, y: 90, width: 26, height: 12)), with: .color(palette.rug))
+            context.stroke(Path(ellipseIn: CGRect(x: 54, y: 90, width: 26, height: 12)), with: .color(out), lineWidth: 1)
+            context.stroke(Path(ellipseIn: CGRect(x: 59, y: 93, width: 16, height: 6)), with: .color(palette.pillow), lineWidth: 2)
+        case .stringLights:
+            line(&context, iso(6, 0, 39), iso(51, 0, 39), palette.woodShade, width: 0.7)
+            for index in 0..<7 {
+                let point = iso(8 + Double(index) * 7, 0, 38.5 - Double(index % 2))
+                context.fill(Path(ellipseIn: CGRect(x: point.x - 1.2, y: point.y - 1.2, width: 2.4, height: 2.4)), with: .color(palette.lamp.opacity(motion ? 0.75 + 0.2 * sin(time + Double(index)) : 0.85)))
+            }
+        case .globe:
+            let center = iso(55, 10, 18)
+            context.fill(Path(ellipseIn: CGRect(x: center.x - 4, y: center.y - 4, width: 8, height: 8)), with: .color(palette.book))
+            context.stroke(Path(ellipseIn: CGRect(x: center.x - 4, y: center.y - 4, width: 8, height: 8)), with: .color(out), lineWidth: 1)
+            line(&context, CGPoint(x: center.x, y: center.y + 4), CGPoint(x: center.x, y: center.y + 8), out, width: 1)
+        case .bookends:
+            box(&context, x: 53, y: 11, z: 10, width: 1, depth: 6, height: 7, top: palette.bookAlt, left: palette.bookAlt, right: palette.bookAlt)
+            box(&context, x: 58, y: 11, z: 10, width: 1, depth: 6, height: 7, top: palette.bookAlt, left: palette.bookAlt, right: palette.bookAlt)
+        case .bookStack:
+            for index in 0..<3 { box(&context, x: 29, y: 14, z: 18 + Double(index) * 1.5, width: 7, depth: 5, height: 1.2, top: index.isMultiple(of: 2) ? palette.book : palette.bookAlt, left: palette.book, right: palette.bookAlt) }
+        case .pencilCup:
+            box(&context, x: 31, y: 22, z: 18, width: 3, depth: 3, height: 4, top: palette.mug, left: palette.mug, right: palette.potShade)
+            for index in 0..<3 { line(&context, iso(31.7 + Double(index) * 0.7, 23, 22), iso(31.7 + Double(index) * 0.7, 23, 27 + Double(index % 2)), index == 1 ? palette.book : palette.bookAlt, width: 0.8) }
+        case .tinyClock:
+            let center = iso(55, 12, 19)
+            context.fill(Path(ellipseIn: CGRect(x: center.x - 3, y: center.y - 3, width: 6, height: 6)), with: .color(palette.pillow))
+            context.stroke(Path(ellipseIn: CGRect(x: center.x - 3, y: center.y - 3, width: 6, height: 6)), with: .color(out), lineWidth: 1)
+            line(&context, center, CGPoint(x: center.x, y: center.y - 2), out, width: 0.7)
+        case .ceramicBird:
+            let center = iso(39, 22, 20)
+            context.fill(Path(ellipseIn: CGRect(x: center.x - 3, y: center.y - 2, width: 6, height: 4)), with: .color(palette.doodle))
+            polygon(&context, [CGPoint(x: center.x + 2, y: center.y), CGPoint(x: center.x + 5, y: center.y + 1), CGPoint(x: center.x + 2, y: center.y + 2)], palette.bookAlt)
+        case .paperStars:
+            for index in 0..<5 {
+                let p = iso(36 + Double(index) * 4, 0, 29 + Double(index % 2) * 4)
+                polygon(&context, [CGPoint(x: p.x, y: p.y - 2), CGPoint(x: p.x + 1, y: p.y), CGPoint(x: p.x, y: p.y + 2), CGPoint(x: p.x - 1, y: p.y)], palette.lamp)
+            }
+        case .wateringCan:
+            box(&context, x: 31, y: 2, z: 19, width: 5, depth: 4, height: 4, top: palette.book, left: palette.book, right: palette.bookAlt)
+            line(&context, iso(36, 3, 21), iso(40, 2, 24), palette.book, width: 2)
+        case .floorCushion:
+            context.fill(Path(ellipseIn: CGRect(x: 91, y: 93, width: 23, height: 11)), with: .color(palette.bookAlt))
+            context.stroke(Path(ellipseIn: CGRect(x: 91, y: 93, width: 23, height: 11)), with: .color(out), lineWidth: 1)
+        case .pinboard:
+            polygon(&context, [iso(39, 0, 23), iso(49, 0, 23), iso(49, 0, 35), iso(39, 0, 35)], palette.wood)
+            for index in 0..<3 {
+                let x = 40.5 + Double(index) * 2.7
+                polygon(&context, [iso(x, 0, 25), iso(x + 2, 0, 25), iso(x + 2, 0, 29), iso(x, 0, 29)], index == 1 ? palette.doodle : palette.pillow)
+            }
+        case .radio:
+            box(&context, x: 53, y: 11, z: 10, width: 6, depth: 6, height: 5, top: palette.wood, left: palette.woodShade, right: palette.woodShade)
+            let p = iso(58.5, 12, 13)
+            context.stroke(Path(ellipseIn: CGRect(x: p.x - 2, y: p.y - 2, width: 4, height: 4)), with: .color(palette.pillow), lineWidth: 1)
+        case .candle:
+            box(&context, x: 43, y: 23, z: 18, width: 2, depth: 2, height: 4, top: palette.pillow, left: palette.pillow, right: palette.pillow)
+            let flame = iso(44, 24, 24)
+            context.fill(Path(ellipseIn: CGRect(x: flame.x - 1, y: flame.y - 2, width: 2, height: 3)), with: .color(palette.lamp.opacity(motion ? 0.7 + 0.25 * sin(time * 2) : 0.85)))
+        case .telescope:
+            line(&context, iso(24, 4, 23), iso(34, 2, 29), out, width: 2.4)
+            line(&context, iso(29, 3, 25), iso(26, 5, 18), palette.woodShade, width: 1)
+            line(&context, iso(29, 3, 25), iso(33, 6, 18), palette.woodShade, width: 1)
+        }
+    }
+
     private static func iso(_ x: Double, _ y: Double, _ z: Double) -> CGPoint {
         CGPoint(x: 80 + (x - y), y: 54 + (x + y) / 2 - z)
     }
@@ -274,6 +376,7 @@ private enum RoomArtwork {
         let leaf: Color
         let leafShade: Color
         let doodle: Color
+        let highlight: Color
 
         init(phase: StillDayPhase, sceneName: String) {
             if sceneName == "Night City" {
@@ -304,6 +407,7 @@ private enum RoomArtwork {
             lamp = Color(hex: 0xFFE19C); lampGlow = Color(hex: 0xFFD186); mug = Color(hex: 0xD98470)
             pot = Color(hex: 0xD58A68); potShade = Color(hex: 0xA6604F); leaf = Color(hex: 0x5F9A74); leafShade = Color(hex: 0x3E7053)
             doodle = sceneName == "Night City" ? Color(hex: 0xA8A2E8) : Color(hex: 0xA8D7C4)
+            highlight = Color(hex: phase == .night || phase == .focus ? 0xD8D1F2 : 0xFFF7EA)
         }
     }
 }

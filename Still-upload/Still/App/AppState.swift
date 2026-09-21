@@ -29,6 +29,7 @@ final class AppState {
     private(set) var habitDays: [HabitDay] = []
     private(set) var doodles: [ActivityArtifact] = []
     private(set) var books: [BookSummary] = []
+    private(set) var roomCollection = RoomCollectionState()
     /// Read-only calendar events for today's timeline (empty unless allowed).
     private(set) var calendarAccess: CalendarAccess = .unavailable
     /// Mute toggled on the active screen. Transient: the preset mix is unchanged.
@@ -45,7 +46,7 @@ final class AppState {
         self.router = AppRouter(flags: container.flags)
         self.preferences = container.preferencesStore.load()
         let reportError: (Error) -> Void = { [weak self] _ in
-            self?.notice = StillNotice(text: "Couldn't save that change. Your session is still running.")
+            self?.notice = StillNotice(text: Copy.Notices.persistenceFailure)
         }
         container.focus.onPersistenceError = reportError
         container.breaks.onPersistenceError = reportError
@@ -54,6 +55,7 @@ final class AppState {
         container.journalController.onPersistenceError = reportError
         container.habitController.onPersistenceError = reportError
         container.books.onPersistenceError = reportError
+        container.room.onPersistenceError = reportError
         if let storageNotice = container.storageNotice {
             notice = StillNotice(text: storageNotice)
         }
@@ -112,6 +114,15 @@ final class AppState {
         habitDays = container.habitController.today()
         doodles = container.artifacts.artifacts(kind: .doodle)
         books = container.books.books()
+        let roomHistory = RoomActivityHistory.make(
+            sessions: sessions,
+            usages: usages,
+            readingProgress: container.readingProgress.allProgress(),
+            doodles: doodles,
+            calendar: container.calendar
+        )
+        _ = container.room.evaluate(roomHistory)
+        roomCollection = container.room.state()
         calendarAccess = container.calendarAdapter.access
         publishWidgetSnapshot()
     }
@@ -146,6 +157,38 @@ final class AppState {
     var completedSessionCount: Int { stats.completedSessions }
 
     var animationIntensity: AnimationIntensity { preferences.animationIntensity }
+
+    var newlyUnlockedRoomObjects: [RoomObject] {
+        RoomObjectCatalog.all.filter {
+            roomCollection.unlockedObjectIDs.contains($0.id) && !roomCollection.acknowledgedObjectIDs.contains($0.id)
+        }
+    }
+
+    func placedRoomObjects(in sceneID: SceneID) -> [RoomPlacement] {
+        roomCollection.placements.filter { $0.sceneID == sceneID }
+    }
+
+    func placeRoomObject(_ objectID: RoomObjectID, in sceneID: SceneID, slot: RoomSlot) {
+        do {
+            try container.room.place(objectID, in: sceneID, slot: slot)
+            let name = RoomObjectCatalog.object(objectID)?.name ?? "Room object"
+            notice = StillNotice(text: Copy.Collection.placedNotice(name, slot.displayName))
+        } catch {
+            notice = StillNotice(text: Copy.Notices.persistenceFailure)
+        }
+        reload()
+    }
+
+    func removeRoomObject(from sceneID: SceneID, slot: RoomSlot) {
+        container.room.remove(from: sceneID, slot: slot)
+        notice = StillNotice(text: Copy.Collection.removedNotice(slot.displayName))
+        reload()
+    }
+
+    func acknowledgeRoomUnlocks() {
+        container.room.acknowledgeUnlocks()
+        reload()
+    }
 
     func scene(_ id: SceneID) -> SceneDefinition { SceneCatalog.scene(id) }
 
@@ -197,7 +240,7 @@ final class AppState {
         switch outcome {
         case .started, .startedWithFallback:
             if case .startedWithFallback = outcome {
-                notice = StillNotice(text: "That preset isn't on this phone, so your default session started.")
+                notice = StillNotice(text: Copy.Notices.fallbackPreset)
             }
             router.go(to: .focusHome)
             // Ask for notification permission in context, the first time only.
@@ -207,7 +250,7 @@ final class AppState {
                 self.reload()
             }
         case .alreadyRunning:
-            notice = StillNotice(text: "A session is already running. It's still going.")
+            notice = StillNotice(text: Copy.Notices.alreadyRunning)
             router.go(to: .focusHome)
         }
         reload()
@@ -244,7 +287,7 @@ final class AppState {
         reload()
         if let event { handle([event]) }
         if case .some(.sessionAbandoned) = event {
-            notice = StillNotice(text: "Sessions under 5 minutes aren't counted. That's fine.")
+            notice = StillNotice(text: Copy.Notices.shortSession)
         }
     }
 

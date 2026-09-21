@@ -23,6 +23,7 @@ final class DependencyContainer {
     let habits: HabitRepository
     let artifacts: ArtifactRepository
     let readingProgress: ReadingProgressRepository
+    let roomCollection: RoomCollectionRepository
     let blockingSelections: BlockingSelectionStore
 
     // Services
@@ -50,6 +51,7 @@ final class DependencyContainer {
     let journalController: JournalController
     let habitController: HabitController
     let books: BookReadingController
+    let room: RoomCollectionController
 
     /// A non-nil value means storage fell back to memory; the UI says so calmly.
     let storageNotice: String?
@@ -90,6 +92,7 @@ final class DependencyContainer {
         habits = StoredHabitRepository(store: recordStore)
         artifacts = StoredArtifactRepository(store: recordStore)
         readingProgress = StoredReadingProgressRepository(store: recordStore)
+        roomCollection = StoredRoomCollectionRepository(store: recordStore)
         blockingSelections = KeyValueBlockingSelectionStore(store: keyValueStore)
 
         timer = FocusTimerEngine()
@@ -134,6 +137,7 @@ final class DependencyContainer {
         journalController = JournalController(clock: clock, calendar: calendar, journal: journal, events: tracker)
         habitController = HabitController(clock: clock, calendar: calendar, habits: habits, events: tracker)
         books = BookReadingController(library: bookLibrary, progress: readingProgress, clock: clock)
+        room = RoomCollectionController(repository: roomCollection, clock: clock)
     }
 
     /// Fully in-memory container for tests and SwiftUI previews.

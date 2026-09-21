@@ -80,6 +80,9 @@ enum AppRoute: Hashable {
     case morningStart
     case blockingSetup
     case habits
+    case onboardingGoalPreference
+    case onboardingBreakPreference
+    case onboardingLookPreference
 }
 
 enum SheetRoute: String, Identifiable, Hashable {
@@ -121,7 +124,8 @@ struct RouteResolver {
             return RouteDestination(tab: currentTab, stack: [], sheet: .tasks, completionSessionID: nil)
         case .me:
             return RouteDestination(tab: .me, stack: [], sheet: nil, completionSessionID: nil)
-        case .nfcSetup, .sceneCollection, .presets, .doodleGallery, .morningStart, .blockingSetup:
+        case .nfcSetup, .sceneCollection, .presets, .doodleGallery, .morningStart, .blockingSetup,
+             .onboardingGoalPreference, .onboardingBreakPreference, .onboardingLookPreference:
             return RouteDestination(tab: .me, stack: [route], sheet: nil, completionSessionID: nil)
         case .dayTimeline:
             return RouteDestination(tab: currentTab, stack: [], sheet: .dayTimeline, completionSessionID: nil)

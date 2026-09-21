@@ -39,6 +39,7 @@ final class DependencyContainer {
     let calendarAdapter: CalendarAdapter
     let morningStart: MorningStartScheduling
     let widgetSnapshots: WidgetSnapshotWriting
+    let alternateAppIcons: AlternateAppIconChanging
     /// Nil where speech capture isn't available (tests, Linux, flag off).
     let speech: SpeechTaskCapturing?
 
@@ -69,6 +70,7 @@ final class DependencyContainer {
         calendarAdapter: CalendarAdapter = NoCalendarAdapter(),
         morningStart: MorningStartScheduling = RecordingMorningStartScheduler(),
         widgetSnapshots: WidgetSnapshotWriting = RecordingWidgetSnapshotWriter(),
+        alternateAppIcons: AlternateAppIconChanging = UnavailableAlternateAppIconChanger(),
         speech: SpeechTaskCapturing? = nil,
         storageNotice: String? = nil
     ) {
@@ -106,6 +108,7 @@ final class DependencyContainer {
         self.calendarAdapter = calendarAdapter
         self.morningStart = morningStart
         self.widgetSnapshots = widgetSnapshots
+        self.alternateAppIcons = alternateAppIcons
         self.speech = flags.voiceCapture ? speech : nil
 
         focus = FocusFlowController(
@@ -129,7 +132,8 @@ final class DependencyContainer {
             recordStore: recordStore,
             events: tracker,
             notifications: notifications,
-            audio: audio
+            audio: audio,
+            alternateAppIcons: alternateAppIcons
         )
         journalController = JournalController(clock: clock, calendar: calendar, journal: journal, events: tracker)
         habitController = HabitController(clock: clock, calendar: calendar, habits: habits, events: tracker)

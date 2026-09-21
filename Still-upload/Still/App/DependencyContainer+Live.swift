@@ -74,6 +74,7 @@ extension DependencyContainer {
             calendarAdapter: calendarAdapter,
             morningStart: notifications,
             widgetSnapshots: widgetSnapshots,
+            alternateAppIcons: UIKitAlternateAppIconChanger(),
             speech: speech,
             storageNotice: storageNotice
         )

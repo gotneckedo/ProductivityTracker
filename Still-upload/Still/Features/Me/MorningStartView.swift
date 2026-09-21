@@ -17,10 +17,10 @@ struct MorningStartView: View {
                     HStack(alignment: .firstTextBaseline) {
                         VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
                             Text(appState.container.flags.wakeUpPreview ? "Wake up" : "Morning Start")
-                                .font(StillTypography.title)
+                                .font(StillTypography.display)
                                 .foregroundStyle(StillTheme.textPrimary)
                                 .accessibilityAddTraits(.isHeader)
-                            Text("A gentle start before class: choose a time and queue one study session.")
+                            Text("A quiet nudge at the start of the day: pick one task, and a session is ready when you are.")
                                 .font(StillTypography.callout)
                                 .foregroundStyle(StillTheme.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -168,7 +168,9 @@ struct MorningStartView: View {
                 .font(StillTypography.callout.weight(isOn ? .semibold : .regular))
                 .foregroundStyle(isOn ? StillTheme.onAccent : StillTheme.textSecondary)
                 .frame(maxWidth: .infinity, minHeight: 38)
-                .background(Circle().fill(isOn ? StillTheme.accent : StillTheme.surfaceSunken))
+                .background(Circle().fill(.ultraThinMaterial))
+                .overlay(Circle().fill(isOn ? StillTheme.accent : Color.white.opacity(0.10)))
+                .overlay(Circle().strokeBorder(isOn ? StillTheme.accent : StillTheme.border, lineWidth: StillTheme.Stroke.hairline))
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)

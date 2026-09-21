@@ -83,6 +83,19 @@ enum StillDayPhase: String, CaseIterable, Hashable, Codable {
     }
 }
 
+private struct StillDayPhaseKey: EnvironmentKey {
+    static let defaultValue: StillDayPhase? = nil
+}
+
+extension EnvironmentValues {
+    /// The phase resolved by the nearest `StillScreen`. Components fall back to
+    /// the clock and color scheme when they are presented on their own.
+    var stillDayPhase: StillDayPhase? {
+        get { self[StillDayPhaseKey.self] }
+        set { self[StillDayPhaseKey.self] = newValue }
+    }
+}
+
 /// Semantic design tokens. Feature views use these names, never raw values.
 enum StillTheme {
     /// Raw palette. Warm paper instead of white, navy-charcoal instead of black.
@@ -90,10 +103,10 @@ enum StillTheme {
         static let paper = Color(hex: 0xF7E8DA)
         static let paperRaised = Color.white.opacity(0.46)
         static let paperSunken = Color.white.opacity(0.24)
-        static let ink = Color(hex: 0x2E2530)
-        static let inkSecondary = Color(hex: 0x4F4651)
-        static let inkTertiary = Color(hex: 0x786D78)
-        static let hairline = Color.white.opacity(0.72)
+        static let ink = Color.dynamic(light: 0x2E2530, dark: 0xF5EEF8)
+        static let inkSecondary = Color.dynamic(light: 0x4F4651, dark: 0xD9D0DE)
+        static let inkTertiary = Color.dynamic(light: 0x786D78, dark: 0xB9ADBF)
+        static let hairline = Color.dynamic(light: 0xFFFFFF, dark: 0x6A607A).opacity(0.72)
 
         static let sage = Color(hex: 0x3E8F74)
         static let sageSoft = Color(hex: 0xA6D7C4, opacity: 0.48)
@@ -124,7 +137,7 @@ enum StillTheme {
     static let border = Palette.hairline
 
     /// Primary action fill. Paired with `onAccent` text.
-    static let accent = Palette.sage
+    static let accent = Color.dynamic(light: 0x3E8F74, dark: 0x8FDCC0)
     static let accentSoft = Palette.sageSoft
     static let onAccent = Color(hex: 0x3A2A22)
     /// Gentle attention (e.g. a Sudoku conflict). Never alarm red.
@@ -138,6 +151,16 @@ enum StillTheme {
     static let warmSoft = Palette.peachSoft
     static let litButtonTop = Color(hex: 0xFFF7EA)
     static let litButtonBottom = Color(hex: 0xF7DDBB)
+
+    static func primaryText(for phase: StillDayPhase) -> Color { phase.ink }
+    static func secondaryText(for phase: StillDayPhase) -> Color { phase.secondaryInk }
+
+    static func tertiaryText(for phase: StillDayPhase) -> Color {
+        switch phase {
+        case .night, .focus: return phase.ink.opacity(0.54)
+        case .morning, .afternoon, .dusk: return phase.ink.opacity(0.58)
+        }
+    }
 
     static func categoryTint(_ category: ActivityCategory) -> Color {
         switch category {

@@ -2303,7 +2303,12 @@ final class EPUBReaderTests: XCTestCase {
             "robert-louis-stevenson_travel-essays": ("Travel Essays", "Robert Louis Stevenson"),
             "saki_short-fiction": ("Short Fiction", "Saki")
         ]
-        let urls: [URL] = try XCTUnwrap(Bundle.module.urls(forResourcesWithExtension: "epub", subdirectory: "PublicDomainBooks"))
+        #if SWIFT_PACKAGE
+        let resourceBundle = Bundle.module
+        #else
+        let resourceBundle = Bundle(for: EPUBReaderTests.self)
+        #endif
+        let urls: [URL] = try XCTUnwrap(resourceBundle.urls(forResourcesWithExtension: "epub", subdirectory: "PublicDomainBooks"))
             .map { $0 as URL }
         XCTAssertEqual(urls.count, expected.count)
         for url in urls {

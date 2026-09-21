@@ -13,6 +13,15 @@ struct SessionOptionsView: View {
                 ScrollView {
                     if let preset = draft {
                         VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+                            VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
+                                Text("Set the room")
+                                    .font(StillTypography.display)
+                                    .foregroundStyle(StillTheme.textPrimary)
+                                    .accessibilityAddTraits(.isHeader)
+                                Text("A timer, task, sound, and room — kept together in your preset.")
+                                    .font(StillTypography.callout)
+                                    .foregroundStyle(StillTheme.textSecondary)
+                            }
                             presetSection(preset)
                             taskSection
                             timerSection
@@ -79,6 +88,8 @@ struct SessionOptionsView: View {
                 draft = appState.presets.first { $0.id == id }
             }
         }
+        .padding(StillTheme.Spacing.m)
+        .stillGlass()
     }
 
     private var taskSection: some View {
@@ -91,6 +102,8 @@ struct SessionOptionsView: View {
             }
             .buttonStyle(.plain)
         }
+        .padding(StillTheme.Spacing.m)
+        .stillGlass()
     }
 
     private var timerSection: some View {
@@ -126,6 +139,8 @@ struct SessionOptionsView: View {
                 }
             }
         }
+        .padding(StillTheme.Spacing.m)
+        .stillGlass()
     }
 
     private func environmentSection(_ preset: FocusPreset) -> some View {
@@ -148,6 +163,8 @@ struct SessionOptionsView: View {
                     .foregroundStyle(StillTheme.textTertiary)
             }
         }
+        .padding(StillTheme.Spacing.m)
+        .stillGlass()
     }
 
     private var soundSection: some View {
@@ -157,6 +174,8 @@ struct SessionOptionsView: View {
                 appState.container.audio.isAssetAvailable(source)
             }
         }
+        .padding(StillTheme.Spacing.m)
+        .stillGlass()
     }
 
     private var blockingSection: some View {
@@ -170,6 +189,8 @@ struct SessionOptionsView: View {
             }
             .buttonStyle(.plain)
         }
+        .padding(StillTheme.Spacing.m)
+        .stillGlass()
     }
 
     // MARK: Small pieces

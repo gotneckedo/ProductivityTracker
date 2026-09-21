@@ -14,7 +14,7 @@ struct SceneCollectionView: View {
                 VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
                         Text("Scenes")
-                            .font(StillTypography.title)
+                            .font(StillTypography.display)
                             .foregroundStyle(StillTheme.textPrimary)
                             .accessibilityAddTraits(.isHeader)
                         Text("New scenes open as you complete sessions. Choose one for \(preset.name).")
@@ -93,6 +93,13 @@ private struct SceneCard: View {
                     .foregroundStyle(StillTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(StillTheme.Spacing.s)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .stillGlass(radius: StillTheme.Radius.medium)
+            .overlay(
+                RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
+                    .strokeBorder(isSelected ? StillTheme.accent : Color.clear, lineWidth: isSelected ? 2 : 0)
+            )
         }
         .buttonStyle(.plain)
         .disabled(!isUnlocked)

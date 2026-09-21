@@ -9,22 +9,36 @@ import SwiftUI
 struct SudokuActivityView: View {
     let onSolved: () -> Void
     @Environment(AppState.self) private var appState
+    @Environment(\.stillDayPhase) private var phase
+    @Environment(\.colorScheme) private var colorScheme
     @State private var game: SudokuGame?
+    @State private var history = SudokuMoveHistory()
+
+    private var resolvedPhase: StillDayPhase {
+        phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
+    }
+
+    private var style: ActivityVisualStyle {
+        ActivityPresentation.visualStyle(for: .sudoku)
+    }
 
     var body: some View {
-        VStack(spacing: StillTheme.Spacing.l) {
-            if let game {
-                Text(game.isSolved ? "Solved. Every row, column, and box holds 1 to 6." : "Fill each row, column, and box with 1 to 6.")
-                    .font(StillTypography.callout)
-                    .foregroundStyle(StillTheme.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                grid(game)
-                if game.isSolved {
-                    Button("Start over") { reset() }
-                        .buttonStyle(QuietSecondaryButtonStyle())
-                } else {
-                    numberPad(game)
-                    feedback(game)
+        ActivityGlassCard(activityID: .sudoku) {
+            VStack(spacing: StillTheme.Spacing.l) {
+                if let game {
+                    Text(game.isSolved ? "Solved. Every row, column, and box holds 1 to 6." : "Fill each row, column, and box with 1 to 6.")
+                        .font(StillTypography.callout)
+                        .foregroundStyle(StillTheme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    grid(game)
+                    if game.isSolved {
+                        Button("Start over") { reset() }
+                            .buttonStyle(QuietSecondaryButtonStyle())
+                    } else {
+                        numberPad(game)
+                        controlRow(game)
+                        feedback(game)
+                    }
                 }
             }
         }
@@ -52,12 +66,18 @@ struct SudokuActivityView: View {
 
     private func cell(game: SudokuGame, index: Int, isConflict: Bool) -> some View {
         let isGiven = game.puzzle.isGiven(index)
-        let isSelected = game.selectedIndex == index
+        let emphasis = game.emphasis(at: index)
+        let isSelected = emphasis == .selected
         let value = game.value(at: index)
-        let fill: Color = isSelected ? StillTheme.accentSoft
-            : isConflict ? StillTheme.attentionSoft
-            : isGiven ? StillTheme.surfaceSunken
-            : StillTheme.surface
+        let palette = style.accentColor(for: resolvedPhase)
+        let fill: Color
+        switch emphasis {
+        case .selected: fill = palette.opacity(0.28)
+        case .conflict: fill = StillTheme.attentionSoft
+        case .matchingNumber: fill = palette.opacity(0.20)
+        case .peer: fill = resolvedPhase.glassFill.opacity(0.76)
+        case .none: fill = isGiven ? resolvedPhase.glassFill.opacity(0.58) : resolvedPhase.glassFill.opacity(0.35)
+        }
         return Button {
             update { $0.select(index) }
         } label: {
@@ -72,7 +92,7 @@ struct SudokuActivityView: View {
                                   lineWidth: isSelected ? 2 : StillTheme.Stroke.hairline)
                 Text(value.map { String($0) } ?? "")
                     .font(StillTypography.title3.weight(isGiven ? .semibold : .regular))
-                    .foregroundStyle(isGiven ? StillTheme.textPrimary : StillTheme.calm)
+                    .foregroundStyle(isConflict ? StillTheme.attention : isGiven ? resolvedPhase.ink : palette)
             }
             .aspectRatio(1, contentMode: .fit)
             .frame(maxWidth: .infinity)
@@ -86,32 +106,45 @@ struct SudokuActivityView: View {
     private func numberPad(_ game: SudokuGame) -> some View {
         HStack(spacing: StillTheme.Spacing.xs) {
             ForEach(1...game.puzzle.size, id: \.self) { number in
+                let isUsed = game.placedCount(of: number) >= game.puzzle.size
                 Button {
-                    update { _ = $0.enter(number) }
+                    update(recordingMove: true) { _ = $0.enter(number) }
                 } label: {
                     Text("\(number)")
                         .font(StillTypography.title3)
-                        .foregroundStyle(StillTheme.textPrimary)
+                        .foregroundStyle(style.accentColor(for: resolvedPhase))
                         .frame(maxWidth: .infinity, minHeight: 48)
-                        .background(Capsule(style: .continuous).fill(StillTheme.surface))
-                        .overlay(Capsule(style: .continuous).strokeBorder(StillTheme.border, lineWidth: StillTheme.Stroke.hairline))
-                        .opacity(game.placedCount(of: number) >= game.puzzle.size ? 0.4 : 1)
+                        .background(Capsule(style: .continuous).fill(.ultraThinMaterial))
+                        .overlay(Capsule(style: .continuous).fill(resolvedPhase.glassFill))
+                        .overlay(Capsule(style: .continuous).strokeBorder(resolvedPhase.glassBorder, lineWidth: StillTheme.Stroke.hairline))
+                        .opacity(isUsed ? 0.32 : 1)
                 }
                 .buttonStyle(.plain)
-                .disabled(game.selectedIndex == nil)
+                .disabled(game.selectedIndex == nil || isUsed)
                 .accessibilityLabel("Enter \(number)")
+                .accessibilityValue(isUsed ? "All placed" : "")
             }
+        }
+    }
+
+    private func controlRow(_ game: SudokuGame) -> some View {
+        HStack(spacing: StillTheme.Spacing.xs) {
+            Button(action: undo) {
+                Label("Undo", systemImage: "arrow.uturn.backward")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(QuietSecondaryButtonStyle())
+            .disabled(!history.canUndo)
+            .accessibilityHint("Restores the previous number or erase action.")
+
             Button {
-                update { _ = $0.erase() }
+                update(recordingMove: true) { _ = $0.erase() }
             } label: {
-                Image(systemName: "delete.left")
-                    .font(StillTypography.title3)
-                    .foregroundStyle(StillTheme.textSecondary)
-                    .frame(maxWidth: .infinity, minHeight: 48)
+                Label("Erase", systemImage: "delete.left")
+                    .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.plain)
-            .disabled(game.selectedIndex == nil)
-            .accessibilityLabel("Erase")
+            .buttonStyle(QuietSecondaryButtonStyle())
+            .disabled(game.selectedIndex == nil || game.selectedIndex.map(game.puzzle.isGiven) == true)
         }
     }
 
@@ -134,15 +167,24 @@ struct SudokuActivityView: View {
         guard let puzzle = game?.puzzle else { return }
         try? appState.container.puzzleProgress.clear(puzzleID: puzzle.id)
         game = SudokuGame(puzzle: puzzle)
+        history.clear()
     }
 
-    private func update(_ change: (inout SudokuGame) -> Void) {
+    private func update(recordingMove: Bool = false, _ change: (inout SudokuGame) -> Void) {
         guard var current = game else { return }
+        let previous = current
         let wasSolved = current.isSolved
         change(&current)
+        if recordingMove && current != previous { history.record(previous) }
         game = current
         try? appState.container.puzzleProgress.save(current, puzzleID: current.puzzle.id, at: Date())
         if current.isSolved && !wasSolved { onSolved() }
+    }
+
+    private func undo() {
+        guard var current = game, history.undo(current: &current) else { return }
+        game = current
+        try? appState.container.puzzleProgress.save(current, puzzleID: current.puzzle.id, at: Date())
     }
 }
 

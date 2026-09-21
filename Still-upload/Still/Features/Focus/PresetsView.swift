@@ -21,7 +21,7 @@ struct PresetsView: View {
                 VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
                         Text("Presets")
-                            .font(StillTypography.title)
+                            .font(StillTypography.display)
                             .foregroundStyle(StillTheme.textPrimary)
                             .accessibilityAddTraits(.isHeader)
                         Text("A preset is a timer, a scene, and a sound. Tap one to make it your default. Each one has its own Focus Card link.")
@@ -173,14 +173,11 @@ private struct PresetRow: View {
             .accessibilityLabel("More for \(preset.name)")
         }
         .padding(.horizontal, StillTheme.Spacing.s)
-        .padding(.vertical, StillTheme.Spacing.xs)
-        .background(
-            RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
-                .fill(StillTheme.surface)
-        )
+        .padding(.vertical, StillTheme.Spacing.s)
+        .stillGlass(radius: StillTheme.Radius.medium)
         .overlay(
             RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
-                .strokeBorder(isDefault ? StillTheme.accent : StillTheme.border, lineWidth: StillTheme.Stroke.hairline)
+                .strokeBorder(isDefault ? StillTheme.accent : Color.clear, lineWidth: isDefault ? 2 : 0)
         )
     }
 
@@ -211,8 +208,9 @@ struct PresetChips: View {
                             .lineLimit(1)
                             .padding(.horizontal, StillTheme.Spacing.m)
                             .frame(minHeight: 38)
-                            .background(Capsule(style: .continuous).fill(isSelected ? StillTheme.surface : StillTheme.surfaceSunken))
-                            .overlay(Capsule(style: .continuous).strokeBorder(isSelected ? StillTheme.accent : Color.clear, lineWidth: StillTheme.Stroke.hairline))
+                            .background(Capsule(style: .continuous).fill(.ultraThinMaterial))
+                            .overlay(Capsule(style: .continuous).fill(isSelected ? Color.white.opacity(0.30) : Color.white.opacity(0.08)))
+                            .overlay(Capsule(style: .continuous).strokeBorder(isSelected ? StillTheme.accent : StillTheme.border, lineWidth: StillTheme.Stroke.hairline))
                             .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)

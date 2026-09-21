@@ -27,6 +27,7 @@ struct ActivityContainerView: View {
                     title: activity?.name ?? "Activity",
                     startedAt: startedAt,
                     duration: activity?.estimatedDuration ?? 60,
+                    showsRemainingTime: activity?.category != .puzzle,
                     isFinished: outcome != nil,
                     onBack: backToBreak,
                     onDone: done
@@ -126,11 +127,15 @@ struct ActivityHeader: View {
     let title: String
     let startedAt: Date
     let duration: TimeInterval
+    var showsRemainingTime: Bool = true
     let isFinished: Bool
     let onBack: () -> Void
     let onDone: () -> Void
+    @Environment(\.stillDayPhase) private var phase
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
+        let resolved = phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
             HStack {
                 Button(action: onBack) {
@@ -150,7 +155,7 @@ struct ActivityHeader: View {
                     .foregroundStyle(StillTheme.textPrimary)
                     .accessibilityAddTraits(.isHeader)
                 Spacer()
-                if !isFinished {
+                if !isFinished && showsRemainingTime {
                     TimelineView(.periodic(from: startedAt, by: 1)) { timeline in
                         let remaining = max(0, duration - timeline.date.timeIntervalSince(startedAt))
                         Text(remaining > 0 ? "\(DurationFormatter.clock(remaining)) left" : "Take your time")
@@ -165,8 +170,9 @@ struct ActivityHeader: View {
         .padding(.top, StillTheme.Spacing.xs)
         .padding(.bottom, StillTheme.Spacing.s)
         .background(.ultraThinMaterial)
+        .background(resolved.glassFill)
         .overlay(alignment: .bottom) {
-            Rectangle().fill(Color.white.opacity(0.46)).frame(height: StillTheme.Stroke.hairline)
+            Rectangle().fill(resolved.glassBorder).frame(height: StillTheme.Stroke.hairline)
         }
     }
 }
@@ -195,11 +201,8 @@ struct ActivityFinishedPanel: View {
                 .frame(maxWidth: .infinity)
         }
         .padding(StillTheme.Spacing.l)
-        .background(
-            UnevenRoundedRectangle(topLeadingRadius: StillTheme.Radius.large, topTrailingRadius: StillTheme.Radius.large, style: .continuous)
-                .fill(StillTheme.surface)
-                .shadow(color: StillTheme.Shadow.color, radius: StillTheme.Shadow.radius, y: -2)
-                .ignoresSafeArea(edges: .bottom)
-        )
+        .background(.ultraThinMaterial)
+        .stillGlass(radius: StillTheme.Radius.large)
+        .ignoresSafeArea(edges: .bottom)
     }
 }

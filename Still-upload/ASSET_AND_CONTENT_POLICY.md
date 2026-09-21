@@ -16,6 +16,7 @@ layouts, puzzles, or branding.
 | Asset | Where | Provenance | License |
 |---|---|---|---|
 | Pixel scenes (Rainy Bedroom, Library Light, Train Window, Night City) | `DesignSystem/Scenes/SceneArtwork.swift` | Drawn in code for Still | Original |
+| Isometric room renderer | `DesignSystem/RoomHeroView.swift` | Drawn in code for Still; optional local Pixel Doodle display | Original |
 | Calm plant nook | `DesignSystem/Scenes/SceneArtwork.swift` | Drawn in code for Still | Original |
 | App icon (pixel sprout) | `Assets.xcassets/AppIcon.appiconset` | Generated for Still from a 16×16 pixel design | Original |
 | Ambient loops (rain, café, fireplace, waves) | `Resources/AmbientAudio/*.m4a` | Procedurally generated (NumPy/SciPy, ffmpeg) | Original |
@@ -23,7 +24,8 @@ layouts, puzzles, or branding.
 | Creative prompts | `Data/SeedData/ReadingLibrary.swift` | Written for Still | Original |
 | Sudoku, Picross, Word Search puzzles | `Data/SeedData/PuzzleLibrary.swift` | Generated for Still; uniqueness verified in `PuzzleTests` | Original |
 | Stretch steps and safety note | `Domain/Activities/GuidedRoutines.swift` | Written for Still, deliberately conservative | Original |
-| Font | System (SF Pro Rounded / New York) | Apple system fonts | Apple platform license |
+| Instrument Serif | `Resources/Fonts/InstrumentSerif-*.ttf` | [Instrument/instrument-serif](https://github.com/Instrument/instrument-serif), downloaded 2026-09-21 | SIL Open Font License 1.1 |
+| Outfit | `Resources/Fonts/Outfit-*.ttf` | [Outfitio/Outfit-Fonts](https://github.com/Outfitio/Outfit-Fonts), downloaded 2026-09-21 | SIL Open Font License 1.1 |
 | Icons | SF Symbols | Apple | SF Symbols license (use as UI icons only) |
 
 ## Rules by asset type

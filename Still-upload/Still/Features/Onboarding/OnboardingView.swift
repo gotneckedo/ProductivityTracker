@@ -9,29 +9,31 @@ struct OnboardingView: View {
         StillScreen {
             ScrollView {
                 VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
-                    CalmPlantCanvas(stage: .full)
-                        .frame(width: 132, height: 132)
-                        .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous))
+                    RoomHeroView(sceneName: "Your room", plantStage: .sprout)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 220)
                         .accessibilityHidden(true)
                         .stillEntrance()
 
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
                         Text("Still")
-                            .font(StillTypography.subheadline.weight(.semibold))
+                            .font(StillTypography.caption)
+                            .textCase(.uppercase)
+                            .tracking(1.4)
                             .foregroundStyle(StillTheme.textSecondary)
-                        Text("What would you like help with?")
-                            .font(StillTypography.display)
+                        Text("Make room for\nwhat matters.")
+                            .font(StillTypography.hero)
                             .foregroundStyle(StillTheme.textPrimary)
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityAddTraits(.isHeader)
-                        Text("One question. You can change anything later.")
+                        Text("Choose what you want a little more space for.")
                             .font(StillTypography.callout)
                             .foregroundStyle(StillTheme.textSecondary)
                     }
                     .stillEntrance(delay: 0.1)
 
                     VStack(spacing: StillTheme.Spacing.s) {
-                        ForEach(OnboardingGoal.allCases, id: \.self) { goal in
+                        ForEach(Array(OnboardingGoal.allCases.prefix(3)), id: \.self) { goal in
                             GoalChoice(goal: goal, isSelected: selection == goal) {
                                 selection = goal
                             }
@@ -39,7 +41,7 @@ struct OnboardingView: View {
                     }
                     .stillEntrance(delay: 0.2)
 
-                    Button("Continue") {
+                    Button("Begin gently") {
                         if let selection {
                             appState.completeOnboarding(goal: selection)
                         }

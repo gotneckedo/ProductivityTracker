@@ -13,12 +13,13 @@ struct TaskDetailView: View {
     @State private var hasSchedule = false
     @State private var scheduledAt = Date()
     @State private var course = ""
+    @State private var newStep = ""
     @State private var hasLoaded = false
 
     var body: some View {
         StillScreen {
             ScrollView {
-                if appState.task(taskID) != nil {
+                if let task = appState.task(taskID) {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                         StillCard {
                             VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
@@ -61,6 +62,42 @@ struct TaskDetailView: View {
                                     .font(StillTypography.body)
                                     .submitLabel(.done)
                                     .onSubmit(saveDetails)
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+                            SectionHeader(title: "Steps", detail: "Optional small actions for the next focus session.")
+                            StillCard {
+                                VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+                                    ForEach(task.steps) { step in
+                                        HStack(spacing: StillTheme.Spacing.s) {
+                                            Button { appState.toggleTaskStep(taskID: taskID, stepID: step.id) } label: {
+                                                Image(systemName: step.isCompleted ? "checkmark.circle.fill" : "circle")
+                                                    .foregroundStyle(step.isCompleted ? StillTheme.accent : StillTheme.textTertiary)
+                                                    .frame(width: 28, height: 28)
+                                            }
+                                            .buttonStyle(.plain)
+                                            Text(step.title)
+                                                .font(StillTypography.callout)
+                                                .strikethrough(step.isCompleted, color: StillTheme.textTertiary)
+                                                .foregroundStyle(step.isCompleted ? StillTheme.textTertiary : StillTheme.textPrimary)
+                                            Spacer()
+                                            Button(role: .destructive) { appState.deleteTaskStep(taskID: taskID, stepID: step.id) } label: {
+                                                Image(systemName: "xmark")
+                                            }
+                                            .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.textTertiary))
+                                        }
+                                    }
+                                    HStack(spacing: StillTheme.Spacing.s) {
+                                        TextField("Add a step", text: $newStep)
+                                            .font(StillTypography.callout)
+                                            .submitLabel(.done)
+                                            .onSubmit(addStep)
+                                        Button("Add", action: addStep)
+                                            .buttonStyle(QuietSecondaryButtonStyle(foreground: StillTheme.accent))
+                                            .disabled(newStep.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                                    }
+                                }
                             }
                         }
 
@@ -113,6 +150,12 @@ struct TaskDetailView: View {
             scheduledAt: hasSchedule ? scheduledAt : nil,
             course: course
         )
+    }
+
+    private func addStep() {
+        if appState.addTaskStep(taskID: taskID, title: newStep) {
+            newStep = ""
+        }
     }
 
     /// Tomorrow, so a new due date isn't instantly "today".

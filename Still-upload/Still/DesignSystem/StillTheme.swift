@@ -1,34 +1,116 @@
 import SwiftUI
 import UIKit
 
+/// The environmental treatment for a Still screen. Focus deliberately uses a
+/// quieter violet field instead of the current time-of-day colors.
+enum StillDayPhase: String, CaseIterable, Hashable, Codable {
+    case morning
+    case afternoon
+    case dusk
+    case night
+    case focus
+
+    static func automatic(date: Date = .now, colorScheme: ColorScheme) -> StillDayPhase {
+        if colorScheme == .dark { return .night }
+        let hour = Calendar.autoupdatingCurrent.component(.hour, from: date)
+        switch hour {
+        case 5..<11: return .morning
+        case 11..<17: return .afternoon
+        case 17..<20: return .dusk
+        default: return .night
+        }
+    }
+
+    var ink: Color {
+        switch self {
+        case .morning, .afternoon: return Color(hex: 0x2E2530)
+        case .dusk: return Color(hex: 0x2A1E2C)
+        case .night, .focus: return Color(hex: 0xF5EEF8)
+        }
+    }
+
+    var secondaryInk: Color {
+        switch self {
+        case .morning, .afternoon: return Color(hex: 0x4F4651, opacity: 0.82)
+        case .dusk: return Color(hex: 0x49394B, opacity: 0.84)
+        case .night, .focus: return Color(hex: 0xF5EEF8, opacity: 0.72)
+        }
+    }
+
+    var glassFill: Color {
+        switch self {
+        case .morning, .afternoon, .dusk: return .white.opacity(0.46)
+        case .night, .focus: return .white.opacity(0.08)
+        }
+    }
+
+    var glassBorder: Color {
+        switch self {
+        case .morning, .afternoon, .dusk: return .white.opacity(0.75)
+        case .night, .focus: return .white.opacity(0.16)
+        }
+    }
+
+    var accent: Color {
+        switch self {
+        case .night, .focus: return Color(hex: 0x8FDCC0)
+        case .morning, .afternoon, .dusk: return Color(hex: 0x3E8F74)
+        }
+    }
+
+    var roomHalo: Color {
+        switch self {
+        case .night, .focus: return Color(hex: 0xFFC478, opacity: 0.75)
+        case .morning, .afternoon, .dusk: return Color(hex: 0xFFDEAA, opacity: 0.88)
+        }
+    }
+
+    var gradient: LinearGradient {
+        let colors: [Color]
+        switch self {
+        case .morning:
+            colors = [Color(hex: 0xF9D6C2), Color(hex: 0xF7E8DA), Color(hex: 0xD4E7F0)]
+        case .afternoon:
+            colors = [Color(hex: 0xC9EADC), Color(hex: 0xEAF3EB), Color(hex: 0xD6E6F6)]
+        case .dusk:
+            colors = [Color(hex: 0xF3B39C), Color(hex: 0xDDA8C2), Color(hex: 0x9C92CC)]
+        case .night:
+            colors = [Color(hex: 0x1C2244), Color(hex: 0x2A2556), Color(hex: 0x3A2C5C)]
+        case .focus:
+            colors = [Color(hex: 0x3B2E52), Color(hex: 0x1D1B30), Color(hex: 0x121221)]
+        }
+        return LinearGradient(colors: colors, startPoint: .topTrailing, endPoint: .bottomLeading)
+    }
+}
+
 /// Semantic design tokens. Feature views use these names, never raw values.
 enum StillTheme {
     /// Raw palette. Warm paper instead of white, navy-charcoal instead of black.
     enum Palette {
-        static let paper = Color.dynamic(light: 0xF7F2EA, dark: 0x1B1F2B)
-        static let paperRaised = Color.dynamic(light: 0xFCF9F4, dark: 0x232837)
-        static let paperSunken = Color.dynamic(light: 0xEFE8DC, dark: 0x161A24)
-        static let ink = Color.dynamic(light: 0x2B3140, dark: 0xECE6DC)
-        static let inkSecondary = Color.dynamic(light: 0x5B6172, dark: 0xB9B3A9)
-        static let inkTertiary = Color.dynamic(light: 0x7F8492, dark: 0x8D909B)
-        static let hairline = Color.dynamic(light: 0xE4DCCF, dark: 0x343A4A)
+        static let paper = Color(hex: 0xF7E8DA)
+        static let paperRaised = Color.white.opacity(0.46)
+        static let paperSunken = Color.white.opacity(0.24)
+        static let ink = Color(hex: 0x2E2530)
+        static let inkSecondary = Color(hex: 0x4F4651)
+        static let inkTertiary = Color(hex: 0x786D78)
+        static let hairline = Color.white.opacity(0.72)
 
-        static let sage = Color.dynamic(light: 0x8FAF8A, dark: 0x9DBB98)
-        static let sageSoft = Color.dynamic(light: 0xE0EADB, dark: 0x2E3B31)
-        static let dustyBlue = Color.dynamic(light: 0x8FA7BF, dark: 0x9FB5CB)
-        static let dustyBlueSoft = Color.dynamic(light: 0xDEE6EE, dark: 0x283243)
-        static let peach = Color.dynamic(light: 0xECB597, dark: 0xE6B397)
-        static let peachSoft = Color.dynamic(light: 0xF8E4D8, dark: 0x3C2F29)
-        static let cream = Color.dynamic(light: 0xFBF1DC, dark: 0x2E2A22)
-        static let rose = Color.dynamic(light: 0xD39AA0, dark: 0xD8A4A9)
-        static let roseSoft = Color.dynamic(light: 0xF5E0E1, dark: 0x3A2B2F)
-        static let butter = Color.dynamic(light: 0xE3C87E, dark: 0xE0C888)
-        static let butterSoft = Color.dynamic(light: 0xF7EDCC, dark: 0x383324)
+        static let sage = Color(hex: 0x3E8F74)
+        static let sageSoft = Color(hex: 0xA6D7C4, opacity: 0.48)
+        static let dustyBlue = Color(hex: 0x759FC0)
+        static let dustyBlueSoft = Color(hex: 0xC7E0F0, opacity: 0.66)
+        static let peach = Color(hex: 0xE8A383)
+        static let peachSoft = Color(hex: 0xF8D0C0, opacity: 0.62)
+        static let cream = Color(hex: 0xFFF7EA)
+        static let rose = Color(hex: 0xD9705F)
+        static let roseSoft = Color(hex: 0xF4C4BD, opacity: 0.66)
+        static let butter = Color(hex: 0xE6BF70)
+        static let butterSoft = Color(hex: 0xF7E5AB, opacity: 0.62)
 
         /// Fixed tones for text over pixel scenes (scenes are always dusky).
-        static let sceneText = Color(hex: 0xFBF1DC)
-        static let sceneTextSecondary = Color(hex: 0xFBF1DC, opacity: 0.78)
-        static let navyShadow = Color(hex: 0x1F2537)
+        static let sceneText = Color(hex: 0xF5EEF8)
+        static let sceneTextSecondary = Color(hex: 0xF5EEF8, opacity: 0.78)
+        static let navyShadow = Color(hex: 0x1D1B30)
     }
 
     // MARK: Semantic colors
@@ -44,7 +126,7 @@ enum StillTheme {
     /// Primary action fill. Paired with `onAccent` text.
     static let accent = Palette.sage
     static let accentSoft = Palette.sageSoft
-    static let onAccent = Color(hex: 0x23291F)
+    static let onAccent = Color(hex: 0x3A2A22)
     /// Gentle attention (e.g. a Sudoku conflict). Never alarm red.
     static let attention = Palette.rose
     static let attentionSoft = Palette.roseSoft
@@ -54,6 +136,8 @@ enum StillTheme {
     static let calmSoft = Palette.dustyBlueSoft
     static let warm = Palette.peach
     static let warmSoft = Palette.peachSoft
+    static let litButtonTop = Color(hex: 0xFFF7EA)
+    static let litButtonBottom = Color(hex: 0xF7DDBB)
 
     static func categoryTint(_ category: ActivityCategory) -> Color {
         switch category {
@@ -87,9 +171,11 @@ enum StillTheme {
 
     enum Radius {
         static let small: CGFloat = 10
-        static let medium: CGFloat = 16
-        static let large: CGFloat = 26
+        static let medium: CGFloat = 20
+        static let large: CGFloat = 28
         static let scene: CGFloat = 30
+        static let home: CGFloat = 30
+        static let focusSlab: CGFloat = 34
     }
 
     enum Stroke {
@@ -98,9 +184,9 @@ enum StillTheme {
     }
 
     enum Shadow {
-        static let color = Color(hex: 0x1F2537, opacity: 0.06)
-        static let radius: CGFloat = 14
-        static let y: CGFloat = 4
+        static let color = Color(hex: 0x38274A, opacity: 0.12)
+        static let radius: CGFloat = 18
+        static let y: CGFloat = 8
     }
 
     /// Minimum comfortable touch target.

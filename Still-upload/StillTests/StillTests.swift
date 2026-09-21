@@ -735,6 +735,17 @@ final class FocusFlowControllerTests: XCTestCase {
         XCTAssertEqual(container.focus.snapshot()?.remainingInPhase, minutes(20))
     }
 
+    func testAddingFiveMinutesExtendsOnlyTheRunningSession() {
+        container.focus.start(presetID: .defaultPreset, taskID: nil, source: .manual)
+        clock.advance(by: minutes(5))
+        container.focus.addFiveMinutes()
+
+        XCTAssertEqual(container.focus.snapshot()?.remainingInPhase, minutes(25))
+        XCTAssertEqual(container.focus.activeSession?.configuration.focusDuration, minutes(30))
+        XCTAssertEqual(container.presets.preset(id: .defaultPreset)?.timer.focusDuration, minutes(25))
+        XCTAssertEqual(notifications.scheduled.first?.date, clock.now.addingTimeInterval(minutes(25)))
+    }
+
     // MARK: Relaunch
 
     func testRestoreAfterRelaunchCompletesOverdueSession() {
@@ -811,6 +822,19 @@ final class FocusFlowControllerTests: XCTestCase {
     func testBlankTaskTitleIsRejected() {
         XCTAssertNil(container.taskController.create(title: "   \n "))
         XCTAssertTrue(container.tasks.allTasks().isEmpty)
+    }
+
+    func testTaskChecklistPersistsAndTogglesIndependently() {
+        let task = container.taskController.create(title: "Biology review")!
+        XCTAssertTrue(container.taskController.addStep(taskID: task.id, title: "Read chapter 4"))
+        let step = try! XCTUnwrap(container.tasks.task(id: task.id)?.steps.first)
+
+        container.taskController.toggleStep(taskID: task.id, stepID: step.id)
+        XCTAssertTrue(container.tasks.task(id: task.id)?.steps.first?.isCompleted == true)
+        XCTAssertFalse(container.tasks.task(id: task.id)?.isCompleted == true)
+
+        container.taskController.deleteStep(taskID: task.id, stepID: step.id)
+        XCTAssertTrue(container.tasks.task(id: task.id)?.steps.isEmpty == true)
     }
 
     func testTodaysTasksShowsOpenThenDoneToday() {

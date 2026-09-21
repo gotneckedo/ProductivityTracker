@@ -27,7 +27,7 @@ struct SessionOptionsView: View {
                     }
                 }
             }
-            .navigationTitle("Session options")
+            .navigationTitle("Session setup")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -130,7 +130,7 @@ struct SessionOptionsView: View {
 
     private func environmentSection(_ preset: FocusPreset) -> some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Environment", detail: "Calm keeps a still plant and puts the timer first.")
+            SectionHeader(title: "Room", detail: "Pick the room that feels best for this session.")
             SelectionPill(options: RenderMode.allCases, selection: binding(\.renderMode, fallback: .scene), title: { $0.displayName })
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: StillTheme.Spacing.s) {
@@ -202,7 +202,7 @@ private struct SceneChoice: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
-                PixelSceneView(scene: scene, mode: .scene, intensity: .still)
+                RoomHeroView(sceneName: scene.name, plantStage: .full)
                     .frame(width: 112, height: 100)
                     .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
                     .overlay(

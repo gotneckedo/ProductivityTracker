@@ -4,7 +4,8 @@ name: iOS build, tests & screenshots
 
 on:
   push:
-    branches: [main]
+    branches: [main, "redesign", "redesign/**"]
+  pull_request:
   workflow_dispatch:
 
 concurrency:

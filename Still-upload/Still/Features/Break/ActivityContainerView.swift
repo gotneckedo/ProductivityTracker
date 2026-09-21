@@ -21,31 +21,32 @@ struct ActivityContainerView: View {
 
     var body: some View {
         let startedAt = usage?.startedAt ?? Date()
-        VStack(spacing: 0) {
-            ActivityHeader(
-                title: activity?.name ?? "Activity",
-                startedAt: startedAt,
-                duration: activity?.estimatedDuration ?? 60,
-                isFinished: outcome != nil,
-                onBack: backToBreak,
-                onDone: done
-            )
-            ScrollView {
-                activityBody(startedAt: startedAt)
-                    .padding(.horizontal, StillTheme.Spacing.screen)
-                    .padding(.vertical, StillTheme.Spacing.m)
-            }
-            if let outcome {
-                ActivityFinishedPanel(
-                    title: finishedTitle(outcome),
-                    message: finishedMessage(outcome),
-                    onFocus: { appState.returnToFocusFromActivity() },
-                    onShelf: { appState.returnToShelf() }
+        StillScreen {
+            VStack(spacing: 0) {
+                ActivityHeader(
+                    title: activity?.name ?? "Activity",
+                    startedAt: startedAt,
+                    duration: activity?.estimatedDuration ?? 60,
+                    isFinished: outcome != nil,
+                    onBack: backToBreak,
+                    onDone: done
                 )
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+                ScrollView {
+                    activityBody(startedAt: startedAt)
+                        .padding(.horizontal, StillTheme.Spacing.screen)
+                        .padding(.vertical, StillTheme.Spacing.m)
+                }
+                if let outcome {
+                    ActivityFinishedPanel(
+                        title: finishedTitle(outcome),
+                        message: finishedMessage(outcome),
+                        onFocus: { appState.returnToFocusFromActivity() },
+                        onShelf: { appState.returnToShelf() }
+                    )
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
         }
-        .background(StillTheme.background.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
@@ -163,9 +164,9 @@ struct ActivityHeader: View {
         .padding(.horizontal, StillTheme.Spacing.screen)
         .padding(.top, StillTheme.Spacing.xs)
         .padding(.bottom, StillTheme.Spacing.s)
-        .background(StillTheme.background)
+        .background(.ultraThinMaterial)
         .overlay(alignment: .bottom) {
-            Rectangle().fill(StillTheme.border).frame(height: StillTheme.Stroke.hairline)
+            Rectangle().fill(Color.white.opacity(0.46)).frame(height: StillTheme.Stroke.hairline)
         }
     }
 }

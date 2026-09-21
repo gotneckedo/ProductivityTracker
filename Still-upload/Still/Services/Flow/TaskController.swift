@@ -69,6 +69,26 @@ final class TaskController {
         persist(task)
     }
 
+    @discardableResult
+    func addStep(taskID: UUID, title raw: String) -> Bool {
+        guard var task = tasks.task(id: taskID),
+              let title = TaskItem.normalizedTitle(raw) else { return false }
+        task.steps.append(TaskStep(title: String(title.prefix(80))))
+        return persist(task)
+    }
+
+    func toggleStep(taskID: UUID, stepID: UUID) {
+        guard var task = tasks.task(id: taskID), let index = task.steps.firstIndex(where: { $0.id == stepID }) else { return }
+        task.steps[index].completedAt = task.steps[index].completedAt == nil ? clock.now : nil
+        persist(task)
+    }
+
+    func deleteStep(taskID: UUID, stepID: UUID) {
+        guard var task = tasks.task(id: taskID) else { return }
+        task.steps.removeAll { $0.id == stepID }
+        persist(task)
+    }
+
     func delete(id: UUID) {
         do {
             try tasks.delete(id: id)

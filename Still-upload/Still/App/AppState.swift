@@ -224,6 +224,11 @@ final class AppState {
         reload()
     }
 
+    func addFiveMinutes() {
+        container.focus.addFiveMinutes()
+        reload()
+    }
+
     func startNextPhase() {
         handle(container.focus.startNextPhase())
         reload()

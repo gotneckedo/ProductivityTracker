@@ -26,11 +26,18 @@ struct MainTabView: View {
 
     var body: some View {
         let router = appState.router
-        TabView(selection: Binding(get: { router.selectedTab }, set: { router.selectedTab = $0 })) {
-            ForEach(router.visibleTabs, id: \.self) { tab in
-                tabContent(tab)
-                    .tabItem { Label(tab.title, systemImage: tab.systemImage) }
-                    .tag(tab)
+        ZStack {
+            tabContent(router.selectedTab)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if appState.activeSession == nil {
+                FloatingTabBar(tabs: router.visibleTabs, selection: Binding(
+                    get: { router.selectedTab },
+                    set: { router.selectedTab = $0 }
+                ))
+                .padding(.horizontal, StillTheme.Spacing.screen)
+                .padding(.top, StillTheme.Spacing.xs)
+                .padding(.bottom, StillTheme.Spacing.xs)
             }
         }
         .sheet(item: Binding(get: { router.sheet }, set: { router.sheet = $0 })) { sheet in
@@ -68,6 +75,38 @@ struct MainTabView: View {
         case .journal:
             JournalTab()
         }
+    }
+}
+
+private struct FloatingTabBar: View {
+    let tabs: [AppTab]
+    @Binding var selection: AppTab
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(tabs, id: \.self) { tab in
+                let isSelected = selection == tab
+                Button {
+                    selection = tab
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: tab.systemImage)
+                            .font(StillTypography.callout.weight(.semibold))
+                        Text(tab.title)
+                            .font(StillTypography.caption)
+                    }
+                    .foregroundStyle(isSelected ? StillTheme.textPrimary : StillTheme.textSecondary)
+                    .frame(maxWidth: .infinity, minHeight: 54)
+                    .background(isSelected ? Color.white.opacity(0.54) : .clear, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
+            }
+        }
+        .padding(5)
+        .stillGlass(radius: 26)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Main navigation")
     }
 }
 

@@ -10,15 +10,7 @@ struct MeView: View {
         StillScreen {
             ScrollView {
                 VStack(alignment: .leading, spacing: StillTheme.Spacing.xl) {
-                    VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
-                        Text("Me")
-                            .font(StillTypography.title)
-                            .foregroundStyle(StillTheme.textPrimary)
-                            .accessibilityAddTraits(.isHeader)
-                        Text("Is this helping?")
-                            .font(StillTypography.callout)
-                            .foregroundStyle(StillTheme.textSecondary)
-                    }
+                    ProfileHero(stats: appState.stats)
 
                     StatsSection(stats: appState.stats)
                     BreakUsageSection(stats: appState.stats)
@@ -185,6 +177,37 @@ struct MeView: View {
             .buttonStyle(.plain)
             .accessibilityHint("Asks before deleting everything on this device.")
         }
+    }
+}
+
+private struct ProfileHero: View {
+    let stats: FocusStats
+
+    var body: some View {
+        HStack(spacing: StillTheme.Spacing.m) {
+            ZStack {
+                Circle().fill(StillTheme.accentSoft)
+                Image(systemName: "leaf.fill")
+                    .font(.system(size: 26, weight: .medium, design: .rounded))
+                    .foregroundStyle(StillTheme.accent)
+            }
+            .frame(width: 66, height: 66)
+            .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Me")
+                    .font(StillTypography.display)
+                    .foregroundStyle(StillTheme.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                Text(stats.hasHistory ? StatsCalculator.streakLine(current: stats.currentStreak) : "A quiet place to notice what helps.")
+                    .font(StillTypography.callout)
+                    .foregroundStyle(StillTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(StillTheme.Spacing.m)
+        .stillGlass(radius: StillTheme.Radius.large)
+        .accessibilityElement(children: .combine)
     }
 }
 

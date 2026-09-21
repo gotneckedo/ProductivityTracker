@@ -6,17 +6,53 @@ import SwiftUI
 
 /// The warm paper background every screen sits on.
 struct StillScreen<Content: View>: View {
+    var phase: StillDayPhase?
     private let content: Content
+    @Environment(\.colorScheme) private var colorScheme
 
-    init(@ViewBuilder content: () -> Content) {
+    init(phase: StillDayPhase? = nil, @ViewBuilder content: () -> Content) {
+        self.phase = phase
         self.content = content()
     }
 
     var body: some View {
+        let resolvedPhase = phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         ZStack {
-            StillTheme.background.ignoresSafeArea()
+            resolvedPhase.gradient.ignoresSafeArea()
             content
         }
+    }
+}
+
+/// The app's single quiet surface treatment. Night and focus stay translucent
+/// so the environment remains visible behind content.
+struct StillGlassSurface: ViewModifier {
+    var radius: CGFloat = StillTheme.Radius.large
+    var phase: StillDayPhase? = nil
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        let resolvedPhase = phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
+        content
+            .background(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: radius, style: .continuous)
+                            .fill(resolvedPhase.glassFill)
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(resolvedPhase.glassBorder, lineWidth: StillTheme.Stroke.hairline)
+            )
+            .shadow(color: StillTheme.Shadow.color, radius: StillTheme.Shadow.radius, x: 0, y: StillTheme.Shadow.y)
+    }
+}
+
+extension View {
+    func stillGlass(radius: CGFloat = StillTheme.Radius.large, phase: StillDayPhase? = nil) -> some View {
+        modifier(StillGlassSurface(radius: radius, phase: phase))
     }
 }
 
@@ -24,11 +60,13 @@ struct StillScreen<Content: View>: View {
 struct StillCard<Content: View>: View {
     var padding: CGFloat = StillTheme.Spacing.m
     var tint: Color = StillTheme.surface
+    var phase: StillDayPhase? = nil
     private let content: Content
 
-    init(padding: CGFloat = StillTheme.Spacing.m, tint: Color = StillTheme.surface, @ViewBuilder content: () -> Content) {
+    init(padding: CGFloat = StillTheme.Spacing.m, tint: Color = StillTheme.surface, phase: StillDayPhase? = nil, @ViewBuilder content: () -> Content) {
         self.padding = padding
         self.tint = tint
+        self.phase = phase
         self.content = content()
     }
 
@@ -36,15 +74,8 @@ struct StillCard<Content: View>: View {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous)
-                    .fill(tint)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous)
-                    .strokeBorder(StillTheme.border, lineWidth: StillTheme.Stroke.hairline)
-            )
-            .shadow(color: StillTheme.Shadow.color, radius: StillTheme.Shadow.radius, x: 0, y: StillTheme.Shadow.y)
+            .background(tint.opacity(0.24))
+            .stillGlass(phase: phase)
     }
 }
 
@@ -52,20 +83,27 @@ struct StillCard<Content: View>: View {
 
 /// The one prominent action on a screen.
 struct QuietPrimaryButtonStyle: ButtonStyle {
-    var fill: Color = StillTheme.accent
+    var fill: Color? = nil
     var foreground: Color = StillTheme.onAccent
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
+        let opacity = isEnabled ? 1.0 : 0.45
         configuration.label
             .font(StillTypography.headline)
             .foregroundStyle(foreground)
-            .frame(maxWidth: .infinity, minHeight: 54)
+            .frame(maxWidth: .infinity, minHeight: 58)
             .padding(.horizontal, StillTheme.Spacing.m)
             .background(
                 Capsule(style: .continuous)
-                    .fill(fill.opacity(isEnabled ? 1 : 0.45))
+                    .fill(fill?.opacity(opacity) ?? StillTheme.litButtonBottom.opacity(opacity))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .fill(fill == nil ? LinearGradient(colors: [StillTheme.litButtonTop.opacity(opacity), StillTheme.litButtonBottom.opacity(opacity)], startPoint: .top, endPoint: .bottom) : LinearGradient(colors: [.clear], startPoint: .top, endPoint: .bottom))
+                    )
             )
+            .overlay(Capsule(style: .continuous).strokeBorder(Color.white.opacity(0.72), lineWidth: StillTheme.Stroke.hairline))
+            .shadow(color: fill == nil ? Color(hex: 0xFFBA78, opacity: 0.45) : .clear, radius: 34, x: 0, y: 10)
             .opacity(configuration.isPressed ? 0.82 : 1)
             .contentShape(Capsule())
     }

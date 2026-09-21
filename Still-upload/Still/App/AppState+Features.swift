@@ -100,6 +100,23 @@ extension AppState {
     }
 
     @discardableResult
+    func addTaskStep(taskID: UUID, title: String) -> Bool {
+        let added = container.taskController.addStep(taskID: taskID, title: title)
+        reload()
+        return added
+    }
+
+    func toggleTaskStep(taskID: UUID, stepID: UUID) {
+        container.taskController.toggleStep(taskID: taskID, stepID: stepID)
+        reload()
+    }
+
+    func deleteTaskStep(taskID: UUID, stepID: UUID) {
+        container.taskController.deleteStep(taskID: taskID, stepID: stepID)
+        reload()
+    }
+
+    @discardableResult
     func createTask(from draft: CapturedTaskDraft, source: TaskCaptureSource) -> TaskItem? {
         let task = container.taskController.create(from: draft, source: source)
         if let task {

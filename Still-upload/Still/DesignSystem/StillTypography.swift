@@ -1,28 +1,25 @@
 import SwiftUI
 
-/// Text styles. Every style is built on a Dynamic Type text style so it scales.
-///
-/// V1 uses the rounded system face. To adopt a licensed custom font later,
-/// change only this file (e.g. `Font.custom("Name", size: 17, relativeTo: .body)`).
+/// All type is defined against Dynamic Type styles so the bundled families scale.
+/// Instrument Serif is reserved for editorial display moments; Outfit carries UI.
 enum StillTypography {
-    static let display = Font.system(.largeTitle, design: .rounded).weight(.semibold)
-    static let title = Font.system(.title2, design: .rounded).weight(.semibold)
-    static let title3 = Font.system(.title3, design: .rounded).weight(.medium)
-    static let headline = Font.system(.headline, design: .rounded)
-    static let body = Font.system(.body, design: .rounded)
-    static let bodyEmphasis = Font.system(.body, design: .rounded).weight(.medium)
-    static let callout = Font.system(.callout, design: .rounded)
-    static let subheadline = Font.system(.subheadline, design: .rounded)
-    static let footnote = Font.system(.footnote, design: .rounded)
-    static let caption = Font.system(.caption, design: .rounded)
-    /// Stats and durations.
-    static let metric = Font.system(.title2, design: .rounded).weight(.medium).monospacedDigit()
-    /// Reading text for Short Read: a little larger, serif for long-form calm.
-    static let reading = Font.system(.body, design: .serif)
-    static let readingTitle = Font.system(.title2, design: .serif).weight(.semibold)
+    static let display = Font.custom("InstrumentSerif-Regular", size: 40, relativeTo: .largeTitle)
+    static let hero = Font.custom("InstrumentSerif-Regular", size: 64, relativeTo: .largeTitle)
+    static let title = Font.custom("InstrumentSerif-Regular", size: 26, relativeTo: .title2)
+    static let title3 = Font.custom("InstrumentSerif-Regular", size: 22, relativeTo: .title3)
+    static let headline = Font.custom("Outfit-SemiBold", size: 17, relativeTo: .headline)
+    static let body = Font.custom("Outfit-Regular", size: 17, relativeTo: .body)
+    static let bodyEmphasis = Font.custom("Outfit-Medium", size: 17, relativeTo: .body)
+    static let callout = Font.custom("Outfit-Regular", size: 16, relativeTo: .callout)
+    static let subheadline = Font.custom("Outfit-Medium", size: 15, relativeTo: .subheadline)
+    static let footnote = Font.custom("Outfit-Regular", size: 13, relativeTo: .footnote)
+    static let caption = Font.custom("Outfit-Medium", size: 12, relativeTo: .caption)
+    static let metric = Font.custom("InstrumentSerif-Regular", size: 32, relativeTo: .title2)
+    static let reading = Font.custom("InstrumentSerif-Regular", size: 18, relativeTo: .body)
+    static let readingTitle = Font.custom("InstrumentSerif-Regular", size: 28, relativeTo: .title2)
 
-    /// The large timer. Pair with `@ScaledMetric` for the size so it scales.
+    /// The large timer. Pair with @ScaledMetric so accessibility sizes remain legible.
     static func timer(size: CGFloat) -> Font {
-        Font.system(size: size, weight: .light, design: .rounded).monospacedDigit()
+        Font.custom("InstrumentSerif-Regular", size: size, relativeTo: .largeTitle).monospacedDigit()
     }
 }

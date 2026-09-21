@@ -29,6 +29,7 @@ final class AppState {
     private(set) var habitDays: [HabitDay] = []
     private(set) var doodles: [ActivityArtifact] = []
     private(set) var books: [BookSummary] = []
+    private(set) var blockingSchedule: BlockingSchedule
     /// Read-only calendar events for today's timeline (empty unless allowed).
     private(set) var calendarAccess: CalendarAccess = .unavailable
     /// Mute toggled on the active screen. Transient: the preset mix is unchanged.
@@ -44,6 +45,7 @@ final class AppState {
         self.container = container
         self.router = AppRouter(flags: container.flags)
         self.preferences = container.preferencesStore.load()
+        self.blockingSchedule = container.blockingSchedule.schedule
         let reportError: (Error) -> Void = { [weak self] _ in
             self?.notice = StillNotice(text: "Couldn't save that change. Your session is still running.")
         }
@@ -75,6 +77,9 @@ final class AppState {
         hasBootstrapped = true
         container.breaks.closeStaleUsages()
         let events = container.focus.restore()
+        if container.flags.appBlocking {
+            _ = container.blockingSchedule.refresh()
+        }
         reload()
         handle(events)
         if let pending = preferences.pendingCompletionSessionID, router.completion == nil {
@@ -89,6 +94,9 @@ final class AppState {
 
     /// Call when the app returns to the foreground.
     func handleBecameActive() {
+        if container.flags.appBlocking {
+            _ = container.blockingSchedule.refresh()
+        }
         tick()
         reload()
     }
@@ -118,6 +126,7 @@ final class AppState {
         habitDays = container.habitController.today()
         doodles = container.artifacts.artifacts(kind: .doodle)
         books = container.books.books()
+        blockingSchedule = container.blockingSchedule.schedule
         calendarAccess = container.calendarAdapter.access
         publishWidgetSnapshot()
     }
@@ -419,6 +428,7 @@ final class AppState {
             container.books.removeBook(id: book.id)
         }
         container.preferences.resetAllData()
+        container.blockingSchedule.reset()
         container.morningStart.cancelMorningStart()
         suggestionCache.removeAll()
         isAudioMuted = false
@@ -436,11 +446,13 @@ final class AppState {
 
     /// Handles still:// links from NFC tags, Shortcuts, or other apps.
     func handle(url: URL) {
+        if endScheduledBlockingFromCardIfNeeded() { return }
         routeFocusLink(url, source: .deepLink)
     }
 
     /// The in-app NFC simulator runs the exact same route as a real tag.
     func simulateFocusCard(presetID: FocusPresetID) {
+        if endScheduledBlockingFromCardIfNeeded() { return }
         guard let preset = presets.first(where: { $0.id == presetID }) else { return }
         routeFocusLink(preset.startURL, source: .nfcSimulator)
     }
@@ -451,6 +463,14 @@ final class AppState {
         guard container.flags.brandedFocusCardPreview,
               presets.contains(where: { $0.id == presetID }) else { return }
         routeFocusLink(StillLinks.startFocusURL(presetID: presetID), source: .nfcSimulator)
+    }
+
+    private func endScheduledBlockingFromCardIfNeeded() -> Bool {
+        guard container.flags.appBlocking,
+              container.blockingSchedule.cardTapped() == .endedByCardTap else { return false }
+        notice = StillNotice(text: "Blocking ended. Your card worked.")
+        reload()
+        return true
     }
 
     private func routeFocusLink(_ url: URL, source: SessionSource) {

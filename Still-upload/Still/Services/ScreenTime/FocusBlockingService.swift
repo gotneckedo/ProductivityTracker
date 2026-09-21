@@ -20,11 +20,15 @@ protocol FocusBlockingService: AnyObject {
     var isShielding: Bool { get }
     func sessionDidStart(sessionID: UUID, presetID: FocusPresetID, intent: BlockerIntent)
     func sessionDidEnd(sessionID: UUID)
+    /// Starts an open-ended schedule. It is lifted only by a Focus Card tap or
+    /// the always-available manual override.
+    func scheduleDidStart(presetID: FocusPresetID)
     /// Lifts shields right away, e.g. from "End blocking now".
     func endShieldingNow()
 }
 
 extension FocusBlockingService {
+    func scheduleDidStart(presetID: FocusPresetID) {}
     func endShieldingNow() {}
 }
 
@@ -84,6 +88,7 @@ final class MockFocusBlockingService: FocusBlockingService {
     let capability: BlockingCapability = .simulationOnly
     let isShielding = false
     private(set) var recordedIntents: [UUID: BlockerIntent] = [:]
+    private(set) var scheduledPresetID: FocusPresetID?
 
     func sessionDidStart(sessionID: UUID, presetID: FocusPresetID, intent: BlockerIntent) {
         recordedIntents[sessionID] = intent
@@ -91,6 +96,14 @@ final class MockFocusBlockingService: FocusBlockingService {
 
     func sessionDidEnd(sessionID: UUID) {
         recordedIntents[sessionID] = nil
+    }
+
+    func scheduleDidStart(presetID: FocusPresetID) {
+        scheduledPresetID = presetID
+    }
+
+    func endShieldingNow() {
+        scheduledPresetID = nil
     }
 }
 
@@ -159,6 +172,20 @@ final class FamilyControlsBlockingService: FocusBlockingService {
         guard !selection.applicationTokens.isEmpty || !selection.categoryTokens.isEmpty || !selection.webDomainTokens.isEmpty else {
             return
         }
+        apply(selection: selection, intent: intent, sessionID: sessionID)
+    }
+
+    func scheduleDidStart(presetID: FocusPresetID) {
+        refreshAuthorization()
+        guard capability == .authorized else { return }
+        let selection = selection(for: presetID)
+        guard !selection.applicationTokens.isEmpty || !selection.categoryTokens.isEmpty || !selection.webDomainTokens.isEmpty else {
+            return
+        }
+        apply(selection: selection, intent: .strict, sessionID: nil)
+    }
+
+    fileprivate func apply(selection: FamilyActivitySelection, intent: BlockerIntent, sessionID: UUID?) {
         store.shield.applications = selection.applicationTokens.isEmpty ? nil : selection.applicationTokens
         store.shield.applicationCategories = selection.categoryTokens.isEmpty
             ? nil

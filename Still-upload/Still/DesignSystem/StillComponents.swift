@@ -427,13 +427,19 @@ struct SettingRow: View {
     let title: String
     var value: String?
     var showsChevron: Bool = true
+    var iconTint: Color = StillTheme.accent
+    var iconBackground: Color = StillTheme.accentSoft
 
     var body: some View {
         HStack(spacing: StillTheme.Spacing.s) {
-            Image(systemName: symbol)
-                .font(StillTypography.body)
-                .foregroundStyle(StillTheme.textSecondary)
-                .frame(width: 26)
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .fill(iconBackground)
+                .frame(width: 40, height: 40)
+                .overlay {
+                    Image(systemName: symbol)
+                        .font(StillTypography.callout.weight(.semibold))
+                        .foregroundStyle(iconTint)
+                }
                 .accessibilityHidden(true)
             Text(title)
                 .font(StillTypography.body)

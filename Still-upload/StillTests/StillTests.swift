@@ -1425,6 +1425,9 @@ final class StreakTests: XCTestCase {
         let days = streaks.focusDays(from: sessions)
         XCTAssertEqual(streaks.currentStreak(days: days, today: day(0)), 0)
         XCTAssertEqual(StatsCalculator.streakLine(current: 0), "A streak starts with any one session.")
+        XCTAssertNil(StatsCalculator.streakValue(0), "a numeric zero streak is never presented")
+        XCTAssertEqual(StatsCalculator.streakValue(1), "1 day")
+        XCTAssertEqual(StatsCalculator.streakValue(3), "3 days")
     }
 
     func testAbandonedSessionsDoNotCreateFocusDays() {
@@ -1479,6 +1482,134 @@ final class StatsCalculatorTests: XCTestCase {
         XCTAssertFalse(stats.hasHistory)
         XCTAssertEqual(stats.averageSessionDuration, 0)
         XCTAssertEqual(stats.lastSevenDays.map(\.focusDuration), Array(repeating: 0, count: 7))
+    }
+
+    func testDayWeekMonthAndYearRangesUseCalendarBoundaries() {
+        let calculator = StatsCalculator(calendar: testCalendar)
+        let today = referenceDate
+        let sessions = [
+            completedSession(endingAt: today, focusMinutes: 10),
+            completedSession(endingAt: testCalendar.date(byAdding: .day, value: -6, to: today)!, focusMinutes: 20),
+            completedSession(endingAt: testCalendar.date(byAdding: .day, value: -7, to: today)!, focusMinutes: 30),
+            completedSession(endingAt: testCalendar.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 10))!, focusMinutes: 40),
+            completedSession(endingAt: testCalendar.date(from: DateComponents(year: 2025, month: 12, day: 31, hour: 10))!, focusMinutes: 50)
+        ]
+        let stats = calculator.stats(sessions: sessions, usages: [], now: today)
+
+        XCTAssertEqual(stats.data(for: .day)?.focusDuration, minutes(10))
+        XCTAssertEqual(stats.data(for: .day)?.points.count, 1)
+        XCTAssertEqual(stats.data(for: .week)?.focusDuration, minutes(30))
+        XCTAssertEqual(stats.data(for: .week)?.points.count, 7)
+        XCTAssertEqual(stats.data(for: .month)?.focusDuration, minutes(60))
+        XCTAssertEqual(stats.data(for: .month)?.points.count, 31)
+        XCTAssertEqual(stats.data(for: .year)?.focusDuration, minutes(100))
+        XCTAssertEqual(stats.data(for: .year)?.points.count, 12)
+    }
+
+    func testOwnUsualUsesPriorFocusDaysAndExcludesToday() {
+        let calculator = StatsCalculator(calendar: testCalendar)
+        let sessions = [
+            completedSession(endingAt: testCalendar.date(byAdding: .day, value: -3, to: referenceDate)!, focusMinutes: 20),
+            completedSession(endingAt: testCalendar.date(byAdding: .day, value: -2, to: referenceDate)!, focusMinutes: 40),
+            completedSession(endingAt: referenceDate, focusMinutes: 90)
+        ]
+        let stats = calculator.stats(sessions: sessions, usages: [], now: referenceDate)
+
+        XCTAssertEqual(stats.usualDailyFocus, minutes(30))
+        XCTAssertEqual(stats.data(for: .week)?.usualReferenceFocus, minutes(30))
+        XCTAssertEqual(stats.data(for: .day)?.comparisonToUsual, .more)
+        XCTAssertEqual(StatsCalculator.comparison(focus: minutes(30), usual: minutes(30)), .aboutUsual)
+        XCTAssertEqual(StatsCalculator.comparison(focus: minutes(10), usual: minutes(30)), .lighter)
+    }
+
+    func testCalendarDaysUseNeutralQuietAndUpcomingStates() {
+        let now = testCalendar.date(from: DateComponents(year: 2026, month: 3, day: 10, hour: 9))!
+        let focused = testCalendar.date(from: DateComponents(year: 2026, month: 3, day: 4, hour: 10))!
+        let month = StatsCalculator(calendar: testCalendar).calendarMonth(
+            sessions: [completedSession(endingAt: focused)],
+            now: now
+        )
+
+        XCTAssertEqual(month.days.count, 31)
+        XCTAssertEqual(month.days.first { testCalendar.component(.day, from: $0.date) == 4 }?.kind, .focused)
+        XCTAssertEqual(month.days.first { testCalendar.component(.day, from: $0.date) == 5 }?.kind, .quiet)
+        XCTAssertEqual(month.days.first { testCalendar.component(.day, from: $0.date) == 11 }?.kind, .upcoming)
+        XCTAssertFalse(FocusCalendarDayKind.allRawValuesForTesting.contains("missed"))
+    }
+}
+
+private extension FocusCalendarDayKind {
+    static var allRawValuesForTesting: [String] {
+        [FocusCalendarDayKind.focused, .quiet, .upcoming].map(\.rawValue)
+    }
+}
+
+final class BlockingScheduleTests: XCTestCase {
+    func testScheduleStartsAtTimeAndEndsOnlyOnCardTapOrOverride() {
+        let clock = ManualClock(referenceDate)
+        let keyValues = InMemoryKeyValueStore()
+        let mock = MockFocusBlockingService()
+        let controller = BlockingScheduleController(
+            clock: clock,
+            calendar: testCalendar,
+            store: KeyValueBlockingScheduleStore(store: keyValues),
+            blocking: mock
+        )
+
+        controller.update(isEnabled: true, startMinute: 10 * 60, presetID: .study)
+        XCTAssertEqual(controller.schedule.phase, .waiting)
+        XCTAssertEqual(controller.refresh(at: referenceDate.addingTimeInterval(59 * 60)), .none)
+        XCTAssertEqual(controller.refresh(at: referenceDate.addingTimeInterval(60 * 60)), .started)
+        XCTAssertEqual(controller.schedule.phase, .blockingUntilCardTap)
+        XCTAssertEqual(mock.scheduledPresetID, .study)
+        XCTAssertEqual(controller.refresh(at: referenceDate.addingTimeInterval(4 * 60 * 60)), .none)
+        XCTAssertEqual(controller.schedule.phase, .blockingUntilCardTap)
+        XCTAssertEqual(controller.cardTapped(), .endedByCardTap)
+        XCTAssertEqual(controller.schedule.phase, .waiting)
+        XCTAssertNil(mock.scheduledPresetID)
+    }
+
+    func testSchedulePersistsAndManualEndPersistsWaitingState() {
+        let keyValues = InMemoryKeyValueStore()
+        let mock = MockFocusBlockingService()
+        let store = KeyValueBlockingScheduleStore(store: keyValues)
+        let first = BlockingScheduleController(
+            clock: ManualClock(referenceDate),
+            calendar: testCalendar,
+            store: store,
+            blocking: mock
+        )
+        first.update(isEnabled: true, startMinute: 8 * 60 + 15, presetID: .deepWork)
+        XCTAssertEqual(first.schedule.phase, .blockingUntilCardTap)
+        XCTAssertEqual(mock.scheduledPresetID, .deepWork)
+
+        let restored = BlockingScheduleController(
+            clock: ManualClock(referenceDate),
+            calendar: testCalendar,
+            store: store,
+            blocking: mock
+        )
+        XCTAssertEqual(restored.schedule.phase, .blockingUntilCardTap)
+        XCTAssertEqual(restored.schedule.startMinute, 8 * 60 + 15)
+        XCTAssertEqual(restored.schedule.presetID, .deepWork)
+        XCTAssertEqual(restored.endNow(), .endedManually)
+
+        let afterEnd = BlockingScheduleController(
+            clock: ManualClock(referenceDate),
+            calendar: testCalendar,
+            store: store,
+            blocking: mock
+        )
+        XCTAssertEqual(afterEnd.schedule.phase, .waiting)
+        XCTAssertTrue(afterEnd.schedule.isEnabled)
+    }
+
+    func testMockRecordsIntentButNeverClaimsShielding() {
+        let mock = MockFocusBlockingService()
+        mock.scheduleDidStart(presetID: .defaultPreset)
+        XCTAssertEqual(mock.scheduledPresetID, .defaultPreset)
+        XCTAssertFalse(mock.isShielding)
+        XCTAssertEqual(mock.capability, .simulationOnly)
     }
 }
 
@@ -1568,6 +1699,12 @@ final class FeatureFlagTests: XCTestCase {
         XCTAssertFalse(container.purchases.isStandIn)
         XCTAssertNil(container.focusCardOffering.offer)
         XCTAssertEqual(container.wakeUp.delivery, .notificationFallback)
+    }
+
+    func testV1AndCurrentBothKeepBlockingOffWithoutEntitlement() {
+        XCTAssertFalse(FeatureFlags.v1.appBlocking)
+        XCTAssertFalse(FeatureFlags.current.appBlocking)
+        XCTAssertTrue(DependencyContainer.inMemory(flags: .current).blocking is MockFocusBlockingService)
     }
 
     func testNewRoutesResolve() {

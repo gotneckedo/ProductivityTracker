@@ -438,11 +438,25 @@ extension AppState {
     var blockingCapability: BlockingCapability { container.blocking.capability }
     var isShieldingApps: Bool { container.blocking.isShielding }
 
+    func setBlockingSchedule(isEnabled: Bool, startMinute: Int, presetID: FocusPresetID) {
+        guard container.flags.appBlocking else { return }
+        container.blockingSchedule.update(
+            isEnabled: isEnabled,
+            startMinute: startMinute,
+            presetID: presetID
+        )
+        reload()
+    }
+
     /// The emergency override: lifts shields now; the session keeps running.
     func endBlockingNow() {
-        container.blocking.endShieldingNow()
+        if container.blockingSchedule.endNow() == .none {
+            container.blocking.endShieldingNow()
+        }
         container.events.track(.blockingOverride, EventProperties())
-        notice = StillNotice(text: "Blocking is off for this session. The timer is still running.")
+        notice = StillNotice(text: activeSession == nil
+            ? "Blocking is off. You can turn the schedule back on whenever you like."
+            : "Blocking is off for this session. The timer is still running.")
         reload()
     }
 }

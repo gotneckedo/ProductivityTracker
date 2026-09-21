@@ -24,6 +24,7 @@ final class DependencyContainer {
     let artifacts: ArtifactRepository
     let readingProgress: ReadingProgressRepository
     let blockingSelections: BlockingSelectionStore
+    let blockingScheduleStore: BlockingScheduleStore
 
     // Services
     let timer: FocusTimerService
@@ -44,6 +45,7 @@ final class DependencyContainer {
     let focusCardOffering: FocusCardOffering
     let widgetSnapshots: WidgetSnapshotWriting
     let alternateAppIcons: AlternateAppIconChanging
+    let blockingSchedule: BlockingScheduleController
     /// Nil where speech capture isn't available (tests, Linux, flag off).
     let speech: SpeechTaskCapturing?
 
@@ -101,6 +103,7 @@ final class DependencyContainer {
         artifacts = StoredArtifactRepository(store: recordStore)
         readingProgress = StoredReadingProgressRepository(store: recordStore)
         blockingSelections = KeyValueBlockingSelectionStore(store: keyValueStore)
+        blockingScheduleStore = KeyValueBlockingScheduleStore(store: keyValueStore)
 
         timer = FocusTimerEngine()
         self.notifications = notifications
@@ -122,6 +125,12 @@ final class DependencyContainer {
         self.widgetSnapshots = widgetSnapshots
         self.alternateAppIcons = alternateAppIcons
         self.speech = flags.voiceCapture ? speech : nil
+        blockingSchedule = BlockingScheduleController(
+            clock: clock,
+            calendar: calendar,
+            store: blockingScheduleStore,
+            blocking: blocking
+        )
 
         focus = FocusFlowController(
             clock: clock,

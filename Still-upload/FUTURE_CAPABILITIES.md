@@ -38,6 +38,37 @@ This document records the boundary between what Still genuinely does today and w
 
 `CoreNFCTagWriter` is compiled only with `-DSTILL_CORENFC`. Production needs the NFC Tag Reading capability, the NDEF entitlement, a paid signing team, and physical iPhone tests. A tag written by another NFC app with a `still://` URL works without the in-app writer.
 
+### App/category blocking
+
+- **Done:** `FamilyControlsBlockingService` (authorization, per-preset
+  `FamilyActivitySelection` stored via `BlockingSelectionStore`,
+  `ManagedSettingsStore` shields on session start, cleared on end),
+  `BlockingSetupView` with `FamilyActivityPicker`, a Blocking section in Session
+  options, and "End blocking now" on the running session (logs
+  `blocking_override`, no app names). The setup also has a persisted start-time
+  schedule whose state ends only on a Focus Card tap or the always-available
+  "End blocking now" override, plus an honest Preview label whenever the mock
+  service is in use. All behind `FeatureFlags.appBlocking`.
+- **Needed:**
+  1. Request the **Family Controls (Distribution)** entitlement from Apple.
+     Development builds can use the development entitlement with a paid account.
+  2. Add `com.apple.developer.family-controls` to `Still/Still.entitlements`
+     and set `appBlocking: true` in `FeatureFlags.current`.
+  3. Add a **DeviceActivity monitor extension** (`StillShieldMonitor`) so
+     shields lift when a session's end time passes even if Still was closed:
+     when a session starts, `DeviceActivityCenter().startMonitoring(.init("still.session"), during: DeviceActivitySchedule(intervalStart:intervalEnd:repeats: false))`
+     with the session's end; in the extension's `intervalDidEnd`, call
+     `ManagedSettingsStore(named: .init("still.focus")).clearAllSettings()`.
+     The extension needs the same entitlement.
+- **Scheduled start boundary:** the persisted state machine and foreground start
+  path are complete. Starting at the exact time while Still is closed requires
+  the same DeviceActivity extension to register the repeating start interval;
+  the app does not claim background shielding before that extension and
+  entitlement are installed. Card-tap and manual ending clear the shared
+  `ManagedSettingsStore` immediately whenever real shielding is active.
+- **Privacy:** selections are opaque tokens that stay on the device.
+- **Next safe step:** apply for the entitlement now; the wait is the long pole.
+
 ### Analytics destination
 
 Typed, sanitized events remain in a bounded local log. No network destination is registered. Any future export must be opt-in, reviewable, aggregate-only, and reflected in privacy copy before release.

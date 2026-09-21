@@ -192,6 +192,10 @@ struct RouteView: View {
             MorningStartView()
         case .blockingSetup:
             BlockingSetupView()
+        case .calendarSettings:
+            CalendarSettingsView()
+        case .getFocusCard:
+            GetFocusCardView()
         case .habits:
             HabitsScreen()
         case .focusHome, .focusConfiguration, .activeSession, .sessionComplete, .breakShelf, .tasks, .me, .journal, .dayTimeline:

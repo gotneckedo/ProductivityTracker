@@ -52,6 +52,7 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
+				Resources/StillProducts.storekit,
 				Still.entitlements,
 			);
 			target = 85F1BC6575A2206AB6CBAA37 /* Still */;

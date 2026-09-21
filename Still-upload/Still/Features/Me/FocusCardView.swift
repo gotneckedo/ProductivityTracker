@@ -15,14 +15,30 @@ struct FocusCardView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
-                        Text("Focus Card")
-                            .font(StillTypography.title)
-                            .foregroundStyle(StillTheme.textPrimary)
-                            .accessibilityAddTraits(.isHeader)
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("Focus Card")
+                                .font(StillTypography.title)
+                                .foregroundStyle(StillTheme.textPrimary)
+                                .accessibilityAddTraits(.isHeader)
+                            Spacer()
+                            if appState.container.flags.brandedFocusCardPreview { PreviewTag() }
+                        }
                         Text(FocusCardGuide.summary)
                             .font(StillTypography.callout)
                             .foregroundStyle(StillTheme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    if appState.container.flags.brandedFocusCardPreview {
+                        BrandedFocusCardArtwork(presetName: appState.currentPreset.name)
+                            .aspectRatio(1.6, contentMode: .fit)
+                        Button("Get a card") {
+                            appState.router.go(to: .getFocusCard)
+                        }
+                        .buttonStyle(QuietPrimaryButtonStyle())
+                        Text("Design preview only. There is no ordering or payment in Still.")
+                            .font(StillTypography.footnote)
+                            .foregroundStyle(StillTheme.textSecondary)
                     }
 
                     StillCard {
@@ -101,6 +117,17 @@ struct FocusCardView: View {
                     }
                     .buttonStyle(QuietSecondaryButtonStyle())
                     .accessibilityHint("Starts \(preset.name) exactly as a tag with this link would.")
+                }
+                if appState.container.flags.brandedFocusCardPreview {
+                    Text(StillLinks.startFocusURL(presetID: preset.id).absoluteString)
+                        .font(StillTypography.caption.monospaced())
+                        .foregroundStyle(StillTheme.textTertiary)
+                        .textSelection(.enabled)
+                    Button("Simulate future universal link") {
+                        appState.simulateBrandedFocusCard(presetID: preset.id)
+                    }
+                    .buttonStyle(QuietSecondaryButtonStyle())
+                    .accessibilityHint("Tests the placeholder HTTPS link through the same deep-link parser.")
                 }
                 #if canImport(CoreNFC) && os(iOS) && STILL_CORENFC
                 if CoreNFCTagWriter.isAvailable {

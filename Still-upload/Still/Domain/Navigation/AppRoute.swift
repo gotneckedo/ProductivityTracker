@@ -15,6 +15,14 @@ struct FeatureFlags: Equatable {
     var voiceCapture: Bool = false
     /// V3 read-only Apple Calendar events on the day timeline.
     var calendarEvents: Bool = false
+    /// P9 Wake up planning and DEBUG card-wait simulation.
+    var wakeUpPreview: Bool = false
+    /// P9 seasonal scenes and local StoreKit Supporter testing.
+    var seasonalPurchasesPreview: Bool = false
+    /// P9 direct-Google sample events and calendar settings.
+    var googleCalendarPreview: Bool = false
+    /// P9 branded-card setup placeholder. This never enables commerce.
+    var brandedFocusCardPreview: Bool = false
 
     /// The original V1 surface. Kept so tests can pin V1 behavior.
     static let v1 = FeatureFlags(journalTab: false, liveActivities: false, plantGrowthStages: false, appBlocking: false)
@@ -27,8 +35,31 @@ struct FeatureFlags: Equatable {
         plantGrowthStages: true,
         appBlocking: false,
         voiceCapture: true,
-        calendarEvents: true
+        calendarEvents: true,
+        wakeUpPreview: false,
+        seasonalPurchasesPreview: false,
+        googleCalendarPreview: false,
+        brandedFocusCardPreview: false
     )
+
+    /// Explicit release alias so tests can pin that every stand-in stays off.
+    static let release = current
+
+    /// SwiftUI previews and CI demo launches can show the full future UI. A
+    /// Release build resolves this to `current`, so stand-ins cannot ship by
+    /// accidentally calling PreviewSupport.
+    static var preview: FeatureFlags {
+        #if DEBUG
+        var flags = current
+        flags.wakeUpPreview = true
+        flags.seasonalPurchasesPreview = true
+        flags.googleCalendarPreview = true
+        flags.brandedFocusCardPreview = true
+        return flags
+        #else
+        return current
+        #endif
+    }
 }
 
 enum AppTab: String, CaseIterable, Hashable {
@@ -80,6 +111,8 @@ enum AppRoute: Hashable {
     case morningStart
     case blockingSetup
     case habits
+    case calendarSettings
+    case getFocusCard
 }
 
 enum SheetRoute: String, Identifiable, Hashable {
@@ -121,7 +154,8 @@ struct RouteResolver {
             return RouteDestination(tab: currentTab, stack: [], sheet: .tasks, completionSessionID: nil)
         case .me:
             return RouteDestination(tab: .me, stack: [], sheet: nil, completionSessionID: nil)
-        case .nfcSetup, .sceneCollection, .presets, .doodleGallery, .morningStart, .blockingSetup:
+        case .nfcSetup, .sceneCollection, .presets, .doodleGallery, .morningStart, .blockingSetup,
+             .calendarSettings, .getFocusCard:
             return RouteDestination(tab: .me, stack: [route], sheet: nil, completionSessionID: nil)
         case .dayTimeline:
             return RouteDestination(tab: currentTab, stack: [], sheet: .dayTimeline, completionSessionID: nil)

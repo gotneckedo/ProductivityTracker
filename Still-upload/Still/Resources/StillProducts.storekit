@@ -1,0 +1,35 @@
+{
+  "identifier" : "B2D8C2B8-9996-48C3-B68F-42C2A5215C8E",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "33C64C5B-1E0C-4DB3-8D34-F2D46B6548C6",
+      "localizations" : [
+        {
+          "description" : "Seasonal rooms, extra palettes, and future alternate app icons. Focus tools stay free.",
+          "displayName" : "Still Supporter",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.cocomedia.still.supporter",
+      "referenceName" : "Still Supporter",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA"
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

@@ -11,6 +11,7 @@ enum PreviewSupport {
     ) -> AppState {
         let container = DependencyContainer.inMemory(
             clock: ManualClock(Date()),
+            flags: .preview,
             audio: SilentAmbientAudioPlayer(status: .ready, availableSources: Set(AmbientSource.all.map(\.id)))
         )
         if populated {
@@ -36,7 +37,7 @@ enum PreviewSupport {
     /// A state whose session just completed, plus that session's ID.
     static func completedSession() -> (state: AppState, sessionID: UUID) {
         let clock = ManualClock(Date())
-        let container = DependencyContainer.inMemory(clock: clock)
+        let container = DependencyContainer.inMemory(clock: clock, flags: .preview)
         container.preferences.completeOnboarding(goal: .scrollLess)
         let task = container.taskController.create(title: "Biology homework")
         container.preferences.update { $0.selectedTaskID = task?.id }

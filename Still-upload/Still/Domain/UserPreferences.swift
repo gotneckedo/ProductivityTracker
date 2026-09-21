@@ -43,8 +43,13 @@ struct UserPreferences: Codable, Equatable {
     /// Number of scenes the user has already been shown as unlocked.
     var acknowledgedUnlockedSceneCount: Int = 1
     var morningStart: MorningStartPlan = .standard
+    /// Future Wake up hand-off. The notification fallback still uses the same
+    /// Morning Start schedule.
+    var wakeUpStopMethod: WakeUpStopMethod = .button
     /// Whether the day timeline may show Apple Calendar events.
     var showsCalendarEvents: Bool = false
+    /// DEBUG/CI-demo sample Google events only. No account or token is stored.
+    var showsGoogleCalendarEvents: Bool = false
     var schemaVersion: Int = UserPreferences.currentSchemaVersion
 
     static let currentSchemaVersion = 1
@@ -54,7 +59,8 @@ struct UserPreferences: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case hasCompletedOnboarding, onboardingGoal, defaultPresetID, selectedTaskID
         case animationIntensity, hasRequestedNotificationPermission, notificationPermissionGranted
-        case pendingCompletionSessionID, acknowledgedUnlockedSceneCount, morningStart, showsCalendarEvents, schemaVersion
+        case pendingCompletionSessionID, acknowledgedUnlockedSceneCount, morningStart, wakeUpStopMethod
+        case showsCalendarEvents, showsGoogleCalendarEvents, schemaVersion
     }
 
     init(from decoder: Decoder) throws {
@@ -70,7 +76,9 @@ struct UserPreferences: Codable, Equatable {
         pendingCompletionSessionID = try c.decodeIfPresent(UUID.self, forKey: .pendingCompletionSessionID)
         acknowledgedUnlockedSceneCount = try c.decodeIfPresent(Int.self, forKey: .acknowledgedUnlockedSceneCount) ?? 1
         morningStart = (try? c.decodeIfPresent(MorningStartPlan.self, forKey: .morningStart)) ?? .standard
+        wakeUpStopMethod = (try? c.decodeIfPresent(WakeUpStopMethod.self, forKey: .wakeUpStopMethod)) ?? .button
         showsCalendarEvents = (try? c.decodeIfPresent(Bool.self, forKey: .showsCalendarEvents)) ?? false
+        showsGoogleCalendarEvents = (try? c.decodeIfPresent(Bool.self, forKey: .showsGoogleCalendarEvents)) ?? false
         schemaVersion = try c.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? UserPreferences.currentSchemaVersion
     }
 }

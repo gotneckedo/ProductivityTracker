@@ -417,6 +417,14 @@ final class AppState {
         routeFocusLink(preset.startURL, source: .nfcSimulator)
     }
 
+    /// The branded-card preview uses the future HTTPS shape and therefore tests
+    /// the same `DeepLinkParser` universal-host path that real cards will use.
+    func simulateBrandedFocusCard(presetID: FocusPresetID) {
+        guard container.flags.brandedFocusCardPreview,
+              presets.contains(where: { $0.id == presetID }) else { return }
+        routeFocusLink(StillLinks.startFocusURL(presetID: presetID), source: .nfcSimulator)
+    }
+
     private func routeFocusLink(_ url: URL, source: SessionSource) {
         guard preferences.hasCompletedOnboarding else {
             notice = StillNotice(text: "Finish setting up Still, then tap your card again.")

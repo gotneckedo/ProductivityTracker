@@ -141,12 +141,21 @@ extension AppState {
         container.flags.calendarEvents && preferences.showsCalendarEvents && calendarAccess == .granted
     }
 
+    var showsGoogleCalendarEvents: Bool {
+        container.flags.googleCalendarPreview
+            && preferences.showsGoogleCalendarEvents
+            && container.googleCalendar.access == .granted
+    }
+
     /// Today's (or another day's) tasks, finished sessions, and calendar events.
     func timeline(for day: Date) -> (dueToday: [TimelineItem], timed: [TimelineItem]) {
         let calendar = container.calendar
         let start = calendar.startOfDay(for: day)
         let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
-        let events = showsCalendarEvents ? container.calendarAdapter.events(from: start, to: end) : []
+        var events = showsCalendarEvents ? container.calendarAdapter.events(from: start, to: end) : []
+        if showsGoogleCalendarEvents {
+            events.append(contentsOf: container.googleCalendar.events(from: start, to: end))
+        }
         return DayTimelineBuilder(calendar: calendar).items(
             for: day,
             tasks: container.tasks.allTasks(),
@@ -174,6 +183,31 @@ extension AppState {
             return
         }
         container.preferences.update { $0.showsCalendarEvents = shows }
+        reload()
+    }
+
+    /// DEBUG/CI-demo only: grants access to local sample events. No Google
+    /// account, token, or network request is involved.
+    func connectGoogleCalendar() {
+        guard container.flags.googleCalendarPreview, container.googleCalendar.isStandIn else { return }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let access = await self.container.googleCalendar.requestAccess()
+            self.container.preferences.update { $0.showsGoogleCalendarEvents = access == .granted }
+            self.notice = StillNotice(text: access == .granted
+                ? "Sample Google events are showing. No account was connected."
+                : "The Google Calendar preview is unavailable.")
+            self.reload()
+        }
+    }
+
+    func setShowsGoogleCalendarEvents(_ shows: Bool) {
+        guard container.flags.googleCalendarPreview else { return }
+        if shows && container.googleCalendar.access != .granted {
+            connectGoogleCalendar()
+            return
+        }
+        container.preferences.update { $0.showsGoogleCalendarEvents = shows }
         reload()
     }
 }
@@ -299,6 +333,51 @@ extension AppState {
         } else {
             container.morningStart.cancelMorningStart()
         }
+        reload()
+    }
+
+    func setWakeUp(_ plan: WakeUpPlan) {
+        guard container.flags.wakeUpPreview else {
+            setMorningStart(plan.schedule)
+            return
+        }
+        let validated = plan.validated()
+        container.preferences.update {
+            $0.morningStart = validated.schedule
+            $0.wakeUpStopMethod = validated.stopWith
+        }
+        if validated.schedule.isEnabled && !validated.schedule.weekdays.isEmpty {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                var allowed = await self.container.focus.requestNotificationPermissionIfNeeded()
+                if !allowed {
+                    allowed = await self.container.notifications.authorizationStatus() == .granted
+                }
+                if allowed {
+                    self.container.wakeUp.schedule(validated)
+                    self.container.events.track(.morningStartScheduled, EventProperties().count(validated.schedule.weekdays.count))
+                } else {
+                    self.notice = StillNotice(text: "Notifications are off, so the iOS 17 Wake up fallback can't appear. You can turn them on in Settings.")
+                }
+                self.reload()
+            }
+        } else {
+            container.wakeUp.cancel()
+        }
+        reload()
+    }
+
+    func simulateWakeUpOpening() {
+        guard container.flags.wakeUpPreview, container.wakeUp.simulateOpening() else { return }
+        notice = StillNotice(text: container.wakeUp.isWaitingForFocusCard
+            ? "Preview: Still opened. The queued session is waiting for a simulated card tap."
+            : "Preview: Still opened with the queued session ready.")
+        reload()
+    }
+
+    func simulateWakeUpCardTap() {
+        guard container.flags.wakeUpPreview, container.wakeUp.simulateFocusCardTap() else { return }
+        notice = StillNotice(text: "Preview card accepted. The queued session is ready; no system alarm was controlled.")
         reload()
     }
 }

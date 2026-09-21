@@ -8,7 +8,7 @@ import Foundation
 ///
 /// Screens: onboarding, home, calm, active, complete, break, sudoku, wordsearch,
 /// picross, breathing, read, me, scenes, card, journal, presets, tasks,
-/// timeline, doodle, gallery, morning.
+/// timeline, doodle, gallery, morning, calendar-settings, get-card.
 enum DemoLaunch {
     static let argument = "-still-demo"
 
@@ -64,6 +64,10 @@ enum DemoLaunch {
             return routed(.doodleGallery)
         case "morning":
             return routed(.morningStart)
+        case "calendar-settings":
+            return routed(.calendarSettings)
+        case "get-card":
+            return routed(.getFocusCard)
         default:
             return nil
         }

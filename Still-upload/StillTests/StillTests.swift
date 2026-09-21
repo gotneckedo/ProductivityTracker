@@ -1226,6 +1226,13 @@ final class DeepLinkTests: XCTestCase {
         XCTAssertEqual(withHost.parse(URL(string: "https://focus.example.com/start-focus?preset=study")!), .startFocus(presetID: .study))
     }
 
+    func testPlaceholderUniversalHostUsesTheProductionParserBoundary() {
+        let url = StillLinks.startFocusURL(presetID: .study)
+        XCTAssertEqual(url.host, StillLinks.universalHost)
+        XCTAssertEqual(parser.parse(url), .startFocus(presetID: .study))
+        XCTAssertEqual(StillLinks.focusCardSetupURL.host, StillLinks.universalHost)
+    }
+
     func testPresetURLRoundTrips() {
         for preset in [PresetCatalog.defaultPreset(), PresetCatalog.study] {
             XCTAssertEqual(parser.parse(preset.startURL), .startFocus(presetID: preset.id))
@@ -1539,6 +1546,30 @@ final class FeatureFlagTests: XCTestCase {
         XCTAssertEqual(AppTab.visibleTabs(flags: flags), [.focus, .breakShelf, .journal, .me])
     }
 
+    func testEveryP9StandInIsOffInV1CurrentAndRelease() {
+        for (name, flags) in [("v1", FeatureFlags.v1), ("current", .current), ("release", .release)] {
+            XCTAssertFalse(flags.wakeUpPreview, "Wake up stand-in must be off in \(name).")
+            XCTAssertFalse(flags.seasonalPurchasesPreview, "Purchase stand-in must be off in \(name).")
+            XCTAssertFalse(flags.googleCalendarPreview, "Google sample events must be off in \(name).")
+            XCTAssertFalse(flags.brandedFocusCardPreview, "Card placeholder must be off in \(name).")
+        }
+    }
+
+    func testDisabledFlagsReplaceInjectedStandInsWithNoopBoundaries() {
+        let container = DependencyContainer.inMemory(
+            clock: ManualClock(referenceDate),
+            calendar: testCalendar,
+            flags: .v1,
+            googleCalendar: SampleGoogleCalendarAdapter(now: referenceDate, calendar: testCalendar),
+            purchases: LocalPurchaseService(),
+            focusCardOffering: PlaceholderFocusCardOffering()
+        )
+        XCTAssertFalse(container.googleCalendar.isStandIn)
+        XCTAssertFalse(container.purchases.isStandIn)
+        XCTAssertNil(container.focusCardOffering.offer)
+        XCTAssertEqual(container.wakeUp.delivery, .notificationFallback)
+    }
+
     func testNewRoutesResolve() {
         let resolver = RouteResolver(flags: .current)
         XCTAssertEqual(resolver.destination(for: .presets, currentTab: .focus), RouteDestination(tab: .me, stack: [.presets], sheet: nil, completionSessionID: nil))
@@ -1547,6 +1578,8 @@ final class FeatureFlagTests: XCTestCase {
         XCTAssertEqual(resolver.destination(for: .habits, currentTab: .focus).tab, .journal)
         XCTAssertEqual(RouteResolver(flags: .v1).destination(for: .habits, currentTab: .focus).stack, [.habits])
         XCTAssertEqual(resolver.destination(for: .doodleGallery, currentTab: .focus).stack, [.doodleGallery])
+        XCTAssertEqual(resolver.destination(for: .calendarSettings, currentTab: .focus).stack, [.calendarSettings])
+        XCTAssertEqual(resolver.destination(for: .getFocusCard, currentTab: .focus).stack, [.getFocusCard])
     }
 
     func testRouterKeepsAJournalStack() {
@@ -2013,12 +2046,56 @@ final class MorningStartAndWidgetTests: XCTestCase {
         XCTAssertNil(scheduler.scheduledPlan)
     }
 
+    func testWakeUpPreviewWaitsForCardWithoutClaimingAlarmControl() {
+        let fallback = RecordingMorningStartScheduler()
+        let scheduler = PreviewWakeUpScheduler(fallback: fallback)
+        var schedule = MorningStartPlan.standard
+        schedule.isEnabled = true
+        let plan = WakeUpPlan(schedule: schedule, stopWith: .focusCard)
+        scheduler.schedule(plan)
+        XCTAssertEqual(fallback.scheduledPlan, schedule)
+        XCTAssertTrue(scheduler.simulateOpening())
+        XCTAssertTrue(scheduler.isWaitingForFocusCard)
+        XCTAssertTrue(scheduler.simulateFocusCardTap())
+        XCTAssertFalse(scheduler.isWaitingForFocusCard)
+        XCTAssertFalse(scheduler.simulateFocusCardTap())
+    }
+
     func testPreferencesWithoutNewKeysStillDecode() throws {
         let old = #"{"hasCompletedOnboarding":true,"defaultPresetID":"study"}"#
         let prefs = try RecordCoding.decoder().decode(UserPreferences.self, from: Data(old.utf8))
         XCTAssertEqual(prefs.morningStart, .standard)
+        XCTAssertEqual(prefs.wakeUpStopMethod, .button)
         XCTAssertFalse(prefs.showsCalendarEvents)
+        XCTAssertFalse(prefs.showsGoogleCalendarEvents)
         XCTAssertEqual(prefs.defaultPresetID, .study)
+    }
+
+    func testGoogleStandInOnlyReturnsGrantedOverlappingSampleEvents() async {
+        let adapter = SampleGoogleCalendarAdapter(now: referenceDate, calendar: testCalendar)
+        XCTAssertTrue(adapter.events(from: referenceDate, to: referenceDate.addingTimeInterval(86_400)).isEmpty)
+        let access = await adapter.requestAccess()
+        XCTAssertEqual(access, .granted)
+        let dayStart = testCalendar.startOfDay(for: referenceDate)
+        let events = adapter.events(from: dayStart, to: dayStart.addingTimeInterval(86_400))
+        XCTAssertEqual(events.count, 2)
+        XCTAssertTrue(events.allSatisfy { $0.sourceIdentifier == "google-preview" && $0.title.contains("Sample") })
+        adapter.disconnect()
+        XCTAssertEqual(adapter.access, .notDetermined)
+    }
+
+    func testSeasonalScenesAreCosmeticAndEarnedScenesRemainFree() async {
+        XCTAssertTrue(SceneCatalog.all.allSatisfy { $0.entitlementKey == nil })
+        XCTAssertEqual(SceneCatalog.seasonal.count, 3)
+        XCTAssertTrue(SceneCatalog.seasonal.allSatisfy { $0.entitlementKey == PurchaseProductCatalog.supporter })
+
+        let purchases = LocalPurchaseService()
+        XCTAssertTrue(purchases.purchasedProductIDs.isEmpty)
+        let purchase = await purchases.purchase(productID: PurchaseProductCatalog.supporter)
+        XCTAssertEqual(purchase, .purchased)
+        XCTAssertTrue(purchases.purchasedProductIDs.contains(PurchaseProductCatalog.supporter))
+        let restore = await purchases.restorePurchases()
+        XCTAssertEqual(restore, .purchased)
     }
 
     func testAppPublishesAWidgetSnapshot() throws {

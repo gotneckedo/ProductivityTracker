@@ -13,25 +13,32 @@ enum PreviewFixtures {
 
         let today = calendar.startOfDay(for: now)
         let biology = TaskItem(title: "Biology homework", createdAt: now.addingTimeInterval(-3 * 3600),
+                               subject: .biology,
                                dueAt: calendar.date(byAdding: .day, value: 1, to: today),
-                               homework: HomeworkMetadata(course: "Biology", assignmentKind: nil))
+                               dayPeriod: .afternoon)
         let essay = TaskItem(title: "Outline the essay", createdAt: now.addingTimeInterval(-2 * 3600),
-                             scheduledAt: calendar.date(byAdding: .hour, value: 16, to: today))
+                             subject: .literature,
+                             scheduledAt: calendar.date(byAdding: .hour, value: 16, to: today),
+                             plannedDuration: 45 * 60)
         let inbox = TaskItem(title: "Reply to Sam", createdAt: now.addingTimeInterval(-26 * 3600),
-                             completedAt: now.addingTimeInterval(-3600))
+                             completedAt: now.addingTimeInterval(-3600), dayPeriod: .evening)
         [biology, essay, inbox].forEach { try? container.tasks.save($0) }
 
         let dayOffsets = [0, 0, 1, 2, 2, 3, 5, 6, 8, 9, 10, 12]
         for index in 0..<min(completedSessions, dayOffsets.count) {
-            guard let day = calendar.date(byAdding: .day, value: -dayOffsets[index], to: now) else { continue }
-            let start = day.addingTimeInterval(-Double(30 + index * 5) * 60)
+            guard let date = calendar.date(byAdding: .day, value: -dayOffsets[index], to: now) else { continue }
             let minutes = [25.0, 25, 50, 25, 30, 25, 45, 25, 25, 20, 25, 25][index]
+            // Multiple sessions on one day are laid out sequentially with a
+            // fifteen-minute breath between them; fixture capsules never overlap.
+            let sameDayOrdinal = dayOffsets[..<index].filter { $0 == dayOffsets[index] }.count
+            let dayStart = calendar.startOfDay(for: date)
+            let start = dayStart.addingTimeInterval(Double(9 * 60 + sameDayOrdinal * 75) * 60)
             var configuration = TimerConfiguration.standard
             configuration.focusDuration = minutes * 60
             var session = engine.makeSession(
                 id: UUID(),
                 configuration: configuration,
-                taskID: index == 0 ? biology.id : nil,
+                taskID: index < 2 ? biology.id : nil,
                 sceneID: .rainyBedroom,
                 renderMode: .scene,
                 presetID: .defaultPreset,
@@ -94,6 +101,9 @@ enum PreviewFixtures {
     /// Starts a running session for "active session" previews.
     static func startSession(_ container: DependencyContainer, elapsed: TimeInterval = 7 * 60) {
         let task = container.taskController.create(title: "Biology homework")
+        if let task {
+            container.taskController.updateDetails(id: task.id, dueAt: nil, scheduledAt: nil, subject: .biology)
+        }
         container.focus.start(presetID: .defaultPreset, taskID: task?.id, source: .manual)
         if let manual = container.clock as? ManualClock {
             manual.advance(by: elapsed)

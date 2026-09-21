@@ -106,7 +106,7 @@ final class AppState {
         sessions = container.sessions.allSessions()
         usages = container.usages.allUsages()
         stats = StatsCalculator(calendar: container.calendar)
-            .stats(sessions: sessions, usages: usages, now: container.clock.now)
+            .stats(sessions: sessions, usages: usages, tasks: container.tasks.allTasks(), now: container.clock.now)
         journalToday = container.journalController.todaysEntry()
         journalPast = container.journalController.pastEntries()
         habitDays = container.habitController.today()
@@ -336,7 +336,8 @@ final class AppState {
 
     func setTaskCompleted(_ id: UUID, _ completed: Bool) {
         container.taskController.setCompleted(id: id, completed)
-        if completed, preferences.selectedTaskID == id {
+        if completed, preferences.selectedTaskID == id,
+           container.tasks.task(id: id)?.repeatRule.isRepeating != true {
             container.preferences.update { $0.selectedTaskID = nil }
         }
         reload()

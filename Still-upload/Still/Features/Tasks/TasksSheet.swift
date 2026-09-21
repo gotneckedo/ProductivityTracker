@@ -94,7 +94,7 @@ struct TasksSheet: View {
         var parts: [String] = []
         if let due = appState.dueLine(for: task) { parts.append(due) }
         if let at = task.scheduledAt, !task.isCompleted { parts.append("At \(appState.timeText(at))") }
-        if let course = task.homework?.course { parts.append(course) }
+        if let subject = task.subject { parts.append(subject.name) }
         if task.completedSessionCount > 0 { parts.append("\(task.completedSessionCount) \(task.completedSessionCount == 1 ? "session" : "sessions")") }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
@@ -196,9 +196,7 @@ private struct TaskFocusCard: View {
     }
 
     private var subjectTint: Color {
-        let key = task.homework?.course ?? task.title
-        let value = key.unicodeScalars.reduce(0) { $0 + Int($1.value) }
-        return [Color(hex: 0x6E92C8), Color(hex: 0xA77BC2), Color(hex: 0xD99163), Color(hex: 0x5F9A74)][value % 4]
+        task.subject.map { Color(hex: $0.color.hex) } ?? StillTheme.textTertiary.opacity(0.55)
     }
 }
 

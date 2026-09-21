@@ -4,8 +4,18 @@ struct DayFocus: Equatable, Identifiable {
     var day: Date
     var focusDuration: TimeInterval
     var sessionCount: Int
+    /// Ready-to-render subject segments for a stacked chart. Sessions without a
+    /// task/subject use nil rather than inventing presentation data.
+    var subjectSegments: [SubjectFocusSegment] = []
 
     var id: Date { day }
+}
+
+struct SubjectFocusSegment: Equatable, Identifiable {
+    var subject: Subject?
+    var focusDuration: TimeInterval
+
+    var id: String { subject?.id ?? "unassigned" }
 }
 
 struct ActivityUsageCount: Equatable, Identifiable {
@@ -100,8 +110,9 @@ struct StreakCalculator {
 struct StatsCalculator {
     var calendar: Calendar
 
-    func stats(sessions: [FocusSession], usages: [ActivityUsage], now: Date) -> FocusStats {
+    func stats(sessions: [FocusSession], usages: [ActivityUsage], tasks: [TaskItem] = [], now: Date) -> FocusStats {
         let completed = sessions.filter { $0.state == .completed && $0.endedAt != nil }
+        let tasksByID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
         let streaks = StreakCalculator(calendar: calendar)
         let days = streaks.focusDays(from: completed)
         let todayStart = calendar.startOfDay(for: now)
@@ -110,10 +121,17 @@ struct StatsCalculator {
         for offset in stride(from: 6, through: 0, by: -1) {
             guard let day = calendar.date(byAdding: .day, value: -offset, to: todayStart) else { continue }
             let onDay = completed.filter { calendar.isDate($0.endedAt!, inSameDayAs: day) }
+            var segments: [Subject?: TimeInterval] = [:]
+            for session in onDay {
+                let subject = session.taskID.flatMap { tasksByID[$0]?.subject }
+                segments[subject, default: 0] += session.completedFocusDuration
+            }
             lastSeven.append(DayFocus(
                 day: day,
                 focusDuration: onDay.reduce(0) { $0 + $1.completedFocusDuration },
-                sessionCount: onDay.count
+                sessionCount: onDay.count,
+                subjectSegments: segments.map { SubjectFocusSegment(subject: $0.key, focusDuration: $0.value) }
+                    .sorted { ($0.subject?.name ?? "") < ($1.subject?.name ?? "") }
             ))
         }
 

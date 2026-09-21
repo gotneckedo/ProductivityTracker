@@ -100,7 +100,7 @@ enum ActivityPresentation {
             if let latestTitle = data.latestTitle, !latestTitle.isEmpty {
                 return ActivityStatus(text: "Today: \(latestTitle)", kind: .collection)
             }
-            return ActivityStatus(text: "A short original read", kind: .fresh)
+            return ActivityStatus(text: "A short public-domain read", kind: .fresh)
         case .pixelDoodle:
             if data.artifactCount > 0 {
                 let noun = data.artifactCount == 1 ? "doodle" : "doodles"

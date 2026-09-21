@@ -34,6 +34,9 @@ enum Copy {
         static let detail = "Choose something finite between classes, after homework, or before bed."
         static let wholeShelf = "That's the whole shelf. Every activity has an ending."
         static let recent = "Recently opened"
+        static let all = "All"
+        static let pickedForYou = "Picked for you"
+        static let allActivities = "Everything else"
     }
 
     enum Completion {
@@ -44,6 +47,9 @@ enum Copy {
         static let backToRoom = "Back to room"
         static let firstUsual = "One finished study session is a good place to begin."
         static func usual(_ amount: String) -> String { "Your usual study session is about \(amount)." }
+        static func todayCompared(today: String, usual: String) -> String {
+            "You've focused \(today) today, compared with your usual \(usual) focus day."
+        }
         static let newRoomThing = "Something new for your room"
         static let placeNewThing = "Choose where it goes"
     }

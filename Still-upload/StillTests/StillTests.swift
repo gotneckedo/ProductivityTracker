@@ -1522,6 +1522,23 @@ final class StatsCalculatorTests: XCTestCase {
         XCTAssertEqual(StatsCalculator.comparison(focus: minutes(10), usual: minutes(30)), .lighter)
     }
 
+    func testRangePointsKeepSubjectFocusSegments() {
+        let biology = TaskItem(title: "Lab notes", createdAt: referenceDate, subject: .biology)
+        let literature = TaskItem(title: "Essay", createdAt: referenceDate, subject: .literature)
+        var first = completedSession(endingAt: referenceDate.addingTimeInterval(-30 * 60), focusMinutes: 20)
+        var second = completedSession(endingAt: referenceDate, focusMinutes: 25)
+        first.taskID = biology.id
+        second.taskID = literature.id
+
+        let stats = StatsCalculator(calendar: testCalendar).stats(
+            sessions: [first, second], usages: [], tasks: [biology, literature], now: referenceDate
+        )
+        let segments = stats.data(for: .day)?.points.first?.subjectSegments ?? []
+        XCTAssertEqual(segments.count, 2)
+        XCTAssertEqual(segments.first { $0.subject == .biology }?.focusDuration, minutes(20))
+        XCTAssertEqual(segments.first { $0.subject == .literature }?.focusDuration, minutes(25))
+    }
+
     func testCalendarDaysUseNeutralQuietAndUpcomingStates() {
         let now = testCalendar.date(from: DateComponents(year: 2026, month: 3, day: 10, hour: 9))!
         let focused = testCalendar.date(from: DateComponents(year: 2026, month: 3, day: 4, hour: 10))!
@@ -2052,6 +2069,27 @@ final class TaskScheduleTests: XCTestCase {
         XCTAssertTrue(state.timeline(for: referenceDate).timed.isEmpty, "Off until the person turns it on.")
         state.setShowsCalendarEvents(true)
         XCTAssertEqual(state.timeline(for: referenceDate).timed.map(\.title), ["Class"])
+    }
+}
+
+final class ActivityPresentationTests: XCTestCase {
+    func testShelfStatusesExplainSavedProgressAndCompletions() {
+        XCTAssertEqual(
+            ActivityPresentation.status(for: .sudoku, data: ActivityStatusData(hasSavedProgress: true)),
+            ActivityStatus(text: "Saved progress", kind: .inProgress)
+        )
+        XCTAssertEqual(
+            ActivityPresentation.status(for: .picross, data: ActivityStatusData(completedCount: 2)),
+            ActivityStatus(text: "Solved 2 times", kind: .completed)
+        )
+        XCTAssertEqual(
+            ActivityPresentation.status(for: .pixelDoodle, data: ActivityStatusData(artifactCount: 1)),
+            ActivityStatus(text: "1 doodle on your wall", kind: .collection)
+        )
+        XCTAssertEqual(
+            ActivityPresentation.status(for: .shortRead),
+            ActivityStatus(text: "A short public-domain read", kind: .fresh)
+        )
     }
 }
 

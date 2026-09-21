@@ -148,10 +148,13 @@ struct SessionCompleteView: View {
     }
 
     private var usualLine: String {
-        let sessions = appState.stats.completedSessions
-        guard sessions > 1 else { return Copy.Completion.firstUsual }
-        let average = DurationFormatter.short(appState.stats.averageSessionDuration)
-        return Copy.Completion.usual(average)
+        guard let usual = appState.stats.usualDailyFocus, usual > 0 else {
+            return Copy.Completion.firstUsual
+        }
+        return Copy.Completion.todayCompared(
+            today: DurationFormatter.short(appState.stats.todayFocus),
+            usual: DurationFormatter.short(usual)
+        )
     }
 
     private func focusedAmount(_ session: FocusSession?) -> String {

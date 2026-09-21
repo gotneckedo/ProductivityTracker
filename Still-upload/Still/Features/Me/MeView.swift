@@ -386,10 +386,7 @@ private struct FocusRangeChart: View {
                 HStack(alignment: .bottom, spacing: data.points.count > 12 ? 2 : StillTheme.Spacing.xs) {
                     ForEach(Array(data.points.enumerated()), id: \.element.id) { index, point in
                         VStack(spacing: 5) {
-                            RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                .fill(isCurrent(point) ? StillTheme.highlight : (point.focusDuration > 0 ? StillTheme.accent.opacity(0.76) : StillTheme.surfaceSunken))
-                                .shadow(color: isCurrent(point) ? StillTheme.highlight.opacity(0.58) : .clear, radius: 8)
-                                .frame(height: max(6, plotHeight * point.focusDuration / maximum))
+                            bar(for: point, height: max(6, plotHeight * point.focusDuration / maximum))
                             if shouldLabel(index) {
                                 Text(label(for: point.date))
                                     .font(StillTypography.caption)
@@ -415,6 +412,27 @@ private struct FocusRangeChart: View {
             return Calendar.current.isDate(point.date, equalTo: .now, toGranularity: .month)
         default:
             return Calendar.current.isDateInToday(point.date)
+        }
+    }
+
+    @ViewBuilder
+    private func bar(for point: FocusRangePoint, height: CGFloat) -> some View {
+        if point.focusDuration > 0, !point.subjectSegments.isEmpty {
+            VStack(spacing: 0) {
+                ForEach(point.subjectSegments) { segment in
+                    Rectangle()
+                        .fill(segment.subject.map { Color(hex: $0.color.hex) } ?? StillTheme.accent.opacity(0.76))
+                        .frame(height: max(1, height * segment.focusDuration / point.focusDuration))
+                }
+            }
+            .frame(height: height, alignment: .bottom)
+            .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .shadow(color: isCurrent(point) ? StillTheme.highlight.opacity(0.58) : .clear, radius: 8)
+        } else {
+            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                .fill(isCurrent(point) ? StillTheme.highlight : (point.focusDuration > 0 ? StillTheme.accent.opacity(0.76) : StillTheme.surfaceSunken))
+                .shadow(color: isCurrent(point) ? StillTheme.highlight.opacity(0.58) : .clear, radius: 8)
+                .frame(height: height)
         }
     }
 

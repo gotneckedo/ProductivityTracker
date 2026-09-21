@@ -432,6 +432,39 @@ extension AppState {
     }
 }
 
+// MARK: - Break shelf presentation
+
+extension AppState {
+    /// Presentation state is derived only from the on-device records used by the
+    /// break activities. It never makes an activity look finished unless its
+    /// usage record was completed.
+    func activityStatus(for activityID: BreakActivityID) -> ActivityStatus {
+        let completedCount = usages.filter {
+            $0.activityID == activityID && $0.outcome == .completed
+        }.count
+        let data = ActivityStatusData(
+            completedCount: completedCount,
+            hasSavedProgress: hasSavedPuzzleProgress(for: activityID),
+            latestTitle: activityID == .shortRead && completedCount > 0 ? books.first?.title : nil,
+            artifactCount: activityID == .pixelDoodle ? doodles.count : 0
+        )
+        return ActivityPresentation.status(for: activityID, data: data)
+    }
+
+    private func hasSavedPuzzleProgress(for activityID: BreakActivityID) -> Bool {
+        switch activityID {
+        case .sudoku:
+            return container.puzzleProgress.load(SudokuGame.self, puzzleID: BundledPuzzleLibrary.sudoku6.id)?.hasProgress ?? false
+        case .picross:
+            return container.puzzleProgress.load(PicrossGame.self, puzzleID: BundledPuzzleLibrary.sprout.id)?.hasProgress ?? false
+        case .wordSearch:
+            return container.puzzleProgress.load(WordSearchGame.self, puzzleID: BundledPuzzleLibrary.quietWords.id)?.hasProgress ?? false
+        default:
+            return false
+        }
+    }
+}
+
 // MARK: - Blocking
 
 extension AppState {

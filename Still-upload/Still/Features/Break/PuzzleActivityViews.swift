@@ -48,16 +48,27 @@ struct SudokuActivityView: View {
     private func grid(_ game: SudokuGame) -> some View {
         let puzzle = game.puzzle
         let conflicts = game.conflictingIndices
-        return VStack(spacing: 4) {
-            ForEach(0..<puzzle.size, id: \.self) { row in
-                HStack(spacing: 4) {
-                    ForEach(0..<puzzle.size, id: \.self) { column in
-                        let index = row * puzzle.size + column
-                        cell(game: game, index: index, isConflict: conflicts.contains(index))
-                            .padding(.trailing, (column + 1) % puzzle.boxColumns == 0 && column < puzzle.size - 1 ? 6 : 0)
+        return VStack(spacing: 10) {
+            ForEach(0..<(puzzle.size / puzzle.boxRows), id: \.self) { boxRow in
+                HStack(spacing: 10) {
+                    ForEach(0..<(puzzle.size / puzzle.boxColumns), id: \.self) { boxColumn in
+                        VStack(spacing: 3) {
+                            ForEach(0..<puzzle.boxRows, id: \.self) { rowOffset in
+                                HStack(spacing: 3) {
+                                    ForEach(0..<puzzle.boxColumns, id: \.self) { columnOffset in
+                                        let row = boxRow * puzzle.boxRows + rowOffset
+                                        let column = boxColumn * puzzle.boxColumns + columnOffset
+                                        let index = row * puzzle.size + column
+                                        cell(game: game, index: index, isConflict: conflicts.contains(index))
+                                    }
+                                }
+                            }
+                        }
+                        .padding(3)
+                        .background(resolvedPhase.glassFill.opacity(0.34), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(resolvedPhase.glassBorder.opacity(0.72), lineWidth: StillTheme.Stroke.hairline))
                     }
                 }
-                .padding(.bottom, (row + 1) % puzzle.boxRows == 0 && row < puzzle.size - 1 ? 6 : 0)
             }
         }
         .frame(maxWidth: 380)
@@ -120,7 +131,10 @@ struct SudokuActivityView: View {
                         .opacity(isUsed ? 0.32 : 1)
                 }
                 .buttonStyle(.plain)
-                .disabled(game.selectedIndex == nil || isUsed)
+                // A digit is only retired after all six occurrences exist.
+                // Selection is not a visual completion state, so unselected
+                // digits retain their normal contrast from the start.
+                .disabled(isUsed)
                 .accessibilityLabel("Enter \(number)")
                 .accessibilityValue(isUsed ? "All placed" : "")
             }

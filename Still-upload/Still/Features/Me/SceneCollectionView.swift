@@ -166,7 +166,13 @@ private struct SceneCard: View {
         Button(action: onSelect) {
             VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
                 ZStack {
-                    PixelSceneView(scene: scene, mode: .scene, intensity: .still)
+                    RoomHeroView(
+                        sceneName: scene.name,
+                        sceneID: scene.id,
+                        phase: .afternoon,
+                        plantStage: .full,
+                        showsControls: false
+                    )
                         .saturation(isUnlocked ? 1 : 0.2)
                         .opacity(isUnlocked ? 1 : 0.55)
                     if !isUnlocked {
@@ -177,7 +183,7 @@ private struct SceneCard: View {
                             .background(Circle().fill(StillTheme.Palette.navyShadow.opacity(0.6)))
                     }
                 }
-                .aspectRatio(PixelSceneView.preferredAspectRatio, contentMode: .fit)
+                .aspectRatio(160.0 / 132.0, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)

@@ -146,8 +146,9 @@ struct ActiveFocusView: View {
             appState.toggleMute()
         } label: {
             HStack(spacing: 5) {
-                Image(systemName: mix.isSilent || appState.isAudioMuted ? "speaker.slash" : "waveform")
-                if !mix.isSilent && !appState.isAudioMuted {
+                if mix.isSilent || appState.isAudioMuted {
+                    Image(systemName: "speaker.slash")
+                } else {
                     SoundBars()
                 }
                 Text(mix.isSilent || appState.isAudioMuted ? "Sound off" : mix.summaryLine)
@@ -243,6 +244,7 @@ private struct FocusPlanCard: View {
             }
         }
         .padding(StillTheme.Spacing.s)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .stillGlass(radius: StillTheme.Radius.medium, phase: .focus)
         .accessibilityElement(children: .combine)
     }

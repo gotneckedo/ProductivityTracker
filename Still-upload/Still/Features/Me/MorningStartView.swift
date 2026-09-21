@@ -34,7 +34,7 @@ struct MorningStartView: View {
                             Toggle(appState.container.flags.wakeUpPreview ? "Wake up plan" : "Morning Start",
                                    isOn: $wakeUp.schedule.isEnabled)
                                 .font(StillTypography.bodyEmphasis)
-                            if wakeUp.schedule.isEnabled {
+                            Group {
                                 Divider()
                                 DatePicker("Time", selection: timeBinding, displayedComponents: .hourAndMinute)
                                     .font(StillTypography.body)
@@ -55,20 +55,22 @@ struct MorningStartView: View {
                                         wakeUp.schedule.presetID = id
                                     }
                                 }
+                                Divider()
+                                VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
+                                    HStack {
+                                        Text("Stop with")
+                                            .font(StillTypography.body)
+                                        if appState.container.flags.wakeUpPreview { PreviewTag() }
+                                    }
+                                    SelectionPill(options: WakeUpStopMethod.allCases, selection: $wakeUp.stopWith) { $0.displayName }
+                                    Text(stopMethodDetail)
+                                        .font(StillTypography.footnote)
+                                        .foregroundStyle(StillTheme.textSecondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
                             }
-                        }
-                    }
-
-                    if appState.container.flags.wakeUpPreview, wakeUp.schedule.isEnabled {
-                        StillCard {
-                            VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-                                SectionHeader(title: "Stop with", detail: "What Still waits for after the wake-up entry point opens the app.")
-                                SelectionPill(options: WakeUpStopMethod.allCases, selection: $wakeUp.stopWith) { $0.displayName }
-                                Text(stopMethodDetail)
-                                    .font(StillTypography.footnote)
-                                    .foregroundStyle(StillTheme.textSecondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
+                            .opacity(wakeUp.schedule.isEnabled ? 1 : 0.5)
+                            .disabled(!wakeUp.schedule.isEnabled)
                         }
                     }
 
@@ -88,10 +90,6 @@ struct MorningStartView: View {
                             if appState.container.wakeUp.isWaitingForFocusCard {
                                 Button("Simulate Focus Card tap") { appState.simulateWakeUpCardTap() }
                                     .buttonStyle(QuietPrimaryButtonStyle())
-                            }
-                            if appState.container.flags.googleCalendarPreview {
-                                Button("Calendar settings") { appState.router.go(to: .calendarSettings) }
-                                    .buttonStyle(QuietTextButtonStyle())
                             }
                         }
                     }

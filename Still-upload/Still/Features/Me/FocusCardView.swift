@@ -35,7 +35,7 @@ struct FocusCardView: View {
                         Button("Get a card") {
                             appState.router.go(to: .getFocusCard)
                         }
-                        .buttonStyle(QuietPrimaryButtonStyle())
+                        .buttonStyle(QuietSecondaryButtonStyle())
                         Text("Design preview only. There is no ordering or payment in Still.")
                             .font(StillTypography.footnote)
                             .foregroundStyle(StillTheme.textSecondary)
@@ -83,6 +83,7 @@ struct FocusCardView: View {
                 }
                 .padding(.horizontal, StillTheme.Spacing.screen)
                 .padding(.vertical, StillTheme.Spacing.m)
+                .padding(.bottom, 72)
             }
         }
         .navigationBarTitleDisplayMode(.inline)

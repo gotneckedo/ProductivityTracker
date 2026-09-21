@@ -5,6 +5,10 @@ struct StillApp: App {
     @State private var appState = StillApp.makeAppState()
     @Environment(\.scenePhase) private var scenePhase
 
+    init() {
+        StillFontRegistration.registerBundledFonts()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

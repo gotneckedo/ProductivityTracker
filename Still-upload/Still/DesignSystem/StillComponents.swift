@@ -37,19 +37,16 @@ struct StillGlassSurface: ViewModifier {
 
     func body(content: Content) -> some View {
         let resolvedPhase = phase ?? environmentPhase ?? StillDayPhase.automatic(colorScheme: colorScheme)
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         content
             .background(
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                shape
                     .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: radius, style: .continuous)
-                            .fill(resolvedPhase.glassFill)
-                    )
+                    .overlay(shape.fill(resolvedPhase.glassFill))
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(resolvedPhase.glassBorder, lineWidth: StillTheme.Stroke.hairline)
-            )
+            // Keep material, fill, and decorative content inside one contour.
+            .clipShape(shape)
+            .overlay(shape.strokeBorder(resolvedPhase.glassBorder, lineWidth: StillTheme.Stroke.hairline))
             .shadow(color: StillTheme.Shadow.color, radius: StillTheme.Shadow.radius, x: 0, y: StillTheme.Shadow.y)
     }
 }
@@ -78,7 +75,10 @@ struct StillCard<Content: View>: View {
         content
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(tint.opacity(0.24))
+            .background(
+                RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous)
+                    .fill(tint.opacity(0.24))
+            )
             .stillGlass(phase: phase)
     }
 }
@@ -312,11 +312,13 @@ struct SessionTimerFace: View {
 
     var body: some View {
         VStack(spacing: StillTheme.Spacing.s) {
-            Text(caption)
-                .font(StillTypography.subheadline.weight(.medium))
-                .foregroundStyle(secondary)
-                .textCase(.uppercase)
-                .tracking(1.2)
+            if surface == .paper {
+                Text(caption)
+                    .font(StillTypography.subheadline.weight(.medium))
+                    .foregroundStyle(secondary)
+                    .textCase(.uppercase)
+                    .tracking(1.2)
+            }
             Text(time)
                 .font(StillTypography.timer(size: timerSize))
                 .foregroundStyle(primary)
@@ -325,9 +327,9 @@ struct SessionTimerFace: View {
                 .minimumScaleFactor(0.5)
                 .contentTransition(.numericText())
             if let progress {
-                PixelProgressRow(
+                GlowProgressLine(
                     progress: progress,
-                    filled: surface == .scene ? StillTheme.Palette.sceneText : StillTheme.accent,
+                    filled: surface == .scene ? StillDayPhase.focus.accent : StillTheme.accent,
                     empty: surface == .scene ? StillTheme.Palette.sceneText.opacity(0.22) : StillTheme.border
                 )
             }
@@ -336,6 +338,29 @@ struct SessionTimerFace: View {
         .accessibilityLabel(caption)
         .accessibilityValue(accessibilityText)
         .accessibilityAddTraits(.updatesFrequently)
+    }
+}
+
+/// A single, quiet line for a running session. It reads as time passing rather
+/// than a row of separate status markers.
+private struct GlowProgressLine: View {
+    let progress: Double
+    let filled: Color
+    let empty: Color
+
+    var body: some View {
+        GeometryReader { proxy in
+            let width = max(0, min(proxy.size.width, proxy.size.width * progress))
+            ZStack(alignment: .leading) {
+                Capsule().fill(empty)
+                Capsule()
+                    .fill(filled)
+                    .frame(width: width)
+                    .shadow(color: filled.opacity(0.62), radius: 7)
+            }
+        }
+        .frame(height: 4)
+        .accessibilityHidden(true)
     }
 }
 

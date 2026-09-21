@@ -14,9 +14,11 @@ struct RoomHeroView: View {
     var placedObjects: [RoomPlacement] = []
     var onPrevious: (() -> Void)?
     var onNext: (() -> Void)?
+    var showsControls = true
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isFloating = false
 
     private var resolvedPhase: StillDayPhase {
         phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
@@ -28,6 +30,16 @@ struct RoomHeroView: View {
                 .fill(RadialGradient(colors: [resolvedPhase.roomHalo, .clear], center: .center, startRadius: 2, endRadius: 130))
                 .blur(radius: 18)
                 .scaleEffect(x: 1.25, y: 0.78)
+                .accessibilityHidden(true)
+
+            Ellipse()
+                .fill(Color.black.opacity(dimmed ? 0.28 : 0.12))
+                .blur(radius: 13)
+                .frame(width: 190, height: 24)
+                .offset(y: 52)
+                .accessibilityHidden(true)
+
+            RoomMotes(phase: resolvedPhase, dimmed: dimmed)
                 .accessibilityHidden(true)
 
             Group {
@@ -44,25 +56,34 @@ struct RoomHeroView: View {
             }
             .aspectRatio(160.0 / 132.0, contentMode: .fit)
             .drawingGroup(opaque: false, colorMode: .extendedLinear)
+            .offset(y: reduceMotion ? 0 : (isFloating ? -3 : 2))
 
-            VStack {
-                HStack(spacing: StillTheme.Spacing.xs) {
-                    Text(sceneName)
-                        .font(StillTypography.caption)
-                        .foregroundStyle(resolvedPhase.ink)
-                        .padding(.horizontal, 12)
-                        .frame(minHeight: StillTheme.minimumTapSize)
-                        .background(.ultraThinMaterial, in: Capsule())
-                        .overlay(Capsule().strokeBorder(resolvedPhase.glassBorder, lineWidth: StillTheme.Stroke.hairline))
+            if showsControls {
+                VStack {
+                    HStack(spacing: StillTheme.Spacing.xs) {
+                        Text(sceneName)
+                            .font(StillTypography.caption)
+                            .foregroundStyle(resolvedPhase.ink)
+                            .padding(.horizontal, 12)
+                            .frame(minHeight: StillTheme.minimumTapSize)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .overlay(Capsule().strokeBorder(resolvedPhase.glassBorder, lineWidth: StillTheme.Stroke.hairline))
+                        Spacer()
+                        roomButton(symbol: "chevron.left", label: "Previous room", action: onPrevious)
+                        roomButton(symbol: "chevron.right", label: "Next room", action: onNext)
+                    }
+                    .padding(.horizontal, StillTheme.Spacing.s)
+                    .padding(.top, StillTheme.Spacing.s)
                     Spacer()
-                    roomButton(symbol: "chevron.left", label: "Previous room", action: onPrevious)
-                    roomButton(symbol: "chevron.right", label: "Next room", action: onNext)
+                    PageDots(activeName: sceneName)
+                        .padding(.bottom, StillTheme.Spacing.xs)
                 }
-                .padding(.horizontal, StillTheme.Spacing.s)
-                .padding(.top, StillTheme.Spacing.s)
-                Spacer()
-                PageDots(activeName: sceneName)
-                    .padding(.bottom, StillTheme.Spacing.xs)
+            }
+        }
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 4.2).repeatForever(autoreverses: true)) {
+                isFloating = true
             }
         }
         .accessibilityElement(children: .combine)
@@ -82,6 +103,23 @@ struct RoomHeroView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(label)
+        }
+    }
+}
+
+private struct RoomMotes: View {
+    let phase: StillDayPhase
+    let dimmed: Bool
+
+    var body: some View {
+        GeometryReader { proxy in
+            let points: [(CGFloat, CGFloat, CGFloat)] = [(0.19, 0.44, 2), (0.76, 0.30, 1.5), (0.84, 0.64, 2), (0.28, 0.24, 1)]
+            ForEach(Array(points.enumerated()), id: \.offset) { _, point in
+                Circle()
+                    .fill(phase.roomHalo.opacity(dimmed ? 0.32 : 0.62))
+                    .frame(width: point.2, height: point.2)
+                    .position(x: proxy.size.width * point.0, y: proxy.size.height * point.1)
+            }
         }
     }
 }
@@ -133,7 +171,6 @@ private enum RoomArtwork {
                      dimmed: Bool, plantStage: PlantGrowthStage, bookCount: Int, doodle: PixelDoodle?,
                      placedObjects: [RoomPlacement]) {
         let palette = Palette(phase: phase, sceneName: sceneName)
-        context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(palette.sky))
         drawSlab(context: &context, palette: palette)
         drawWalls(context: &context, palette: palette)
         drawWindow(context: &context, palette: palette, time: time, motion: !dimmed)

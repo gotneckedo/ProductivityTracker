@@ -90,7 +90,7 @@ struct FocusHomeView: View {
                 }
                 .padding(.horizontal, StillTheme.Spacing.screen)
                 .padding(.top, StillTheme.Spacing.s)
-                .padding(.bottom, StillTheme.Spacing.xxl)
+                .padding(.bottom, StillTheme.Spacing.xxl + 64)
             }
         }
         .toolbar(.hidden, for: .navigationBar)

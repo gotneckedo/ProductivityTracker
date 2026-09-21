@@ -7,7 +7,7 @@ enum Copy {
         static let morningGreeting = "Good morning."
         static let readyGreeting = "Ready when you are."
         static func roomDetail(_ sceneName: String) -> String {
-            "\(sceneName) is here for homework, revision, or one clear thing."
+            "\(sceneName) is here for homework, studying, or one clear thing."
         }
         static let addHomework = "Add homework or something to study"
         static let chooseTask = "Choose what to work on"

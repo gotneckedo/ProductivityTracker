@@ -41,6 +41,7 @@ struct BreakShelfView: View {
                 }
                 .padding(.horizontal, StillTheme.Spacing.screen)
                 .padding(.vertical, StillTheme.Spacing.m)
+                .padding(.bottom, 72)
             }
         }
         .toolbar(.hidden, for: .navigationBar)

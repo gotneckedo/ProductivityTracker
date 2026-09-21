@@ -87,10 +87,14 @@ extension DependencyContainer {
         focusCardOffering = NoFocusCardOffering()
         #endif
 
-        let bundledBooks = (
-            Bundle.main.paths(forResourcesOfType: "epub", inDirectory: "PublicDomainBooks")
-            + Bundle.main.paths(forResourcesOfType: "epub", inDirectory: nil)
-        ).map { URL(fileURLWithPath: $0) }
+        // Folder references can land either at the bundle root or inside the
+        // synchronized Resources group. Ask for both layouts and de-duplicate
+        // so the four public-domain books always appear under Short Read.
+        let bundledBooks = Set(
+            (Bundle.main.urls(forResourcesWithExtension: "epub", subdirectory: "PublicDomainBooks") ?? [])
+            + (Bundle.main.urls(forResourcesWithExtension: "epub", subdirectory: "Resources/PublicDomainBooks") ?? [])
+            + (Bundle.main.urls(forResourcesWithExtension: "epub", subdirectory: nil) ?? [])
+        ).sorted { $0.lastPathComponent < $1.lastPathComponent }
         let bookLibrary = FileBookLibrary(directory: FileBookLibrary.defaultDirectory(), bundledURLs: bundledBooks, clock: clock)
 
         return DependencyContainer(

@@ -27,7 +27,7 @@ struct JournalView: View {
                 }
                 .padding(.horizontal, StillTheme.Spacing.screen)
                 .padding(.top, StillTheme.Spacing.m)
-                .padding(.bottom, StillTheme.Spacing.xxl)
+                .padding(.bottom, StillTheme.Spacing.xxl + 64)
             }
             .scrollDismissesKeyboard(.interactively)
         }

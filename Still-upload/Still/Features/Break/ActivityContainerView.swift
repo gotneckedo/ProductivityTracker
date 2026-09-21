@@ -27,7 +27,7 @@ struct ActivityContainerView: View {
                     title: activity?.name ?? "Activity",
                     startedAt: startedAt,
                     duration: activity?.estimatedDuration ?? 60,
-                    showsRemainingTime: activity?.category != .puzzle,
+                    showsRemainingTime: activity?.category != .puzzle && activityID != .boxBreathing,
                     isFinished: outcome != nil,
                     onBack: backToBreak,
                     onDone: done
@@ -36,6 +36,7 @@ struct ActivityContainerView: View {
                     activityBody(startedAt: startedAt)
                         .padding(.horizontal, StillTheme.Spacing.screen)
                         .padding(.vertical, StillTheme.Spacing.m)
+                        .padding(.bottom, 72)
                 }
                 if let outcome {
                     ActivityFinishedPanel(

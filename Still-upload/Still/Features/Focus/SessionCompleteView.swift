@@ -112,9 +112,9 @@ struct SessionCompleteView: View {
         let duration = session?.completedFocusDuration ?? 0
         return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: StillTheme.Spacing.s) {
             CompletionMetric(value: DurationFormatter.short(duration), label: "this session")
-            CompletionMetric(value: "\(appState.stats.todayFocus == 0 ? 1 : appState.stats.completedSessions)", label: "sessions kept")
+            CompletionMetric(value: "\(appState.stats.todayFocus == 0 ? 1 : appState.stats.completedSessions)", label: "sessions")
             CompletionMetric(value: DurationFormatter.short(appState.stats.weekFocus), label: "this week")
-            CompletionMetric(value: appState.stats.currentStreak == 0 ? "—" : "\(appState.stats.currentStreak)", label: "day rhythm")
+            CompletionMetric(value: appState.stats.currentStreak == 0 ? "—" : "\(appState.stats.currentStreak)", label: "focus days")
         }
         .padding(StillTheme.Spacing.m)
         .stillGlass(radius: StillTheme.Radius.medium, phase: .dusk)

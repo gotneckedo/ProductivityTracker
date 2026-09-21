@@ -27,6 +27,7 @@ struct MeView: View {
                 }
                 .padding(.horizontal, StillTheme.Spacing.screen)
                 .padding(.vertical, StillTheme.Spacing.m)
+                .padding(.bottom, 72)
             }
         }
         .toolbar(.hidden, for: .navigationBar)
@@ -207,23 +208,31 @@ struct MeView: View {
 
 private struct ProfileHero: View {
     let stats: FocusStats
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         HStack(spacing: StillTheme.Spacing.m) {
             ZStack {
-                Circle().fill(StillTheme.accentSoft)
-                Image(systemName: "leaf.fill")
-                    .font(.system(size: 26, weight: .medium, design: .rounded))
-                    .foregroundStyle(StillTheme.accent)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(paletteColor.opacity(0.26))
+                if let doodle = latestDoodle {
+                    DoodleCanvas(doodle: doodle)
+                        .padding(8)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                } else {
+                    Image(systemName: "leaf.fill")
+                        .font(.system(size: 26, weight: .medium, design: .rounded))
+                        .foregroundStyle(paletteColor)
+                }
             }
-            .frame(width: 66, height: 66)
+            .frame(width: 68, height: 68)
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
-                Text("Me")
+                Text("Your Still")
                     .font(StillTypography.display)
                     .foregroundStyle(StillTheme.textPrimary)
                     .accessibilityAddTraits(.isHeader)
-                Text(stats.hasHistory ? StatsCalculator.streakLine(current: stats.currentStreak) : "A quiet place to notice what helps.")
+                Text(profileLine)
                     .font(StillTypography.callout)
                     .foregroundStyle(StillTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -233,6 +242,21 @@ private struct ProfileHero: View {
         .padding(StillTheme.Spacing.m)
         .stillGlass(radius: StillTheme.Radius.large)
         .accessibilityElement(children: .combine)
+    }
+
+    private var latestDoodle: PixelDoodle? {
+        appState.doodles.max { $0.updatedAt < $1.updatedAt }?.doodle
+    }
+
+    private var paletteColor: Color {
+        Color(hex: appState.preferences.appAccentPalette.accentHex)
+    }
+
+    private var profileLine: String {
+        let sessions = stats.completedSessions
+        let sessionLine = "\(sessions) \(sessions == 1 ? "session" : "sessions")"
+        guard stats.hasHistory else { return "\(sessionLine) · a quiet place to notice what helps." }
+        return "\(sessionLine) · \(StatsCalculator.streakLine(current: max(1, stats.currentStreak)))"
     }
 }
 

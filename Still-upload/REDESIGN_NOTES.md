@@ -2,9 +2,9 @@
 
 **Branch:** `redesign`  
 **Pull request:** [#1 — Redesign Still with a room-first focus flow](https://github.com/gotneckedo/ProductivityTracker/pull/1)  
-**Published head while this note was prepared:** `c7c3f73`  
+**Published head while this note was prepared:** `8bbe6f3`  
 **Local validation:** `swift test` — **205 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).  
-**GitHub Actions:** **CI validation is in progress.** This note will be amended with the final green run link and screenshot artifact name immediately after the push-triggered iOS workflow completes.
+**GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 35624063139](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35624063139) completed successfully on `8bbe6f3`; its `still-screenshots` artifact contains and was visually reviewed across 26 simulator captures.
 
 ## Delivery by priority
 
@@ -29,7 +29,7 @@
 
 ## What is partial or requires later validation
 
-The Swift package test suite is green locally, but the final iPhone Simulator build, widget extension build, Live Activity rendering, and screenshot capture remain dependent on the push-triggered GitHub Actions run listed above. Accessibility labels, Dynamic Type-aware SwiftUI layouts, 44pt controls, and Reduce Motion support are implemented in code; however, VoiceOver and visual review on physical iPhone hardware remain release-validation tasks.
+The Swift package suite is green locally, and the final iPhone Simulator build, test target, widget extension build, Live Activity-linked app target, and 26-screen screenshot capture passed in GitHub Actions. Accessibility labels, Dynamic Type-aware SwiftUI layouts, 44pt controls, and Reduce Motion support are implemented in code; however, VoiceOver and visual review on physical iPhone hardware remain release-validation tasks.
 
 Family Controls shielding is deliberately **off** in `FeatureFlags.v1`, `current`, and `release`. The app contains truthful UI, a schedule state machine, and a mock/preview path, but Apple’s Family Controls Distribution entitlement, DeviceActivity monitor extension, and hardware verification are still required before shipping actual blocking. Core NFC writing similarly needs the paid-team capability and hardware test. App Group sharing for the widget and Live Activity needs paid-account provisioning verification. The Supporter product and alternate Home Screen icon assets need final App Store/App Icon review before a public release.
 
@@ -115,10 +115,9 @@ Still-upload/TESTFLIGHT_SETUP.md
 | `swift test` | **205 tests passed, 0 failures**. The suite includes new subject segmentation, shelf-state, book provenance/parser, preview-boundary, room collection, onboarding, recurrence, blocking schedule, and wording regressions. |
 | SwiftUI source parse | Updated Focus, Break, Me, Morning Start, shared components, and room views parsed successfully with Swift 6.1. |
 | Static checks | `git diff --check` was clean before publishing. |
-| iPhone CI/screenshots | **In progress** — pending update with the green Actions URL and artifact name. |
+| iPhone CI/screenshots | **Passed.** [Run 35624063139](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35624063139) built and tested the iPhone simulator app successfully, then uploaded 26 reviewed captures. |
 
 ## CI and screenshots
 
-**Run:** pending completion of [iOS build, tests & screenshots](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35620719184).  
-**Screenshot artifact:** pending successful upload and visual review.
-
+**Run:** [iOS build, tests & screenshots — 35624063139](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35624063139) — **success**.  
+**Screenshot artifact:** `still-screenshots` (artifact ID `10651972578`), **26 PNG files**. The review covered onboarding, Home, focus, completion, Break, activities, Journal, Tasks, Day, presets, gallery, Wake up, Me, scenes, Focus Card, and the specified dark-mode screens. No obvious clipping, broken image, overlap, error state, or light/dark contrast failure was found in the CI contact-sheet review.

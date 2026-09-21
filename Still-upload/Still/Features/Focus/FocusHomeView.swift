@@ -128,7 +128,7 @@ private struct HomeTaskLine: View {
         Button(action: action) {
             HStack(spacing: StillTheme.Spacing.s) {
                 Circle()
-                    .fill(task == nil ? StillTheme.textTertiary.opacity(0.45) : StillTheme.accent)
+                    .fill(subjectColor)
                     .frame(width: 10, height: 10)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
@@ -136,7 +136,7 @@ private struct HomeTaskLine: View {
                         .font(StillTypography.bodyEmphasis)
                         .foregroundStyle(StillTheme.textPrimary)
                         .lineLimit(2)
-                    Text(task.flatMap { $0.homework?.course }.map { "\($0) · ready when you are" } ?? "A task is optional, but one helps the session feel clear.")
+                    Text(task?.subject.map { "\($0.name) · ready when you are" } ?? "A task is optional, but one helps the session feel clear.")
                         .font(StillTypography.footnote)
                         .foregroundStyle(StillTheme.textSecondary)
                         .lineLimit(2)
@@ -152,6 +152,11 @@ private struct HomeTaskLine: View {
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityHint("Opens today's tasks.")
+    }
+
+    private var subjectColor: Color {
+        guard let task else { return StillTheme.textTertiary.opacity(0.45) }
+        return task.subject.map { Color(hex: $0.color.hex) } ?? StillTheme.accent
     }
 }
 

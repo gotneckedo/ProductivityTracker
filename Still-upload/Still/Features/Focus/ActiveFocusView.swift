@@ -64,11 +64,11 @@ struct ActiveFocusView: View {
 
                     StillCard(padding: StillTheme.Spacing.l, phase: .focus) {
                         VStack(spacing: StillTheme.Spacing.s) {
-                            Text(task?.homework?.course ?? "Focus")
+                            Text(task?.subject?.name ?? "Focus")
                                 .font(StillTypography.caption)
                                 .tracking(1.4)
                                 .textCase(.uppercase)
-                                .foregroundStyle(StillDayPhase.focus.secondaryInk)
+                                .foregroundStyle(task?.subject.map { Color(hex: $0.color.hex) } ?? StillDayPhase.focus.secondaryInk)
                             Text(task?.title ?? "One clear thing")
                                 .font(StillTypography.title)
                                 .foregroundStyle(StillDayPhase.focus.ink)

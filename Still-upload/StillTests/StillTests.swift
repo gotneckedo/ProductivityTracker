@@ -1758,9 +1758,10 @@ final class TaskScheduleTests: XCTestCase {
         XCTAssertEqual(describer.describe(day(1), now: referenceDate), "Due tomorrow")
         XCTAssertEqual(describer.describe(day(3), now: referenceDate), "Due Friday")
         XCTAssertEqual(describer.describe(day(9), now: referenceDate), "Due Mar 19")
-        XCTAssertEqual(describer.describe(day(-1), now: referenceDate), "Was due yesterday")
-        XCTAssertEqual(describer.describe(day(-3), now: referenceDate), "Was due Saturday")
-        XCTAssertEqual(describer.describe(day(-20), now: referenceDate), "Was due Feb 18")
+        XCTAssertEqual(describer.describe(day(-1), now: referenceDate), "Past due · yesterday")
+        XCTAssertEqual(describer.describe(day(-3), now: referenceDate), "Past due · Saturday")
+        XCTAssertEqual(describer.describe(day(-20), now: referenceDate), "Past due · Feb 18")
+        XCTAssertFalse(describer.describe(day(-1), now: referenceDate).contains("Missed"))
         XCTAssertTrue(describer.isOverdue(day(-1), now: referenceDate))
         XCTAssertFalse(describer.isOverdue(day(0, hour: 1), now: referenceDate))
         XCTAssertEqual(describer.shortTime(day(0, hour: 16)), "4 PM")
@@ -1775,10 +1776,11 @@ final class TaskScheduleTests: XCTestCase {
         _ = tasks.create(title: "No dates")
         tasks.updateDetails(id: lab.id, dueAt: day(2), scheduledAt: nil, course: "  Chemistry ")
         tasks.updateDetails(id: read.id, dueAt: nil, scheduledAt: day(0, hour: 15), course: nil)
-        XCTAssertEqual(tasks.task(id: lab.id)?.homework?.course, "Chemistry")
+        XCTAssertEqual(tasks.task(id: lab.id)?.subject?.name, "Chemistry")
+        XCTAssertNil(tasks.task(id: lab.id)?.homework?.course)
         XCTAssertEqual(tasks.upcomingTasks().map(\.title), ["Read chapter", "Lab report"])
         tasks.updateDetails(id: lab.id, dueAt: nil, scheduledAt: nil, course: " ")
-        XCTAssertNil(tasks.task(id: lab.id)?.homework)
+        XCTAssertNil(tasks.task(id: lab.id)?.subject)
         XCTAssertEqual(tasks.upcomingTasks().map(\.title), ["Read chapter"])
     }
 
@@ -1795,6 +1797,87 @@ final class TaskScheduleTests: XCTestCase {
                                                                        sessions: [session], events: [event])
         XCTAssertEqual(result.dueToday.map(\.title), ["Due today"])
         XCTAssertEqual(result.timed.map(\.title), ["Dentist", "Focus", "At three"])
+        XCTAssertEqual(result.timed.last?.duration, 30 * 60)
+    }
+
+    func testSubjectPaletteMigrationAndControllerUpdates() throws {
+        XCTAssertEqual(SubjectColor.allCases.count, 8)
+        XCTAssertEqual(Set(SubjectColor.allCases.map(\.hex)).count, 8)
+
+        let legacy = """
+        {"id":"00000000-0000-0000-0000-000000000001","title":"Lab","createdAt":0,
+         "homework":{"course":" Biology ","assignmentKind":null}}
+        """
+        let decoded = try RecordCoding.decoder().decode(TaskItem.self, from: Data(legacy.utf8))
+        XCTAssertEqual(decoded.subject, Subject.migrated(fromCourse: "Biology"))
+        XCTAssertTrue(decoded.steps.isEmpty, "old records remain tolerant of missing steps")
+        XCTAssertEqual(decoded.repeatRule, .once)
+
+        let container = makeContainer()
+        let task = container.taskController.create(title: "Lab")!
+        let subject = Subject(name: "Chemistry", color: .lavender)
+        container.taskController.updateDetails(
+            id: task.id, dueAt: nil, scheduledAt: day(0, hour: 14), subject: subject,
+            plannedDuration: 55 * 60, dayPeriod: .afternoon,
+            repeatRule: TaskRepeatRule(frequency: .weekly, weekdays: [3])
+        )
+        let stored = try XCTUnwrap(container.tasks.task(id: task.id))
+        XCTAssertEqual(stored.subject, subject)
+        XCTAssertEqual(stored.plannedDuration, 55 * 60)
+        XCTAssertEqual(stored.dayPeriod, .afternoon)
+        XCTAssertEqual(stored.repeatRule.frequency, .weekly)
+    }
+
+    func testRecurrenceAndPerOccurrenceCompletion() {
+        let weekly = TaskRepeatRule(frequency: .weekly, interval: 2, weekdays: [3, 5])
+        XCTAssertTrue(weekly.occurs(on: day(0), anchoredAt: day(0), calendar: testCalendar))
+        XCTAssertTrue(weekly.occurs(on: day(2), anchoredAt: day(0), calendar: testCalendar))
+        XCTAssertFalse(weekly.occurs(on: day(7), anchoredAt: day(0), calendar: testCalendar))
+        XCTAssertTrue(weekly.occurs(on: day(14), anchoredAt: day(0), calendar: testCalendar))
+
+        let monthly = TaskRepeatRule(frequency: .monthly)
+        let january31 = testCalendar.date(from: DateComponents(year: 2026, month: 1, day: 31))!
+        let february28 = testCalendar.date(from: DateComponents(year: 2026, month: 2, day: 28))!
+        XCTAssertTrue(monthly.occurs(on: february28, anchoredAt: january31, calendar: testCalendar))
+
+        let container = makeContainer()
+        let task = container.taskController.create(title: "Review notes")!
+        container.taskController.updateDetails(
+            id: task.id, dueAt: day(0), scheduledAt: nil, subject: .biology,
+            dayPeriod: .evening, repeatRule: TaskRepeatRule(frequency: .daily)
+        )
+        container.taskController.setCompleted(id: task.id, on: day(0), true)
+        let stored = container.tasks.task(id: task.id)!
+        XCTAssertTrue(stored.isCompleted(on: day(0), calendar: testCalendar))
+        XCTAssertFalse(stored.isCompleted(on: day(1), calendar: testCalendar), "future occurrence stays open")
+        XCTAssertNil(stored.completedAt, "series itself is not globally completed")
+    }
+
+    func testTimelineGroupsPeriodsAndCarriesSubjectPresentation() {
+        let tasks = [
+            TaskItem(title: "Loose", createdAt: day(0), dueAt: day(0), dayPeriod: .anytime),
+            TaskItem(title: "Read", createdAt: day(0), subject: .literature, dueAt: day(0), dayPeriod: .morning),
+            TaskItem(title: "Lab", createdAt: day(0), subject: .biology, scheduledAt: day(0, hour: 13), plannedDuration: 75 * 60)
+        ]
+        let timeline = DayTimelineBuilder(calendar: testCalendar).items(for: day(0), tasks: tasks, sessions: [], events: [])
+        XCTAssertEqual(timeline.untimedGroups.map(\.period), [.anytime, .morning])
+        XCTAssertEqual(timeline.untimedGroups[1].items.first?.subject, .literature)
+        XCTAssertEqual(timeline.timed.first?.subject, .biology)
+        XCTAssertEqual(timeline.timed.first?.duration, 75 * 60)
+    }
+
+    func testPreviewFixtureSessionsNeverOverlap() {
+        let container = makeContainer()
+        PreviewFixtures.populate(container)
+        let completed = container.sessions.allSessions().filter { $0.state == .completed }
+        for (index, lhs) in completed.enumerated() {
+            guard let lhsEnd = lhs.endedAt else { continue }
+            for rhs in completed.dropFirst(index + 1) {
+                guard let rhsEnd = rhs.endedAt else { continue }
+                XCTAssertFalse(lhs.startedAt < rhsEnd && rhs.startedAt < lhsEnd,
+                               "fixture sessions \(lhs.id) and \(rhs.id) overlap")
+            }
+        }
     }
 
     func testSpokenTaskParsing() {

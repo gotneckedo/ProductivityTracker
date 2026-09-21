@@ -45,6 +45,16 @@ extension AppState {
 extension AppState {
     var canAddHabit: Bool { container.habitController.canAddHabit }
 
+    func habits(on day: Date) -> [HabitDay] {
+        container.habitController.days(on: day)
+    }
+
+    func toggleHabit(_ id: UUID, on day: Date) {
+        let done = container.habitController.isDone(habitID: id, on: day)
+        container.habitController.setDone(habitID: id, on: day, !done)
+        reload()
+    }
+
     @discardableResult
     func addHabit(title: String) -> Bool {
         let created = container.habitController.create(title: title) != nil
@@ -99,6 +109,31 @@ extension AppState {
         reload()
     }
 
+    func updateTaskDetails(
+        _ id: UUID,
+        dueAt: Date?,
+        scheduledAt: Date?,
+        subject: Subject?,
+        plannedDuration: TimeInterval?,
+        dayPeriod: TaskDayPeriod,
+        repeatRule: TaskRepeatRule
+    ) {
+        container.taskController.updateDetails(
+            id: id, dueAt: dueAt, scheduledAt: scheduledAt, subject: subject,
+            plannedDuration: plannedDuration, dayPeriod: dayPeriod, repeatRule: repeatRule
+        )
+        reload()
+    }
+
+    func setTaskCompleted(_ id: UUID, on day: Date, _ completed: Bool) {
+        container.taskController.setCompleted(id: id, on: day, completed)
+        if completed, preferences.selectedTaskID == id,
+           container.tasks.task(id: id)?.repeatRule.isRepeating != true {
+            container.preferences.update { $0.selectedTaskID = nil }
+        }
+        reload()
+    }
+
     @discardableResult
     func addTaskStep(taskID: UUID, title: String) -> Bool {
         let added = container.taskController.addStep(taskID: taskID, title: title)
@@ -148,7 +183,7 @@ extension AppState {
     }
 
     /// Today's (or another day's) tasks, finished sessions, and calendar events.
-    func timeline(for day: Date) -> (dueToday: [TimelineItem], timed: [TimelineItem]) {
+    func timeline(for day: Date) -> DayTimeline {
         let calendar = container.calendar
         let start = calendar.startOfDay(for: day)
         let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start

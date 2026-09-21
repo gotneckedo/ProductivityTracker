@@ -7,8 +7,8 @@ struct DueDateDescriber {
     func describe(_ due: Date, now: Date) -> String {
         let days = dayDistance(from: now, to: due)
         switch days {
-        case ..<(-1): return "Was due \(days > -7 ? weekdayName(due) : shortDate(due))"
-        case -1: return "Was due yesterday"
+        case ..<(-1): return "Past due · \(days > -7 ? weekdayName(due) : shortDate(due))"
+        case -1: return "Past due · yesterday"
         case 0: return "Due today"
         case 1: return "Due tomorrow"
         case 2...6: return "Due \(weekdayName(due))"
@@ -67,6 +67,27 @@ struct TimelineItem: Hashable, Identifiable {
     var start: Date
     var end: Date?
     var isDone: Bool
+    var subject: Subject?
+
+    /// A visible capsule never collapses to zero height. Untimed values do not
+    /// use this duration.
+    var duration: TimeInterval { max(0, (end ?? start).timeIntervalSince(start)) }
+}
+
+struct TimelineUntimedGroup: Hashable, Identifiable {
+    var period: TaskDayPeriod
+    var items: [TimelineItem]
+
+    var id: TaskDayPeriod { period }
+}
+
+struct DayTimeline: Hashable {
+    var day: Date
+    var untimedGroups: [TimelineUntimedGroup]
+    var timed: [TimelineItem]
+
+    /// Compatibility for existing callers while the UI moves to four groups.
+    var dueToday: [TimelineItem] { untimedGroups.flatMap(\.items) }
 }
 
 /// Builds the day view: scheduled tasks, calendar events, and finished focus
@@ -79,40 +100,62 @@ struct DayTimelineBuilder {
         tasks: [TaskItem],
         sessions: [FocusSession],
         events: [ExternalCalendarEvent]
-    ) -> (dueToday: [TimelineItem], timed: [TimelineItem]) {
+    ) -> DayTimeline {
         let start = calendar.startOfDay(for: day)
-        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else { return ([], []) }
+        guard let end = calendar.date(byAdding: .day, value: 1, to: start) else {
+            return DayTimeline(day: start, untimedGroups: [], timed: [])
+        }
         let inDay: (Date) -> Bool = { $0 >= start && $0 < end }
 
-        let dueToday = tasks
-            .filter { task in task.scheduledAt == nil && task.dueAt.map(inDay) == true }
-            .sorted { $0.createdAt < $1.createdAt }
-            .map { task in
-                TimelineItem(id: "due-\(task.id.uuidString)", kind: .dueTask(task.id), title: task.title,
-                             start: task.dueAt ?? start, end: nil, isDone: task.isCompleted)
-            }
+        var untimedByPeriod: [TaskDayPeriod: [TimelineItem]] = [:]
 
         var timed: [TimelineItem] = []
         for task in tasks {
-            guard let at = task.scheduledAt, inDay(at) else { continue }
-            timed.append(TimelineItem(id: "task-\(task.id.uuidString)", kind: .scheduledTask(task.id),
-                                      title: task.title, start: at, end: nil, isDone: task.isCompleted))
+            let occurs = task.occurs(on: day, calendar: calendar)
+            let dueToday = task.dueAt.map(inDay) == true
+            guard occurs || dueToday else { continue }
+            let done = task.isCompleted(on: day, calendar: calendar)
+            if let anchor = task.scheduledAt {
+                let at = task.repeatRule.date(on: start, preservingTimeFrom: anchor, calendar: calendar)
+                guard inDay(at) else { continue }
+                let duration = task.plannedDuration ?? 30 * 60
+                timed.append(TimelineItem(
+                    id: "task-\(task.id.uuidString)-\(Int(start.timeIntervalSinceReferenceDate))",
+                    kind: .scheduledTask(task.id), title: task.title, start: at,
+                    end: min(at.addingTimeInterval(duration), end), isDone: done, subject: task.subject
+                ))
+            } else {
+                let item = TimelineItem(
+                    id: "due-\(task.id.uuidString)-\(Int(start.timeIntervalSinceReferenceDate))",
+                    kind: .dueTask(task.id), title: task.title,
+                    start: task.dueAt ?? start, end: nil, isDone: done, subject: task.subject
+                )
+                untimedByPeriod[task.dayPeriod, default: []].append(item)
+            }
         }
         for session in sessions where session.state == .completed {
             guard let ended = session.endedAt, inDay(session.startedAt) || inDay(ended) else { continue }
+            let subject = session.taskID.flatMap { taskID in tasks.first(where: { $0.id == taskID })?.subject }
             timed.append(TimelineItem(id: "session-\(session.id.uuidString)", kind: .focusSession(session.id),
-                                      title: "Focus", start: session.startedAt, end: ended, isDone: true))
+                                      title: "Focus", start: max(session.startedAt, start), end: min(ended, end),
+                                      isDone: true, subject: subject))
         }
         for event in events {
             guard event.startsAt < end && event.endsAt > start else { continue }
             timed.append(TimelineItem(id: "event-\(event.id)", kind: .calendarEvent(event.id),
                                       title: event.title, start: max(event.startsAt, start),
-                                      end: event.endsAt, isDone: false))
+                                      end: min(event.endsAt, end), isDone: false, subject: nil))
         }
         timed.sort { lhs, rhs in
             lhs.start == rhs.start ? lhs.id < rhs.id : lhs.start < rhs.start
         }
-        return (dueToday, timed)
+        let groups = TaskDayPeriod.allCases.compactMap { period -> TimelineUntimedGroup? in
+            let groupItems = (untimedByPeriod[period] ?? []).sorted {
+                $0.start == $1.start ? $0.id < $1.id : $0.start < $1.start
+            }
+            return groupItems.isEmpty ? nil : TimelineUntimedGroup(period: period, items: groupItems)
+        }
+        return DayTimeline(day: start, untimedGroups: groups, timed: timed)
     }
 }
 

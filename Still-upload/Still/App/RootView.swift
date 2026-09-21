@@ -17,7 +17,7 @@ struct RootView: View {
         .overlay(alignment: .top) {
             NoticeBanner()
         }
-        .tint(StillTheme.accent)
+        .tint(Color(hex: appState.preferences.appAccentPalette.accentHex))
     }
 }
 
@@ -198,6 +198,12 @@ struct RouteView: View {
             GetFocusCardView()
         case .habits:
             HabitsScreen()
+        case .onboardingGoalPreference:
+            OnboardingPreferenceEditorView(kind: .goal)
+        case .onboardingBreakPreference:
+            OnboardingPreferenceEditorView(kind: .breakAppeal)
+        case .onboardingLookPreference:
+            OnboardingPreferenceEditorView(kind: .look)
         case .focusHome, .focusConfiguration, .activeSession, .sessionComplete, .breakShelf, .tasks, .me, .journal, .dayTimeline:
             // These are tab roots or modals, never pushed.
             EmptyView()

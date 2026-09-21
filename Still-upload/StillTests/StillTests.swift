@@ -2156,3 +2156,153 @@ final class BlockingBoundaryTests: XCTestCase {
         XCTAssertNil(store.selectionData(for: .study))
     }
 }
+
+// MARK: - Onboarding P2
+
+final class OnboardingPreferenceTests: XCTestCase {
+    func testVersionOnePreferencesMigrateWithSafeDefaults() throws {
+        let data = Data(#"{"hasCompletedOnboarding":true,"onboardingGoal":"scrollLess","schemaVersion":1}"#.utf8)
+        let preferences = try RecordCoding.decoder().decode(UserPreferences.self, from: data)
+
+        XCTAssertEqual(preferences.schemaVersion, UserPreferences.currentSchemaVersion)
+        XCTAssertEqual(preferences.onboardingGoal, .scrollLess)
+        XCTAssertNil(preferences.breakAppeal)
+        XCTAssertEqual(preferences.appAccentPalette, .mint)
+    }
+
+    func testNewPreferencesHaveLocalNonDestructiveDefaults() {
+        let preferences = UserPreferences()
+        XCTAssertFalse(preferences.hasCompletedOnboarding)
+        XCTAssertNil(preferences.onboardingGoal)
+        XCTAssertNil(preferences.breakAppeal)
+        XCTAssertEqual(preferences.appAccentPalette, .mint)
+        XCTAssertEqual(preferences.schemaVersion, UserPreferences.currentSchemaVersion)
+    }
+
+    func testBreakAppealOverridesGoalOnlyForCategorySeed() {
+        let personalized = Personalization(goal: .calmerPhone, breakAppeal: .puzzles)
+        XCTAssertEqual(personalized.categoryOrder, [.puzzle, .reset, .quiet])
+        XCTAssertEqual(personalized.preferredRenderMode, .calm)
+        XCTAssertFalse(personalized.startsWithSound)
+    }
+
+    func testOnboardingCanCompleteWithEveryQuestionSkipped() {
+        let container = makeContainer()
+        container.preferences.completeOnboarding(OnboardingAnswers())
+        let preferences = container.preferencesStore.load()
+
+        XCTAssertTrue(preferences.hasCompletedOnboarding)
+        XCTAssertNil(preferences.onboardingGoal)
+        XCTAssertNil(preferences.breakAppeal)
+        XCTAssertEqual(preferences.appAccentPalette, .mint)
+        XCTAssertEqual(container.preferences.preset(.defaultPreset).timer.focusDuration, minutes(25))
+    }
+
+    func testTargetedPreferenceChangesPreserveOtherAnswersAndData() {
+        let container = makeContainer()
+        container.preferences.completeOnboarding(OnboardingAnswers(
+            goal: .focusBetter,
+            breakAppeal: .quiet,
+            appAccentPalette: .peach
+        ))
+        let task = container.taskController.create(title: "Keep this task")
+
+        container.preferences.setBreakAppeal(.move)
+        var preferences = container.preferencesStore.load()
+        XCTAssertEqual(preferences.onboardingGoal, .focusBetter)
+        XCTAssertEqual(preferences.breakAppeal, .move)
+        XCTAssertEqual(preferences.appAccentPalette, .peach)
+        XCTAssertTrue(preferences.hasCompletedOnboarding)
+        XCTAssertNotNil(task.flatMap { container.tasks.task(id: $0.id) })
+
+        container.preferences.setOnboardingGoal(nil)
+        preferences = container.preferencesStore.load()
+        XCTAssertNil(preferences.onboardingGoal)
+        XCTAssertEqual(preferences.breakAppeal, .move)
+        XCTAssertEqual(preferences.appAccentPalette, .peach)
+        XCTAssertTrue(preferences.hasCompletedOnboarding)
+    }
+
+    func testShelfRankingUsesOnboardingSeedBeforeUsage() {
+        let ranked = BreakShelfRanking().ranked(
+            catalog: ActivityCatalog.available,
+            usages: [],
+            personalization: Personalization(goal: nil, breakAppeal: .quiet)
+        )
+        XCTAssertEqual(ranked.first?.category, .quiet)
+        XCTAssertEqual(Array(ranked.prefix(3).map(\.id)), [.shortRead, .creativePrompt, .pixelDoodle])
+    }
+
+    func testShelfRankingLetsRealUsageTakeOver() {
+        func usage(_ activity: BreakActivityID, at offset: TimeInterval) -> ActivityUsage {
+            ActivityUsage(
+                id: UUID(), activityID: activity,
+                startedAt: referenceDate.addingTimeInterval(offset), endedAt: nil,
+                outcome: .completed, context: .shelf
+            )
+        }
+        let usages = [
+            usage(.boxBreathing, at: 10),
+            usage(.boxBreathing, at: 20),
+            usage(.sudoku, at: 30)
+        ]
+        let ranked = BreakShelfRanking().ranked(
+            catalog: ActivityCatalog.available,
+            usages: usages,
+            personalization: Personalization(goal: nil, breakAppeal: .quiet)
+        )
+        XCTAssertEqual(ranked.first?.id, .boxBreathing)
+        XCTAssertEqual(ranked.dropFirst().first?.id, .sudoku)
+    }
+
+    func testCompletionSuggestionsRemainDiverseWithBreakPreference() {
+        let request = BreakSuggestionRequest(
+            availableBreak: minutes(6), catalog: ActivityCatalog.available,
+            usedToday: [], lastUsedAt: [:],
+            categoryOrder: Personalization(goal: .focusBetter, breakAppeal: .quiet).categoryOrder,
+            daySeed: 12
+        )
+        let suggestions = BreakSuggestionEngine().suggestions(for: request).activities
+        XCTAssertEqual(suggestions.count, 3)
+        XCTAssertEqual(Set(suggestions.map(\.category)), Set(ActivityCategory.allCases))
+    }
+}
+
+final class AlternateAppIconTests: XCTestCase {
+    func testPaletteIconNameContract() {
+        XCTAssertNil(AppAccentPalette.mint.alternateIconName)
+        XCTAssertEqual(AppAccentPalette.peach.alternateIconName, "AppIconPeach")
+        XCTAssertEqual(AppAccentPalette.sky.alternateIconName, "AppIconSky")
+    }
+
+    func testControllerRoutesPaletteChangesThroughIconAbstraction() {
+        let keyValues = InMemoryKeyValueStore()
+        let preferencesStore = CodablePreferencesStore(store: keyValues)
+        let icons = RecordingAlternateAppIconChanger()
+        let controller = PreferencesController(
+            preferences: preferencesStore,
+            presets: StoredPresetRepository(store: keyValues),
+            recordStore: InMemoryRecordStore(),
+            events: LocalEventTracker(clock: ManualClock(referenceDate)),
+            notifications: RecordingNotificationScheduler(),
+            audio: SilentAmbientAudioPlayer(),
+            alternateAppIcons: icons
+        )
+
+        controller.setAppAccentPalette(.sky)
+        controller.setAppAccentPalette(.mint)
+
+        XCTAssertEqual(icons.requestedNames.count, 2)
+        XCTAssertEqual(icons.requestedNames[0], "AppIconSky")
+        XCTAssertNil(icons.requestedNames[1])
+        XCTAssertEqual(preferencesStore.load().appAccentPalette, .mint)
+    }
+
+    func testUnavailableIconChangerReportsHonestStatus() {
+        let icons = UnavailableAlternateAppIconChanger()
+        var result: Result<AppIconChangeOutcome, Error>?
+        icons.setAlternateIconName("AppIconSky") { result = $0 }
+        XCTAssertFalse(icons.supportsAlternateIcons)
+        XCTAssertEqual(try? result?.get(), .unavailable)
+    }
+}

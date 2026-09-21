@@ -6,7 +6,11 @@ struct BreakShelfView: View {
     @State private var selectedCategory: ActivityCategory?
 
     private var visibleActivities: [BreakActivity] {
-        let activities = ActivityCatalog.available
+        let activities = BreakShelfRanking().ranked(
+            catalog: ActivityCatalog.available,
+            usages: appState.usages,
+            personalization: appState.personalization
+        )
         return selectedCategory.map { category in activities.filter { $0.category == category } } ?? activities
     }
 

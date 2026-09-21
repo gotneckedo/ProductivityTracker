@@ -108,6 +108,7 @@ extension DependencyContainer {
             purchases: purchases,
             focusCardOffering: focusCardOffering,
             widgetSnapshots: widgetSnapshots,
+            alternateAppIcons: UIKitAlternateAppIconChanger(),
             speech: speech,
             storageNotice: storageNotice
         )

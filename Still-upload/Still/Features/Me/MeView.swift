@@ -151,14 +151,29 @@ struct MeView: View {
 
     private var privacySection: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Privacy")
-            QuietNote(text: "Data stays on this device in this version. No account, no sync, no tracking.", symbol: "lock")
+            SectionHeader(title: "Your preferences", detail: "Change one answer without resetting anything else.")
             Button {
-                appState.replayOnboarding()
+                appState.router.go(to: .onboardingGoalPreference)
             } label: {
-                SettingRow(symbol: "arrow.counterclockwise", title: "Replay onboarding", showsChevron: false)
+                SettingRow(symbol: "scope", title: "Focus goal", value: appState.preferences.onboardingGoal?.title ?? "Not set")
             }
             .buttonStyle(.plain)
+            Button {
+                appState.router.go(to: .onboardingBreakPreference)
+            } label: {
+                SettingRow(symbol: "cup.and.saucer", title: "Break preference", value: appState.preferences.breakAppeal?.title ?? "Not set")
+            }
+            .buttonStyle(.plain)
+            Button {
+                appState.router.go(to: .onboardingLookPreference)
+            } label: {
+                SettingRow(symbol: "paintpalette", title: "Look & app icon", value: appState.preferences.appAccentPalette.title)
+            }
+            .buttonStyle(.plain)
+
+            SectionHeader(title: "Privacy")
+                .padding(.top, StillTheme.Spacing.s)
+            QuietNote(text: "Processed on this device. No account. No servers.", symbol: "lock")
             Button {
                 isConfirmingReset = true
             } label: {

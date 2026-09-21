@@ -51,6 +51,12 @@ final class AppState {
         container.breaks.onPersistenceError = reportError
         container.taskController.onPersistenceError = reportError
         container.preferences.onPersistenceError = reportError
+        container.preferences.onIconChangeUnavailable = { [weak self] in
+            self?.notice = StillNotice(text: "Alternate app icons aren't available on this device. Your palette preference was saved.")
+        }
+        container.preferences.onIconChangeError = { [weak self] _ in
+            self?.notice = StillNotice(text: "The Home Screen icon couldn't be changed. Your palette preference was saved.")
+        }
         container.journalController.onPersistenceError = reportError
         container.habitController.onPersistenceError = reportError
         container.books.onPersistenceError = reportError
@@ -130,7 +136,9 @@ final class AppState {
 
     // MARK: - Derived
 
-    var personalization: Personalization { Personalization(goal: preferences.onboardingGoal) }
+    var personalization: Personalization {
+        Personalization(goal: preferences.onboardingGoal, breakAppeal: preferences.breakAppeal)
+    }
 
     var currentPreset: FocusPreset {
         presets.first { $0.id == preferences.defaultPresetID }
@@ -373,9 +381,28 @@ final class AppState {
     }
 
     func completeOnboarding(goal: OnboardingGoal) {
-        container.preferences.completeOnboarding(goal: goal)
+        completeOnboarding(OnboardingAnswers(goal: goal))
+    }
+
+    func completeOnboarding(_ answers: OnboardingAnswers) {
+        container.preferences.completeOnboarding(answers)
         reload()
         router.go(to: .focusHome)
+    }
+
+    func setOnboardingGoal(_ goal: OnboardingGoal?) {
+        container.preferences.setOnboardingGoal(goal)
+        reload()
+    }
+
+    func setBreakAppeal(_ appeal: BreakAppeal?) {
+        container.preferences.setBreakAppeal(appeal)
+        reload()
+    }
+
+    func setAppAccentPalette(_ palette: AppAccentPalette) {
+        container.preferences.setAppAccentPalette(palette)
+        reload()
     }
 
     func replayOnboarding() {

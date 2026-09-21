@@ -43,6 +43,7 @@ final class DependencyContainer {
     let purchases: PurchaseService
     let focusCardOffering: FocusCardOffering
     let widgetSnapshots: WidgetSnapshotWriting
+    let alternateAppIcons: AlternateAppIconChanging
     /// Nil where speech capture isn't available (tests, Linux, flag off).
     let speech: SpeechTaskCapturing?
 
@@ -77,6 +78,7 @@ final class DependencyContainer {
         purchases: PurchaseService = NoPurchaseService(),
         focusCardOffering: FocusCardOffering = NoFocusCardOffering(),
         widgetSnapshots: WidgetSnapshotWriting = RecordingWidgetSnapshotWriter(),
+        alternateAppIcons: AlternateAppIconChanging = UnavailableAlternateAppIconChanger(),
         speech: SpeechTaskCapturing? = nil,
         storageNotice: String? = nil
     ) {
@@ -118,6 +120,7 @@ final class DependencyContainer {
         self.purchases = flags.seasonalPurchasesPreview ? purchases : NoPurchaseService()
         self.focusCardOffering = flags.brandedFocusCardPreview ? focusCardOffering : NoFocusCardOffering()
         self.widgetSnapshots = widgetSnapshots
+        self.alternateAppIcons = alternateAppIcons
         self.speech = flags.voiceCapture ? speech : nil
 
         focus = FocusFlowController(
@@ -141,7 +144,8 @@ final class DependencyContainer {
             recordStore: recordStore,
             events: tracker,
             notifications: notifications,
-            audio: audio
+            audio: audio,
+            alternateAppIcons: alternateAppIcons
         )
         journalController = JournalController(clock: clock, calendar: calendar, journal: journal, events: tracker)
         habitController = HabitController(clock: clock, calendar: calendar, habits: habits, events: tracker)

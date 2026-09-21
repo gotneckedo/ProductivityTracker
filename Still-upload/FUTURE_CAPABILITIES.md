@@ -45,7 +45,10 @@ Quick map of the extension points:
   `ManagedSettingsStore` shields on session start, cleared on end),
   `BlockingSetupView` with `FamilyActivityPicker`, a Blocking section in Session
   options, and "End blocking now" on the running session (logs
-  `blocking_override`, no app names). All behind `FeatureFlags.appBlocking`.
+  `blocking_override`, no app names). The setup also has a persisted start-time
+  schedule whose state ends only on a Focus Card tap or the always-available
+  "End blocking now" override, plus an honest Preview label whenever the mock
+  service is in use. All behind `FeatureFlags.appBlocking`.
 - **Needed:**
   1. Request the **Family Controls (Distribution)** entitlement from Apple.
      Development builds can use the development entitlement with a paid account.
@@ -57,6 +60,12 @@ Quick map of the extension points:
      with the session's end; in the extension's `intervalDidEnd`, call
      `ManagedSettingsStore(named: .init("still.focus")).clearAllSettings()`.
      The extension needs the same entitlement.
+- **Scheduled start boundary:** the persisted state machine and foreground start
+  path are complete. Starting at the exact time while Still is closed requires
+  the same DeviceActivity extension to register the repeating start interval;
+  the app does not claim background shielding before that extension and
+  entitlement are installed. Card-tap and manual ending clear the shared
+  `ManagedSettingsStore` immediately whenever real shielding is active.
 - **Privacy:** selections are opaque tokens that stay on the device.
 - **Next safe step:** apply for the entitlement now; the wait is the long pole.
 

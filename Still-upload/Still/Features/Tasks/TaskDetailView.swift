@@ -64,7 +64,7 @@ struct TaskDetailView: View {
     private func notebook(task: TaskItem) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             TextField("Task", text: $title, axis: .vertical)
-                .font(StillTypography.title2)
+                .font(StillTypography.title)
                 .foregroundStyle(StillTheme.textPrimary)
                 .lineLimit(1...3)
                 .submitLabel(.done)

@@ -2,9 +2,17 @@
 
 **Branch:** `redesign`  
 **Pull request:** [#1 — Redesign Still with a room-first focus flow](https://github.com/gotneckedo/ProductivityTracker/pull/1)  
-**Published head while this note was prepared:** `8bbe6f3`  
+**Published head while this note was prepared:** `c496b14`
 **Local validation:** `swift test` — **205 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).  
-**GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 35624063139](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35624063139) completed successfully on `8bbe6f3`; its `still-screenshots` artifact contains and was visually reviewed across 26 simulator captures.
+**GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 35672301284](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35672301284) completed successfully on `c496b14`; its `still-screenshots` artifact contains and was visually reviewed across 26 simulator captures.
+
+## Visual correction pass
+
+The post-review correction pass explicitly registers the bundled Instrument Serif and Outfit files at launch, retaining the `UIAppFonts` entries as a second registration path. Captures now show Instrument Serif in display headlines, timers, and large statistics rather than a system-sans fallback. Shared glass surfaces clip their material, fill, border, and shadow to one rounded contour; Home, active focus, Journal, Me, and Short Read no longer retain an outer rectangular fill.
+
+The original room renderer now floats over the phase background with a warm halo, lamp bloom, shadow, motes, two wall planes, and reduced-motion-aware motion. It is also the renderer used in Scene thumbnails. All major tab scroll views reserve bottom clearance for the floating tab bar. The active-focus screen now has one subject-or-Focus overline, a thin glowing progress line, one sound-state glyph, and a full-width Study Plan card.
+
+Sudoku presents six separated 2×3 boxes and keeps a keypad number available until all six placements exist. Short Read explicitly lists and opens the four bundled public-domain books. Wake up exposes time, days, preset, and Stop with Button/Focus Card controls without a Calendar settings detour; Box Breathing shows remaining time only once. Me begins with the personal glass card, and preview Focus Card acquisition is secondary glass. Student language is updated to US wording, including **studying**, **sessions**, and **focus days**.
 
 ## Delivery by priority
 
@@ -58,6 +66,7 @@ Still-upload/Still/Assets.xcassets/AppIconPeach.appiconset/Contents.json
 Still-upload/Still/Assets.xcassets/AppIconSky.appiconset/AppIcon-1024.png
 Still-upload/Still/Assets.xcassets/AppIconSky.appiconset/Contents.json
 Still-upload/Still/DesignSystem/PreviewTag.swift
+Still-upload/Still/DesignSystem/StillFontRegistration.swift
 Still-upload/Still/DesignSystem/RoomHeroView.swift
 Still-upload/Still/Domain/ActivityPresentation.swift
 Still-upload/Still/Domain/Copy.swift
@@ -115,9 +124,9 @@ Still-upload/TESTFLIGHT_SETUP.md
 | `swift test` | **205 tests passed, 0 failures**. The suite includes new subject segmentation, shelf-state, book provenance/parser, preview-boundary, room collection, onboarding, recurrence, blocking schedule, and wording regressions. |
 | SwiftUI source parse | Updated Focus, Break, Me, Morning Start, shared components, and room views parsed successfully with Swift 6.1. |
 | Static checks | `git diff --check` was clean before publishing. |
-| iPhone CI/screenshots | **Passed.** [Run 35624063139](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35624063139) built and tested the iPhone simulator app successfully, then uploaded 26 reviewed captures. |
+| iPhone CI/screenshots | **Passed.** [Run 35672301284](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35672301284) built and tested the iPhone simulator app successfully, then uploaded 26 reviewed captures after the visual correction pass. |
 
 ## CI and screenshots
 
-**Run:** [iOS build, tests & screenshots — 35624063139](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35624063139) — **success**.  
-**Screenshot artifact:** `still-screenshots` (artifact ID `10651972578`), **26 PNG files**. The review covered onboarding, Home, focus, completion, Break, activities, Journal, Tasks, Day, presets, gallery, Wake up, Me, scenes, Focus Card, and the specified dark-mode screens. No obvious clipping, broken image, overlap, error state, or light/dark contrast failure was found in the CI contact-sheet review.
+**Run:** [iOS build, tests & screenshots — 35672301284](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35672301284) — **success**.
+**Screenshot artifact:** `still-screenshots` (artifact ID `10671389621`), **26 PNG files**. The review covered onboarding, Home, focus, completion, Break, activities, Journal, Tasks, Day, presets, gallery, Wake up, Me, scenes, Focus Card, and the specified dark-mode screens. A side-by-side check against the supplied prototype screens confirmed the corrected serif display type, rounded glass clipping, room treatment, focus layout, Sudoku grouping, and personal Me header. The downloaded artifact is attached with this delivery.

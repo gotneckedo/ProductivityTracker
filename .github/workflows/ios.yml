@@ -133,6 +133,16 @@ jobs:
             n=$((n + 1))
           done
 
+          # Section 1 visual proof: the top and bottom of the all-unlocked
+          # scene grid show all four unique core rooms, while the Short Read
+          # bottom proves the complete bundled-book shelf is present.
+          shoot "scenes-all" "$(printf '%02d' $n)-scenes-all"
+          n=$((n + 1))
+          shoot_bottom "scenes-all" "$(printf '%02d' $n)-scenes-all-bottom"
+          n=$((n + 1))
+          shoot_bottom "read" "$(printf '%02d' $n)-read-bottom"
+          n=$((n + 1))
+
           xcrun simctl ui "$UDID" appearance dark
           for screen in home active complete journal me; do
             shoot "$screen" "$(printf '%02d' $n)-$screen-dark"

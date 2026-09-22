@@ -6,12 +6,20 @@ enum Copy {
     /// Counted phrases stay in one place so one is never rendered as a plural.
     /// The number is intentionally kept in the phrase for VoiceOver, too.
     enum Count {
+        static func sessionLabel(_ value: Int) -> String {
+            value == 1 ? "session" : "sessions"
+        }
+
         static func session(_ value: Int) -> String {
-            "\(value) \(value == 1 ? "session" : "sessions")"
+            "\(value) \(sessionLabel(value))"
+        }
+
+        static func focusDayLabel(_ value: Int) -> String {
+            value == 1 ? "focus day" : "focus days"
         }
 
         static func focusDay(_ value: Int) -> String {
-            "\(value) focus \(value == 1 ? "day" : "days")"
+            "\(value) \(focusDayLabel(value))"
         }
 
         static func shortRead(_ value: Int) -> String {

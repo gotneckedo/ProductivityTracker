@@ -57,6 +57,10 @@ enum DemoLaunch {
             return routed(.me)
         case "scenes":
             return routed(.sceneCollection)
+        case "scenes-all":
+            let state = PreviewSupport.appState(populated: true, completedSessions: 30)
+            state.router.go(to: .sceneCollection)
+            return state
         case "card":
             return routed(.nfcSetup)
         case "journal":

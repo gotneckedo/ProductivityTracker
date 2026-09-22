@@ -32,11 +32,22 @@ struct ActivityContainerView: View {
                     onBack: backToBreak,
                     onDone: done
                 )
-                ScrollView {
-                    activityBody(startedAt: startedAt)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            activityBody(startedAt: startedAt)
+                            Color.clear.frame(height: 1).id("activity-bottom")
+                        }
                         .padding(.horizontal, StillTheme.Spacing.screen)
                         .padding(.vertical, StillTheme.Spacing.m)
                         .padding(.bottom, 72)
+                    }
+                    .onAppear {
+                        #if DEBUG
+                        guard activityID == .shortRead, DemoLaunch.shouldScrollToBottom("read") else { return }
+                        DispatchQueue.main.async { proxy.scrollTo("activity-bottom", anchor: .bottom) }
+                        #endif
+                    }
                 }
                 if let outcome {
                     ActivityFinishedPanel(

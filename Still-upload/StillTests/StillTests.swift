@@ -1636,6 +1636,8 @@ final class CopyCountTests: XCTestCase {
         XCTAssertEqual(Copy.Count.session(2), "2 sessions")
         XCTAssertEqual(Copy.Count.focusDay(1), "1 focus day")
         XCTAssertEqual(Copy.Count.focusDay(3), "3 focus days")
+        XCTAssertEqual(Copy.Count.sessionLabel(1), "session")
+        XCTAssertEqual(Copy.Count.focusDayLabel(1), "focus day")
         XCTAssertEqual(RoomUnlockRule.focusDays(1).plainLanguage, "Focus on 1 focus day total")
     }
 }

@@ -19,8 +19,9 @@ struct SceneCollectionView: View {
     var body: some View {
         let preset = appState.currentPreset
         StillScreen {
-            ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
                         Text("Scenes")
                             .font(StillTypography.display)
@@ -52,10 +53,18 @@ struct SceneCollectionView: View {
                         seasonalSection(preset: preset)
                         supporterSection
                     }
+                    Color.clear.frame(height: 1).id("scenes-bottom")
+                    }
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.vertical, StillTheme.Spacing.m)
+                    .padding(.bottom, StillTheme.Spacing.xxl + 64)
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.vertical, StillTheme.Spacing.m)
-                .padding(.bottom, StillTheme.Spacing.xxl + 64)
+                .onAppear {
+                    #if DEBUG
+                    guard DemoLaunch.shouldScrollToBottom("scenes-all") else { return }
+                    DispatchQueue.main.async { proxy.scrollTo("scenes-bottom", anchor: .bottom) }
+                    #endif
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)

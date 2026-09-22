@@ -6,6 +6,7 @@ enum PreviewSupport {
         onboarded: Bool = true,
         goal: OnboardingGoal = .focusBetter,
         populated: Bool = false,
+        completedSessions: Int = 9,
         renderMode: RenderMode? = nil,
         activeSession: Bool = false
     ) -> AppState {
@@ -23,7 +24,7 @@ enum PreviewSupport {
             bookLibrary: bookLibrary
         )
         if populated {
-            PreviewFixtures.populate(container)
+            PreviewFixtures.populate(container, completedSessions: completedSessions)
             PreviewFixtures.populateDailyLife(container)
         } else if onboarded {
             container.preferences.completeOnboarding(goal: goal)

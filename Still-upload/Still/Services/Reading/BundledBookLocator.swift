@@ -36,7 +36,11 @@ enum BundledBookLocator {
             bundle.resourceURL?.appendingPathComponent("Resources/PublicDomainBooks", isDirectory: true)
         ].compactMap { $0 }
 
-        var urls = Set<URL>()
+        // One physical resource can be visible through both the root and its
+        // synchronized-group folder in an Xcode bundle. A URL set is not
+        // sufficient because those paths differ; the filename is the authored
+        // catalog identity and must occur exactly once on the shelf.
+        var urlByFileName: [String: URL] = [:]
         for root in candidateRoots where FileManager.default.fileExists(atPath: root.path) {
             if let enumerator = FileManager.default.enumerator(
                 at: root,
@@ -44,11 +48,14 @@ enum BundledBookLocator {
                 options: [.skipsHiddenFiles]
             ) {
                 for case let url as URL in enumerator where expectedFileNames.contains(url.lastPathComponent) {
-                    urls.insert(url)
+                    let existing = urlByFileName[url.lastPathComponent]
+                    if existing == nil || url.path.count < existing!.path.count {
+                        urlByFileName[url.lastPathComponent] = url
+                    }
                 }
             }
         }
-        return urls.sorted { $0.lastPathComponent < $1.lastPathComponent }
+        return urlByFileName.values.sorted { $0.lastPathComponent < $1.lastPathComponent }
     }
 
     static func metadata(for url: URL) -> Metadata? {

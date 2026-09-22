@@ -2333,8 +2333,10 @@ final class EPUBReaderTests: XCTestCase {
         #else
         let bundle = Bundle(for: AppState.self)
         #endif
-        let names = Set(BundledBookLocator.urls(in: bundle).map(\.lastPathComponent))
+        let urls = BundledBookLocator.urls(in: bundle)
+        let names = Set(urls.map(\.lastPathComponent))
         XCTAssertEqual(names, BundledBookLocator.expectedFileNames)
+        XCTAssertEqual(urls.count, BundledBookLocator.expectedFileNames.count)
     }
 
     func testBundledBookCatalogCoversEveryExpectedFile() {

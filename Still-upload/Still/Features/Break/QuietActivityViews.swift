@@ -91,7 +91,8 @@ struct ShortReadActivityView: View {
                     book: book,
                     progress: appState.readingProgress(bookID: book.id),
                     onOpen: { open(book) },
-                    onRestart: { appState.restartBook(book.id) }
+                    onRestart: { appState.restartBook(book.id) },
+                    onRemove: nil
                 )
             }
             if !importedBooks.isEmpty {

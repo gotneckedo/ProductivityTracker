@@ -144,7 +144,10 @@ jobs:
           n=$((n + 1))
 
           xcrun simctl ui "$UDID" appearance dark
-          for screen in home active complete journal me; do
+          # Section 1 dark captures exercise the remaining dark-specific
+          # defects: the task sheet must inherit the night phase and every
+          # puzzle must keep a light, legible cell treatment.
+          for screen in home active complete journal me tasks sudoku wordsearch picross; do
             shoot "$screen" "$(printf '%02d' $n)-$screen-dark"
             n=$((n + 1))
           done

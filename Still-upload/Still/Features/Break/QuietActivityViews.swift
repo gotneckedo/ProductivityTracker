@@ -80,7 +80,7 @@ struct ShortReadActivityView: View {
     private var booksSection: some View {
         let bundledBooks = appState.books.filter { $0.origin == .bundled }
         let importedBooks = appState.books.filter { $0.origin == .imported }
-        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+        return VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
             SectionHeader(title: "Books", detail: "One sitting is a few minutes. Your place is kept for next time.")
                 .padding(.top, StillTheme.Spacing.m)
             if bundledBooks.isEmpty {

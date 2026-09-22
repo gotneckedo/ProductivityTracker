@@ -2325,6 +2325,11 @@ final class EPUBReaderTests: XCTestCase {
         XCTAssertEqual(names, BundledBookLocator.expectedFileNames)
     }
 
+    func testBundledBookCatalogCoversEveryExpectedFile() {
+        XCTAssertEqual(Set(BundledBookLocator.catalog.keys), BundledBookLocator.expectedFileNames)
+        XCTAssertTrue(BundledBookLocator.catalog.values.allSatisfy { !$0.title.isEmpty && !$0.author.isEmpty && $0.sittingCount > 0 })
+    }
+
     func testEveryBundledStandardEbookResourceParsesAndIsPublicDomain() throws {
         let expected: [String: (title: String, author: String)] = [
             "e-m-forster_short-fiction": ("Short Fiction", "E. M. Forster"),

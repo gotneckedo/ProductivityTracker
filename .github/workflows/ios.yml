@@ -103,7 +103,10 @@ jobs:
 
           shoot() {
             xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" > /dev/null
-            sleep 6
+            # A demo state performs local fixture setup and SwiftUI layout on a
+            # cold process. Twelve seconds avoids capturing the system launch
+            # surface before the requested route has drawn.
+            sleep 12
             xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
             echo "Captured $2"
           }
@@ -113,7 +116,7 @@ jobs:
           # floating tab bar leaves enough bottom clearance.
           shoot_bottom() {
             xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" -still-scroll-bottom "$1" > /dev/null
-            sleep 6
+            sleep 12
             xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
             echo "Captured $2"
           }

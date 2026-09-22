@@ -25,12 +25,18 @@ enum PreviewFixtures {
         [biology, essay, inbox].forEach { try? container.tasks.save($0) }
 
         let dayOffsets = [0, 0, 1, 2, 2, 3, 5, 6, 8, 9, 10, 12]
-        for index in 0..<min(completedSessions, dayOffsets.count) {
-            guard let date = calendar.date(byAdding: .day, value: -dayOffsets[index], to: now) else { continue }
-            let minutes = [25.0, 25, 50, 25, 30, 25, 45, 25, 25, 20, 25, 25][index]
+        let durations = [25.0, 25, 50, 25, 30, 25, 45, 25, 25, 20, 25, 25]
+        for index in 0..<completedSessions {
+            // The first twelve entries produce a representative recent history.
+            // Extra entries support all-unlocked visual fixtures without
+            // collapsing multiple sessions into the same timeline slot.
+            let dayOffset = index < dayOffsets.count ? dayOffsets[index] : index
+            guard let date = calendar.date(byAdding: .day, value: -dayOffset, to: now) else { continue }
+            let minutes = durations[index % durations.count]
             // Multiple sessions on one day are laid out sequentially with a
             // fifteen-minute breath between them; fixture capsules never overlap.
-            let sameDayOrdinal = dayOffsets[..<index].filter { $0 == dayOffsets[index] }.count
+            let priorOffsets = (0..<index).map { $0 < dayOffsets.count ? dayOffsets[$0] : $0 }
+            let sameDayOrdinal = priorOffsets.filter { $0 == dayOffset }.count
             let dayStart = calendar.startOfDay(for: date)
             let start = dayStart.addingTimeInterval(Double(9 * 60 + sameDayOrdinal * 75) * 60)
             var configuration = TimerConfiguration.standard

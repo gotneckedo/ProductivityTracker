@@ -1668,6 +1668,16 @@ final class ProgressionTests: XCTestCase {
         XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 25).count, 4)
     }
 
+    func testAllUnlockedPreviewFixtureSeedsRequestedSessionCount() {
+        let clock = ManualClock(referenceDate)
+        let container = DependencyContainer.inMemory(clock: clock, calendar: testCalendar)
+        PreviewFixtures.populate(container, completedSessions: 30)
+
+        let count = container.sessions.allSessions().filter { $0.state == .completed }.count
+        XCTAssertEqual(count, 30)
+        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: count).count, 4)
+    }
+
     func testNextLockedSceneAndRemaining() {
         let next = evaluator.nextLockedScene(in: catalog, completedSessions: 4)
         XCTAssertEqual(next?.scene.id, .libraryLight)

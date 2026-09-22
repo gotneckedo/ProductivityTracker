@@ -44,11 +44,11 @@ struct RoomHeroView: View {
 
             Group {
                 if reduceMotion {
-                    RoomCanvas(sceneName: sceneName, phase: resolvedPhase, time: 0, dimmed: dimmed,
+                    RoomCanvas(sceneName: sceneName, sceneID: sceneID, phase: resolvedPhase, time: 0, dimmed: dimmed,
                                plantStage: plantStage, bookCount: bookCount, doodle: doodle, placedObjects: placedObjects)
                 } else {
                     TimelineView(.animation(minimumInterval: 1.0 / 12.0, paused: false)) { timeline in
-                        RoomCanvas(sceneName: sceneName, phase: resolvedPhase,
+                        RoomCanvas(sceneName: sceneName, sceneID: sceneID, phase: resolvedPhase,
                                    time: timeline.date.timeIntervalSinceReferenceDate, dimmed: dimmed,
                                    plantStage: plantStage, bookCount: bookCount, doodle: doodle, placedObjects: placedObjects)
                     }
@@ -141,6 +141,7 @@ private struct PageDots: View {
 
 private struct RoomCanvas: View {
     let sceneName: String
+    let sceneID: SceneID
     let phase: StillDayPhase
     let time: Double
     let dimmed: Bool
@@ -156,7 +157,7 @@ private struct RoomCanvas: View {
                                  y: ((size.height - 132 * scale) / 2).rounded(.down))
             context.translateBy(x: origin.x, y: origin.y)
             context.scaleBy(x: scale, y: scale)
-            RoomArtwork.draw(context: &context, sceneName: sceneName, phase: phase, time: time,
+            RoomArtwork.draw(context: &context, sceneName: sceneName, sceneID: sceneID, phase: phase, time: time,
                              dimmed: dimmed, plantStage: plantStage, bookCount: bookCount, doodle: doodle,
                              placedObjects: placedObjects)
         }
@@ -167,21 +168,28 @@ private enum RoomArtwork {
     private static let out = Color(hex: 0x4A2F33)
     private static let size = CGSize(width: 160, height: 132)
 
-    static func draw(context: inout GraphicsContext, sceneName: String, phase: StillDayPhase, time: Double,
+    static func draw(context: inout GraphicsContext, sceneName: String, sceneID: SceneID, phase: StillDayPhase, time: Double,
                      dimmed: Bool, plantStage: PlantGrowthStage, bookCount: Int, doodle: PixelDoodle?,
                      placedObjects: [RoomPlacement]) {
         let palette = Palette(phase: phase, sceneName: sceneName)
         drawSlab(context: &context, palette: palette)
         drawWalls(context: &context, palette: palette)
-        drawWindow(context: &context, palette: palette, time: time, motion: !dimmed)
-        drawBed(context: &context, palette: palette)
-        drawDesk(context: &context, palette: palette, time: time, motion: !dimmed, bookCount: bookCount)
-        drawPlant(context: &context, palette: palette, stage: plantStage, time: time, motion: !dimmed)
+        switch sceneID {
+        case .rainyBedroom, .autumnWindow, .snowDay:
+            drawRainyBedroom(context: &context, palette: palette, time: time, motion: !dimmed, plantStage: plantStage, bookCount: bookCount)
+        case .libraryLight, .springRain:
+            drawLibraryLight(context: &context, palette: palette, time: time, motion: !dimmed, plantStage: plantStage, bookCount: bookCount)
+        case .trainWindow:
+            drawTrainWindow(context: &context, palette: palette, time: time, motion: !dimmed, plantStage: plantStage, bookCount: bookCount)
+        case .nightCity:
+            drawNightCity(context: &context, palette: palette, time: time, motion: !dimmed, plantStage: plantStage, bookCount: bookCount)
+        default:
+            // A future scene without a dedicated renderer remains a complete,
+            // warm room rather than a blank canvas.
+            drawRainyBedroom(context: &context, palette: palette, time: time, motion: !dimmed, plantStage: plantStage, bookCount: bookCount)
+        }
         if let doodle { drawDoodle(context: &context, palette: palette, doodle: doodle) }
         drawPlacedObjects(context: &context, palette: palette, placements: placedObjects, time: time, motion: !dimmed)
-        if dimmed {
-            context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(Color(hex: 0x121221, opacity: 0.42)))
-        }
     }
 
     private static func drawSlab(context: inout GraphicsContext, palette: Palette) {
@@ -196,6 +204,119 @@ private enum RoomArtwork {
         line(&context, iso(0, 0, 0), iso(60, 0, 0), out, width: 1)
         line(&context, iso(60, 0, 0), iso(60, 60, 0), out, width: 1)
         line(&context, iso(60, 0, 0), iso(60, 0, 44), out, width: 1)
+    }
+
+    private static func drawRainyBedroom(context: inout GraphicsContext, palette: Palette, time: Double,
+                                         motion: Bool, plantStage: PlantGrowthStage, bookCount: Int) {
+        drawWindow(context: &context, palette: palette, time: time, motion: motion)
+        drawBed(context: &context, palette: palette)
+        drawDesk(context: &context, palette: palette, time: time, motion: motion, bookCount: bookCount)
+        drawPlant(context: &context, palette: palette, stage: plantStage, time: time, motion: motion)
+    }
+
+    private static func drawLibraryLight(context: inout GraphicsContext, palette: Palette, time: Double,
+                                         motion: Bool, plantStage: PlantGrowthStage, bookCount: Int) {
+        // A tall, warm window and a full left-hand wall of shelves make this
+        // room intentionally unlike the starter bedroom.
+        box(&context, x: 42, y: 0, z: 8, width: 13, depth: 1, height: 31,
+            top: palette.windowFrame, left: palette.windowFrame, right: palette.windowFrame)
+        polygon(&context, [iso(44, 0, 10), iso(53, 0, 10), iso(53, 0, 36), iso(44, 0, 36)], palette.windowSky)
+        line(&context, iso(48.5, 0, 10), iso(48.5, 0, 36), palette.windowFrame, width: 1)
+        line(&context, iso(44, 0, 22), iso(53, 0, 22), palette.windowFrame, width: 1)
+        // A quiet light shaft and drifting dust.
+        for index in 0..<6 {
+            let point = iso(38 - Double(index) * 2.8, 16 + Double(index) * 2, 0.4)
+            context.fill(Path(ellipseIn: CGRect(x: point.x - 1, y: point.y - 1, width: 2, height: 2)),
+                         with: .color(palette.lampGlow.opacity(motion ? 0.22 : 0.16)))
+        }
+        for shelf in 0..<4 {
+            let height = 8.0 + Double(shelf) * 7
+            box(&context, x: 4, y: 0, z: height, width: 29, depth: 2, height: 1.3,
+                top: palette.wood, left: palette.woodShade, right: palette.woodShade)
+            for book in 0..<7 {
+                let x = 5.5 + Double(book) * 3.5
+                let h = 3.0 + Double((book + shelf) % 3)
+                box(&context, x: x, y: 0.2, z: height + 1.3, width: 2.2, depth: 1.4, height: h,
+                    top: (book + shelf).isMultiple(of: 2) ? palette.book : palette.bookAlt,
+                    left: palette.book, right: palette.bookAlt)
+            }
+        }
+        box(&context, x: 31, y: 20, z: 12, width: 18, depth: 12, height: 3,
+            top: palette.wood, left: palette.woodShade, right: palette.woodShade)
+        box(&context, x: 36, y: 22, z: 16, width: 3, depth: 3, height: 2,
+            top: palette.mug, left: palette.mug, right: palette.mug)
+        drawPlant(context: &context, palette: palette, stage: plantStage, time: time, motion: motion)
+        if bookCount > 4 {
+            box(&context, x: 45, y: 18, z: 16, width: 5, depth: 5, height: 2,
+                top: palette.bookAlt, left: palette.book, right: palette.bookAlt)
+        }
+    }
+
+    private static func drawTrainWindow(context: inout GraphicsContext, palette: Palette, time: Double,
+                                        motion: Bool, plantStage: PlantGrowthStage, bookCount: Int) {
+        // The room becomes a carriage: a panoramic window, a table, and seat
+        // backs. Hills slide past instead of rain falling down a bedroom pane.
+        polygon(&context, [iso(8, 0, 15), iso(53, 0, 15), iso(53, 0, 39), iso(8, 0, 39)], palette.windowFrame)
+        polygon(&context, [iso(10, 0, 17), iso(51, 0, 17), iso(51, 0, 37), iso(10, 0, 37)], palette.windowSky)
+        let offset = motion ? (time * 4).truncatingRemainder(dividingBy: 18) : 0
+        for hill in 0..<7 {
+            let x = 11 + Double(hill) * 7 - offset
+            let base = 22 + Double(hill % 3)
+            polygon(&context, [iso(x, 0, base), iso(x + 8, 0, base + 7), iso(x + 15, 0, base), iso(x + 15, 0, 17), iso(x, 0, 17)],
+                    hill.isMultiple(of: 2) ? palette.leafShade : palette.leaf)
+        }
+        line(&context, iso(30, 0, 17), iso(30, 0, 37), palette.windowFrame, width: 1)
+        box(&context, x: 14, y: 22, z: 8, width: 32, depth: 13, height: 3,
+            top: palette.wood, left: palette.woodShade, right: palette.woodShade)
+        box(&context, x: 5, y: 39, z: 1, width: 17, depth: 13, height: 9,
+            top: palette.bed, left: palette.bedShade, right: palette.bedShade)
+        box(&context, x: 39, y: 39, z: 1, width: 17, depth: 13, height: 9,
+            top: palette.bed, left: palette.bedShade, right: palette.bedShade)
+        box(&context, x: 27, y: 26, z: 12, width: 3, depth: 3, height: 3,
+            top: palette.mug, left: palette.mug, right: palette.mug)
+        if motion { line(&context, iso(28, 27, 16), iso(29 + sin(time) * 1.2, 27, 20), Color.white.opacity(0.45), width: 0.7) }
+        drawPlant(context: &context, palette: palette, stage: plantStage, time: time, motion: motion)
+        if bookCount > 2 {
+            box(&context, x: 34, y: 28, z: 12, width: 7, depth: 5, height: 1.2,
+                top: palette.book, left: palette.book, right: palette.bookAlt)
+        }
+    }
+
+    private static func drawNightCity(context: inout GraphicsContext, palette: Palette, time: Double,
+                                      motion: Bool, plantStage: PlantGrowthStage, bookCount: Int) {
+        // A desk faces a low skyline. Small windows warm and dim slowly, rather
+        // than reusing the rainy-bedroom bed/window arrangement.
+        polygon(&context, [iso(7, 0, 15), iso(54, 0, 15), iso(54, 0, 39), iso(7, 0, 39)], palette.windowFrame)
+        polygon(&context, [iso(9, 0, 17), iso(52, 0, 17), iso(52, 0, 37), iso(9, 0, 37)], palette.windowSky)
+        for building in 0..<7 {
+            let x = 10 + Double(building) * 6
+            let height = 7.0 + Double((building * 5) % 8)
+            polygon(&context, [iso(x, 0, 17), iso(x + 5, 0, 17), iso(x + 5, 0, 17 + height), iso(x, 0, 17 + height)], palette.wallRight.opacity(0.72))
+            for window in 0..<3 {
+                let lit = !motion || Int(time / 5 + Double(building + window)).isMultiple(of: 3)
+                if lit {
+                    let point = iso(x + 1.2 + Double(window), 0, 19 + Double(window) * 2)
+                    context.fill(Path(CGRect(x: point.x, y: point.y, width: 1.4, height: 1.4)), with: .color(palette.lamp))
+                }
+            }
+        }
+        box(&context, x: 21, y: 18, z: 12, width: 27, depth: 17, height: 3,
+            top: palette.wood, left: palette.woodShade, right: palette.woodShade)
+        box(&context, x: 29, y: 21, z: 16, width: 10, depth: 3, height: 8,
+            top: palette.wallRight, left: palette.wallLeft, right: palette.wallRight)
+        context.fill(Path(ellipseIn: CGRect(x: 102, y: 53, width: 38, height: 27)),
+                     with: .color(palette.lampGlow.opacity(motion ? 0.17 + 0.04 * sin(time) : 0.18)))
+        box(&context, x: 43, y: 22, z: 17, width: 1, depth: 1, height: 9,
+            top: out, left: out, right: out)
+        box(&context, x: 40, y: 20, z: 26, width: 7, depth: 5, height: 3,
+            top: palette.lamp, left: palette.lamp, right: palette.lamp)
+        drawPlant(context: &context, palette: palette, stage: plantStage, time: time, motion: motion)
+        if bookCount > 3 {
+            for index in 0..<min(4, bookCount) {
+                box(&context, x: 11 + Double(index) * 3, y: 6, z: 10, width: 2, depth: 3, height: 5,
+                    top: index.isMultiple(of: 2) ? palette.book : palette.bookAlt, left: palette.book, right: palette.bookAlt)
+            }
+        }
     }
 
     private static func drawWindow(context: inout GraphicsContext, palette: Palette, time: Double, motion: Bool) {

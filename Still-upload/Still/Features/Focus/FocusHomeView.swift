@@ -9,8 +9,9 @@ struct FocusHomeView: View {
         let preset = appState.currentPreset
         let scene = displayScene(for: preset)
         StillScreen {
-            ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
                     RoomHeroView(
                         sceneName: scene.name,
                         sceneID: scene.id,
@@ -87,10 +88,18 @@ struct FocusHomeView: View {
                     if appState.audioStatus == .assetsMissing && !preset.ambientMix.isSilent {
                         QuietNote(text: AmbientAudioCopy.assetsMissing)
                     }
+                    Color.clear.frame(height: 1).id("focus-home-bottom")
+                    }
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.top, StillTheme.Spacing.s)
+                    .padding(.bottom, StillTheme.Spacing.xxl + 64)
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.top, StillTheme.Spacing.s)
-                .padding(.bottom, StillTheme.Spacing.xxl + 64)
+                .onAppear {
+                    #if DEBUG
+                    guard DemoLaunch.shouldScrollToBottom("home") else { return }
+                    DispatchQueue.main.async { proxy.scrollTo("focus-home-bottom", anchor: .bottom) }
+                    #endif
+                }
             }
         }
         .toolbar(.hidden, for: .navigationBar)

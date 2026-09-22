@@ -26,8 +26,9 @@ struct BreakShelfView: View {
 
     var body: some View {
         StillScreen {
-            ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                     header
                     categoryChips
                     pickedSection
@@ -38,10 +39,18 @@ struct BreakShelfView: View {
                         .foregroundStyle(StillTheme.textTertiary)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical, StillTheme.Spacing.s)
+                    Color.clear.frame(height: 1).id("break-bottom")
+                    }
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.vertical, StillTheme.Spacing.m)
+                    .padding(.bottom, 72)
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.vertical, StillTheme.Spacing.m)
-                .padding(.bottom, 72)
+                .onAppear {
+                    #if DEBUG
+                    guard DemoLaunch.shouldScrollToBottom("break") else { return }
+                    DispatchQueue.main.async { proxy.scrollTo("break-bottom", anchor: .bottom) }
+                    #endif
+                }
             }
         }
         .toolbar(.hidden, for: .navigationBar)

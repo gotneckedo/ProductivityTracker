@@ -1630,6 +1630,16 @@ final class BlockingScheduleTests: XCTestCase {
     }
 }
 
+final class CopyCountTests: XCTestCase {
+    func testSingularSessionAndFocusDayCopy() {
+        XCTAssertEqual(Copy.Count.session(1), "1 session")
+        XCTAssertEqual(Copy.Count.session(2), "2 sessions")
+        XCTAssertEqual(Copy.Count.focusDay(1), "1 focus day")
+        XCTAssertEqual(Copy.Count.focusDay(3), "3 focus days")
+        XCTAssertEqual(RoomUnlockRule.focusDays(1).plainLanguage, "Focus on 1 focus day total")
+    }
+}
+
 final class ProgressionTests: XCTestCase {
     let evaluator = ProgressionEvaluator()
     let catalog = SceneCatalog.all
@@ -1639,6 +1649,13 @@ final class ProgressionTests: XCTestCase {
         XCTAssertEqual(SceneCatalog.libraryLight.unlockRule, .completedSessions(7))
         XCTAssertEqual(SceneCatalog.trainWindow.unlockRule, .completedSessions(15))
         XCTAssertEqual(SceneCatalog.nightCity.unlockRule, .completedSessions(25))
+    }
+
+    func testCoreScenesUseFourDistinctRendererLayouts() {
+        XCTAssertEqual(
+            Set(SceneCatalog.all.map(\.rendererKind)),
+            Set([.rainyBedroom, .libraryLight, .trainWindow, .nightCity])
+        )
     }
 
     func testUnlocksAtExactThresholds() {
@@ -2295,6 +2312,18 @@ let epubFixture = "UEsDBBQAAAAAAAAAIQBvYassFAAAABQAAAAIAAAAbWltZXR5cGVhcHBsaWNhd
 
 final class EPUBReaderTests: XCTestCase {
     private func bytes(_ base64: String) -> [UInt8] { [UInt8](Data(base64Encoded: base64)!) }
+
+    func testAppBundleLocatorListsAllFourBundledBooks() {
+        #if SWIFT_PACKAGE
+        // SwiftPM mirrors the app bundle layout with the copied test resource
+        // bundle; the Xcode branch below validates the real app target.
+        let bundle = Bundle.module
+        #else
+        let bundle = Bundle(for: AppState.self)
+        #endif
+        let names = Set(BundledBookLocator.urls(in: bundle).map(\.lastPathComponent))
+        XCTAssertEqual(names, BundledBookLocator.expectedFileNames)
+    }
 
     func testEveryBundledStandardEbookResourceParsesAndIsPublicDomain() throws {
         let expected: [String: (title: String, author: String)] = [

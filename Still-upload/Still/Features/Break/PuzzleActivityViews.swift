@@ -98,9 +98,14 @@ struct SudokuActivityView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(fill)
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(isSelected ? StillTheme.accent : StillTheme.border,
-                                  lineWidth: isSelected ? 2 : StillTheme.Stroke.hairline)
+                // Box-level outlines already define the six 2×3 groups. Only
+                // a selected or conflicting cell earns an inner outline, so
+                // adjacent cells never read as a heavy double grid.
+                if isSelected || isConflict {
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(isConflict ? StillTheme.attention : StillTheme.accent,
+                                      lineWidth: isSelected ? 2 : StillTheme.Stroke.hairline)
+                }
                 Text(value.map { String($0) } ?? "")
                     .font(StillTypography.title3.weight(isGiven ? .semibold : .regular))
                     .foregroundStyle(isConflict ? StillTheme.attention : isGiven ? resolvedPhase.ink : palette)
@@ -207,10 +212,16 @@ struct SudokuActivityView: View {
 struct PicrossActivityView: View {
     let onSolved: () -> Void
     @Environment(AppState.self) private var appState
+    @Environment(\.stillDayPhase) private var phase
+    @Environment(\.colorScheme) private var colorScheme
     @State private var game: PicrossGame?
     @State private var tool: PicrossTool = .fill
 
     private let clueWidth: CGFloat = 52
+
+    private var resolvedPhase: StillDayPhase {
+        phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
+    }
 
     var body: some View {
         VStack(spacing: StillTheme.Spacing.l) {
@@ -278,9 +289,9 @@ struct PicrossActivityView: View {
         } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(state == .filled ? filledColor : StillTheme.surface)
+                    .fill(state == .filled ? filledColor : resolvedPhase.glassFill.opacity(0.45))
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .strokeBorder(StillTheme.border, lineWidth: StillTheme.Stroke.hairline)
+                    .strokeBorder(resolvedPhase.glassBorder.opacity(0.42), lineWidth: StillTheme.Stroke.hairline)
                 if state == .crossed {
                     Image(systemName: "xmark")
                         .font(StillTypography.caption)
@@ -323,8 +334,14 @@ struct PicrossActivityView: View {
 struct WordSearchActivityView: View {
     let onSolved: () -> Void
     @Environment(AppState.self) private var appState
+    @Environment(\.stillDayPhase) private var phase
+    @Environment(\.colorScheme) private var colorScheme
     @State private var game: WordSearchGame?
     @State private var message = "Tap the first letter of a word, then its last letter."
+
+    private var resolvedPhase: StillDayPhase {
+        phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
@@ -363,7 +380,7 @@ struct WordSearchActivityView: View {
         let letter = game.puzzle.letter(at: point).map { String($0) } ?? ""
         let isFound = game.foundCells.contains(point)
         let isPending = game.pendingStart == point
-        let fill: Color = isPending ? StillTheme.highlightSoft : isFound ? StillTheme.accentSoft : StillTheme.surface
+        let fill: Color = isPending ? StillTheme.highlightSoft : isFound ? StillTheme.accentSoft : resolvedPhase.glassFill.opacity(0.45)
         return Button {
             tap(point)
         } label: {
@@ -371,7 +388,7 @@ struct WordSearchActivityView: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(fill)
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .strokeBorder(isPending ? StillTheme.highlight : StillTheme.border,
+                    .strokeBorder(isPending ? StillTheme.highlight : resolvedPhase.glassBorder.opacity(0.42),
                                   lineWidth: isPending ? 2 : StillTheme.Stroke.hairline)
                 Text(letter)
                     .font(StillTypography.headline)

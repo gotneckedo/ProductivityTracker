@@ -9,10 +9,18 @@ enum PreviewSupport {
         renderMode: RenderMode? = nil,
         activeSession: Bool = false
     ) -> AppState {
+        let clock = ManualClock(Date())
+        let bundledBooks = BundledBookLocator.urls(in: Bundle(for: AppState.self))
+        let bookLibrary = FileBookLibrary(
+            directory: FileManager.default.temporaryDirectory.appendingPathComponent("StillPreviewBooks", isDirectory: true),
+            bundledURLs: bundledBooks,
+            clock: clock
+        )
         let container = DependencyContainer.inMemory(
-            clock: ManualClock(Date()),
+            clock: clock,
             flags: .preview,
-            audio: SilentAmbientAudioPlayer(status: .ready, availableSources: Set(AmbientSource.all.map(\.id)))
+            audio: SilentAmbientAudioPlayer(status: .ready, availableSources: Set(AmbientSource.all.map(\.id))),
+            bookLibrary: bookLibrary
         )
         if populated {
             PreviewFixtures.populate(container)

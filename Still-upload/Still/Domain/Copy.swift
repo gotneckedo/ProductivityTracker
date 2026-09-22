@@ -3,6 +3,30 @@ import Foundation
 /// Student-facing language lives here so tone can be reviewed without hunting through views.
 /// Keep it plain, warm, specific to study life, and free of judgment.
 enum Copy {
+    /// Counted phrases stay in one place so one is never rendered as a plural.
+    /// The number is intentionally kept in the phrase for VoiceOver, too.
+    enum Count {
+        static func session(_ value: Int) -> String {
+            "\(value) \(value == 1 ? "session" : "sessions")"
+        }
+
+        static func focusDay(_ value: Int) -> String {
+            "\(value) focus \(value == 1 ? "day" : "days")"
+        }
+
+        static func shortRead(_ value: Int) -> String {
+            "\(value) short \(value == 1 ? "read" : "reads")"
+        }
+
+        static func doodle(_ value: Int) -> String {
+            "\(value) \(value == 1 ? "doodle" : "doodles")"
+        }
+
+        static func breakActivity(_ value: Int) -> String {
+            "\(value) break \(value == 1 ? "activity" : "activities")"
+        }
+    }
+
     enum Home {
         static let morningGreeting = "Good morning."
         static let readyGreeting = "Ready when you are."

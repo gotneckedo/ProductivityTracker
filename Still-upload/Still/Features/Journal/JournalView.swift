@@ -9,8 +9,9 @@ struct JournalView: View {
     var body: some View {
         let phase = StillDayPhase.automatic(colorScheme: colorScheme)
         StillScreen {
-            ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.xl) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.xl) {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
                         Text("Journal")
                             .font(StillTypography.display)
@@ -24,12 +25,20 @@ struct JournalView: View {
                     TodayLineCard()
                     HabitsSection()
                     PastLinesSection()
+                    Color.clear.frame(height: 1).id("journal-bottom")
+                    }
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.top, StillTheme.Spacing.m)
+                    .padding(.bottom, StillTheme.Spacing.xxl + 64)
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.top, StillTheme.Spacing.m)
-                .padding(.bottom, StillTheme.Spacing.xxl + 64)
+                .onAppear {
+                    #if DEBUG
+                    guard DemoLaunch.shouldScrollToBottom("journal") else { return }
+                    DispatchQueue.main.async { proxy.scrollTo("journal-bottom", anchor: .bottom) }
+                    #endif
+                }
+                .scrollDismissesKeyboard(.interactively)
             }
-            .scrollDismissesKeyboard(.interactively)
         }
         .toolbar(.hidden, for: .navigationBar)
     }

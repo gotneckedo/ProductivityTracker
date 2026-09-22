@@ -57,11 +57,11 @@ enum RoomUnlockRule: Hashable, Codable {
 
     var plainLanguage: String {
         switch self {
-        case .completedSessions(let count): return count == 1 ? "Finish your first focus session" : "Finish \(count) focus sessions"
-        case .focusDays(let count): return "Focus on \(count) days total"
-        case .completedReads(let count): return count == 1 ? "Finish your first short read" : "Finish \(count) short reads"
-        case .savedDoodles(let count): return count == 1 ? "Save your first doodle" : "Save \(count) doodles"
-        case .completedActivities(let count): return count == 1 ? "Finish one break activity" : "Finish \(count) break activities"
+        case .completedSessions(let count): return "Finish \(Copy.Count.session(count))"
+        case .focusDays(let count): return "Focus on \(Copy.Count.focusDay(count)) total"
+        case .completedReads(let count): return "Finish \(Copy.Count.shortRead(count))"
+        case .savedDoodles(let count): return "Save \(Copy.Count.doodle(count))"
+        case .completedActivities(let count): return "Finish \(Copy.Count.breakActivity(count))"
         case .triedActivities(let count): return "Try \(count) different break activities"
         case .triedCategory(let category): return "Try every \(category.displayName.lowercased()) activity"
         case .triedEveryActivity: return "Try every break activity once"

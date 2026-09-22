@@ -108,10 +108,25 @@ jobs:
             echo "Captured $2"
           }
 
+          # The feature views recognize this DEBUG-only argument and scroll
+          # their own root tab to its final row. These captures prove that the
+          # floating tab bar leaves enough bottom clearance.
+          shoot_bottom() {
+            xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" -still-scroll-bottom "$1" > /dev/null
+            sleep 6
+            xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
+            echo "Captured $2"
+          }
+
           xcrun simctl ui "$UDID" appearance light
           n=1
           for screen in onboarding home calm active complete break sudoku wordsearch picross breathing read doodle journal tasks timeline presets gallery morning me scenes card; do
             shoot "$screen" "$(printf '%02d' $n)-$screen"
+            n=$((n + 1))
+          done
+
+          for screen in home break journal me; do
+            shoot_bottom "$screen" "$(printf '%02d' $n)-$screen-bottom"
             n=$((n + 1))
           done
 

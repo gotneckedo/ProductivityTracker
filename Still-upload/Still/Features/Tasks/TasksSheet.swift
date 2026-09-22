@@ -5,14 +5,16 @@ import SwiftUI
 struct TasksSheet: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var newTitle = ""
     @State private var isCapturingVoice = false
     @State private var detailTaskID: UUID?
     @FocusState private var isFieldFocused: Bool
 
     var body: some View {
+        let phase = StillDayPhase.automatic(colorScheme: colorScheme)
         NavigationStack {
-            StillScreen(phase: .afternoon) {
+            StillScreen(phase: phase) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                         VStack(alignment: .leading, spacing: 3) {
@@ -23,7 +25,7 @@ struct TasksSheet: View {
                                 .font(StillTypography.callout)
                                 .foregroundStyle(StillTheme.textSecondary)
                         }
-                        addBox
+                        addBox(phase: phase)
                         if appState.todaysTasks.isEmpty {
                             EmptyState(symbol: "checklist", title: "Nothing here yet", message: "A task is optional. One clear thing is usually enough.")
                                 .padding(.vertical, StillTheme.Spacing.xl)
@@ -38,7 +40,8 @@ struct TasksSheet: View {
                                         onToggleDone: { appState.setTaskCompleted(task.id, !task.isCompleted) },
                                         onToggleStep: { step in appState.toggleTaskStep(taskID: task.id, stepID: step.id) },
                                         onDetails: { detailTaskID = task.id },
-                                        onDelete: { appState.deleteTask(task.id) }
+                                        onDelete: { appState.deleteTask(task.id) },
+                                        phase: phase
                                     )
                                 }
                             }
@@ -65,7 +68,7 @@ struct TasksSheet: View {
         .sheet(isPresented: $isCapturingVoice) { VoiceCaptureView().environment(appState) }
     }
 
-    private var addBox: some View {
+    private func addBox(phase: StillDayPhase) -> some View {
         HStack(spacing: StillTheme.Spacing.s) {
             Image(systemName: "plus")
                 .foregroundStyle(StillTheme.accent)
@@ -86,7 +89,7 @@ struct TasksSheet: View {
             }
         }
         .padding(StillTheme.Spacing.s)
-        .stillGlass(radius: StillTheme.Radius.medium, phase: .afternoon)
+        .stillGlass(radius: StillTheme.Radius.medium, phase: phase)
     }
 
     /// "Due Friday · Biology · 2 sessions"
@@ -95,7 +98,7 @@ struct TasksSheet: View {
         if let due = appState.dueLine(for: task) { parts.append(due) }
         if let at = task.scheduledAt, !task.isCompleted { parts.append("At \(appState.timeText(at))") }
         if let subject = task.subject { parts.append(subject.name) }
-        if task.completedSessionCount > 0 { parts.append("\(task.completedSessionCount) \(task.completedSessionCount == 1 ? "session" : "sessions")") }
+        if task.completedSessionCount > 0 { parts.append(Copy.Count.session(task.completedSessionCount)) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
@@ -118,6 +121,7 @@ private struct TaskFocusCard: View {
     let onToggleStep: (TaskStep) -> Void
     let onDetails: () -> Void
     let onDelete: () -> Void
+    let phase: StillDayPhase
 
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
@@ -191,7 +195,7 @@ private struct TaskFocusCard: View {
             }
         }
         .padding(StillTheme.Spacing.s)
-        .stillGlass(radius: StillTheme.Radius.medium, phase: .afternoon)
+        .stillGlass(radius: StillTheme.Radius.medium, phase: phase)
         .accessibilityElement(children: .contain)
     }
 

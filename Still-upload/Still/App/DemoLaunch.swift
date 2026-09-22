@@ -11,11 +11,20 @@ import Foundation
 /// timeline, doodle, gallery, morning, calendar-settings, get-card.
 enum DemoLaunch {
     static let argument = "-still-demo"
+    static let scrollBottomArgument = "-still-scroll-bottom"
 
     static var requestedScreen: String? {
         let arguments = ProcessInfo.processInfo.arguments
         guard let index = arguments.firstIndex(of: argument), index + 1 < arguments.count else { return nil }
         return arguments[index + 1]
+    }
+
+    /// Used only by screenshot CI to prove the floating tab bar does not cover
+    /// the final row of a tab. It has no production effect.
+    static func shouldScrollToBottom(_ screen: String) -> Bool {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: scrollBottomArgument), index + 1 < arguments.count else { return false }
+        return arguments[index + 1] == screen
     }
 
     static func appState() -> AppState? {

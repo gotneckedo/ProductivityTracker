@@ -8,8 +8,9 @@ struct MeView: View {
 
     var body: some View {
         StillScreen {
-            ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.xl) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.xl) {
                     ProfileHero(stats: appState.stats)
 
                     StatsSection(stats: appState.stats)
@@ -24,10 +25,18 @@ struct MeView: View {
                     #if DEBUG
                     EventLogSection()
                     #endif
+                    Color.clear.frame(height: 1).id("me-bottom")
+                    }
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.vertical, StillTheme.Spacing.m)
+                    .padding(.bottom, 72)
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.vertical, StillTheme.Spacing.m)
-                .padding(.bottom, 72)
+                .onAppear {
+                    #if DEBUG
+                    guard DemoLaunch.shouldScrollToBottom("me") else { return }
+                    DispatchQueue.main.async { proxy.scrollTo("me-bottom", anchor: .bottom) }
+                    #endif
+                }
             }
         }
         .toolbar(.hidden, for: .navigationBar)
@@ -57,7 +66,7 @@ struct MeView: View {
 
     private var nextUnlockLine: String {
         guard let next = appState.nextLockedScene else { return "Every scene is open." }
-        return "\(next.scene.name) opens after \(next.remaining) more completed \(next.remaining == 1 ? "session" : "sessions")."
+        return "\(next.scene.name) opens after \(Copy.Count.session(next.remaining)) more."
     }
 
     private var focusSection: some View {
@@ -254,7 +263,7 @@ private struct ProfileHero: View {
 
     private var profileLine: String {
         let sessions = stats.completedSessions
-        let sessionLine = "\(sessions) \(sessions == 1 ? "session" : "sessions")"
+        let sessionLine = Copy.Count.session(sessions)
         guard stats.hasHistory else { return "\(sessionLine) · a quiet place to notice what helps." }
         return "\(sessionLine) · \(StatsCalculator.streakLine(current: max(1, stats.currentStreak)))"
     }

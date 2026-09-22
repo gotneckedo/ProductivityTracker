@@ -8,7 +8,13 @@ struct SceneCollectionView: View {
     @State private var supporterProducts: [SupporterProduct] = []
     @State private var purchasedProductIDs: Set<String> = []
 
-    private let columns = [GridItem(.flexible(), spacing: StillTheme.Spacing.m), GridItem(.flexible(), spacing: StillTheme.Spacing.m)]
+    /// Zero minimums let the grid derive its width from the phone rather than a
+    /// long scene title. A compact landscape always wraps instead of escaping
+    /// the right edge.
+    private let columns = [
+        GridItem(.flexible(minimum: 0), spacing: StillTheme.Spacing.s),
+        GridItem(.flexible(minimum: 0), spacing: StillTheme.Spacing.s)
+    ]
 
     var body: some View {
         let preset = appState.currentPreset
@@ -49,6 +55,7 @@ struct SceneCollectionView: View {
                 }
                 .padding(.horizontal, StillTheme.Spacing.screen)
                 .padding(.vertical, StillTheme.Spacing.m)
+                .padding(.bottom, StillTheme.Spacing.xxl + 64)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
@@ -194,6 +201,8 @@ private struct SceneCard: View {
                     Text(scene.name)
                         .font(StillTypography.bodyEmphasis)
                         .foregroundStyle(StillTheme.textPrimary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
                     if isSelected {
                         Image(systemName: "checkmark")
                             .font(StillTypography.caption.weight(.semibold))
@@ -203,6 +212,7 @@ private struct SceneCard: View {
                 Text(isUnlocked ? scene.summary : unlockText)
                     .font(StillTypography.footnote)
                     .foregroundStyle(StillTheme.textSecondary)
+                    .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(StillTheme.Spacing.s)
@@ -224,7 +234,7 @@ private struct SceneCard: View {
     private var unlockText: String {
         if let lockedText { return lockedText }
         let needed = scene.unlockRule.requiredSessions
-        return "Opens at \(needed) completed sessions · \(remaining) to go"
+        return "Opens at \(Copy.Count.session(needed)) · \(Copy.Count.session(remaining)) to go"
     }
 }
 

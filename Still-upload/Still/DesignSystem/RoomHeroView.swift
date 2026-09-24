@@ -35,7 +35,11 @@ struct RoomHeroView: View {
             Ellipse()
                 .fill(Color.black.opacity(dimmed ? 0.28 : 0.12))
                 .blur(radius: 13)
-                .frame(width: 190, height: 24)
+                // A max-width shadow participates in the available room width;
+                // a fixed 190-point frame forced every two-column Scene card
+                // wider than an iPhone grid column and made the cards overlap.
+                .frame(maxWidth: 190, maxHeight: 24)
+                .padding(.horizontal, 12)
                 .offset(y: 52)
                 .accessibilityHidden(true)
 

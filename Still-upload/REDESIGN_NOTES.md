@@ -24,7 +24,7 @@ The following corrections were accepted only after review of the **final** iPhon
 | **Room geometry and lamp lighting** | `RoomArtwork` renders opaque back and side walls plus a floor. The lamp is rendered as clipped radial gradients on the floor and the back wall rather than a foreground tan oval. | `04-active.png` | The focus room visibly contains two solid wall planes and a floor; light falls from the lamp through the room and brightens the wall behind it. |
 | **Fresh Sudoku keypad** | `SudokuGame.isDigitComplete(_:)` retires a digit only after six placements. The keypad backgrounds now sit behind their labels instead of overlaying them. `PuzzleTests.testSudokuDigitCompletesOnlyAfterSixPlacements` pins both the fresh and completed states. | `07-sudoku.png`, `36-sudoku-dark.png` | All digits 1–6 are at full contrast on a fresh puzzle in both captured appearances; none is prematurely faded. |
 
-**Final screenshot artifact:** `still-screenshots` (artifact ID `10786252810`), **38 PNG files**, archive integrity checked locally before review.
+**Final screenshot artifact:** `still-screenshots` (artifact ID `10787966480`), **38 PNG files**, archive integrity checked locally before review.
 
 ## Delivery by priority
 
@@ -141,4 +141,4 @@ Still-upload/TESTFLIGHT_SETUP.md
 ## CI and screenshots
 
 **Run:** [iOS build, tests & screenshots — 35946615524](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35946615524) — **success**.
-**Screenshot artifact:** `still-screenshots` (artifact ID `10786252810`), **38 PNG files**. The review covered onboarding, Home, focus, completion, Break, activities, Journal, Tasks, Day, presets, gallery, Wake up, Me, scenes, Focus Card, dark-mode screens, all core rooms, seasonal rooms, and tab-bottom proofs. `26-scenes-all.png`, `27-scenes-seasonal.png`, and `28-scenes-all-bottom.png` prove the final two-column Scene grid; `04-active.png` proves the two-wall room and radial lamp lighting; `07-sudoku.png` and `36-sudoku-dark.png` prove the fresh full-contrast Sudoku keypad. The downloaded artifact is attached with this delivery.
+**Screenshot artifact:** `still-screenshots` (artifact ID `10787966480`), **38 PNG files**. The review covered onboarding, Home, focus, completion, Break, activities, Journal, Tasks, Day, presets, gallery, Wake up, Me, scenes, Focus Card, dark-mode screens, all core rooms, seasonal rooms, and tab-bottom proofs. `26-scenes-all.png`, `27-scenes-seasonal.png`, and `28-scenes-all-bottom.png` prove the final two-column Scene grid; `04-active.png` proves the two-wall room and radial lamp lighting; `07-sudoku.png` and `36-sudoku-dark.png` prove the fresh full-contrast Sudoku keypad. The downloaded artifact is attached with this delivery.

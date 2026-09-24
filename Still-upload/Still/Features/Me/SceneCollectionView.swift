@@ -19,9 +19,11 @@ struct SceneCollectionView: View {
     var body: some View {
         let preset = appState.currentPreset
         StillScreen {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+            GeometryReader { viewport in
+                let contentWidth = max(0, viewport.size.width - (StillTheme.Spacing.screen * 2))
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
                         Text("Scenes")
                             .font(StillTypography.display)
@@ -54,19 +56,25 @@ struct SceneCollectionView: View {
                         supporterSection
                     }
                     Color.clear.frame(height: 1).id("scenes-bottom")
+                        }
+                        // SwiftUI's vertical ScrollView otherwise measures the
+                        // grid at its children's ideal width. This is the live
+                        // viewport width—not a device/card constant—so each
+                        // flexible track resolves from the padded phone screen.
+                        .frame(width: contentWidth, alignment: .leading)
+                        .padding(.horizontal, StillTheme.Spacing.screen)
+                        .padding(.vertical, StillTheme.Spacing.m)
+                        .padding(.bottom, StillTheme.Spacing.xxl + 64)
                     }
-                    .padding(.horizontal, StillTheme.Spacing.screen)
-                    .padding(.vertical, StillTheme.Spacing.m)
-                    .padding(.bottom, StillTheme.Spacing.xxl + 64)
-                }
-                .onAppear {
-                    #if DEBUG
-                    if DemoLaunch.shouldScrollToBottom("scenes-all") {
-                        DispatchQueue.main.async { proxy.scrollTo("scenes-bottom", anchor: .bottom) }
-                    } else if DemoLaunch.requestedScreen == "scenes-seasonal" {
-                        DispatchQueue.main.async { proxy.scrollTo("seasonal-rooms", anchor: .top) }
+                    .onAppear {
+                        #if DEBUG
+                        if DemoLaunch.shouldScrollToBottom("scenes-all") {
+                            DispatchQueue.main.async { proxy.scrollTo("scenes-bottom", anchor: .bottom) }
+                        } else if DemoLaunch.requestedScreen == "scenes-seasonal" {
+                            DispatchQueue.main.async { proxy.scrollTo("seasonal-rooms", anchor: .top) }
+                        }
+                        #endif
                     }
-                    #endif
                 }
             }
         }
@@ -237,6 +245,7 @@ private struct SceneCard: View {
             )
         }
         .buttonStyle(.plain)
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         .disabled(!isUnlocked)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(scene.name)

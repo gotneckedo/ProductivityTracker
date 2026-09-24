@@ -40,8 +40,8 @@ struct ActivityContainerView: View {
                         }
                         .padding(.horizontal, StillTheme.Spacing.screen)
                         .padding(.vertical, StillTheme.Spacing.m)
-                        .padding(.bottom, 72)
                     }
+                    .stillScrollableViewport()
                     .onAppear {
                         #if DEBUG
                         guard activityID == .shortRead, DemoLaunch.shouldScrollToBottom("read") else { return }

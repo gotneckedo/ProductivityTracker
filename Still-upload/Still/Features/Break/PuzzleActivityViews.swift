@@ -220,10 +220,19 @@ struct PicrossActivityView: View {
     @State private var game: PicrossGame?
     @State private var tool: PicrossTool = .fill
 
-    private let clueWidth: CGFloat = 52
-
     private var resolvedPhase: StillDayPhase {
         phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
+    }
+
+    /// CI renders this at the available width of a 320-point content region,
+    /// making the narrow-phone layout a visual regression target without
+    /// changing the production board width on larger phones.
+    private var narrowProofWidth: CGFloat? {
+        #if DEBUG
+        return DemoLaunch.requestedScreen == "picross-320" ? 280 : nil
+        #else
+        return nil
+        #endif
     }
 
     var body: some View {
@@ -239,6 +248,8 @@ struct PicrossActivityView: View {
                     }
                 }
                 board(game)
+                    .frame(maxWidth: narrowProofWidth)
+                    .frame(maxWidth: .infinity)
                 if game.isSolved {
                     Button("Start over") { reset() }
                         .buttonStyle(QuietSecondaryButtonStyle())
@@ -252,35 +263,46 @@ struct PicrossActivityView: View {
         let size = game.puzzle.size
         let columnClues = game.puzzle.columnClues
         let rowClues = game.puzzle.rowClues
-        return VStack(spacing: 4) {
-            HStack(alignment: .bottom, spacing: 4) {
-                Color.clear.frame(width: clueWidth, height: 1)
-                ForEach(0..<size, id: \.self) { column in
-                    VStack(spacing: 0) {
-                        ForEach(Array(columnClues[column].enumerated()), id: \.offset) { item in
-                            Text("\(item.element)")
+        return GeometryReader { proxy in
+            // The clue column and every board cell derive from the actual
+            // available width. On a 320-point iPhone this produces roughly
+            // 45-point cells, so the puzzle remains fully visible without
+            // horizontal scrolling or clipped clue labels.
+            let clueWidth = min(52, max(38, proxy.size.width * 0.18))
+            let cellWidth = max(1, (proxy.size.width - clueWidth - 4 * CGFloat(size)) / CGFloat(size))
+            VStack(spacing: 4) {
+                HStack(alignment: .bottom, spacing: 4) {
+                    Color.clear.frame(width: clueWidth, height: 40)
+                    ForEach(0..<size, id: \.self) { column in
+                        VStack(spacing: 0) {
+                            ForEach(Array(columnClues[column].enumerated()), id: \.offset) { item in
+                                Text("\(item.element)")
+                            }
+                        }
+                        .font(StillTypography.footnote.monospacedDigit())
+                        .foregroundStyle(game.isColumnSatisfied(column) ? StillTheme.textTertiary : StillTheme.textPrimary)
+                        .frame(width: cellWidth, height: 40, alignment: .bottom)
+                        .accessibilityLabel("Column \(column + 1) clue \(columnClues[column].map { String($0) }.joined(separator: " "))")
+                    }
+                }
+
+                ForEach(0..<size, id: \.self) { row in
+                    HStack(spacing: 4) {
+                        Text(rowClues[row].map { String($0) }.joined(separator: " "))
+                            .font(StillTypography.footnote.monospacedDigit())
+                            .foregroundStyle(game.isRowSatisfied(row) ? StillTheme.textTertiary : StillTheme.textPrimary)
+                            .frame(width: clueWidth, height: cellWidth, alignment: .trailing)
+                            .accessibilityLabel("Row \(row + 1) clue \(rowClues[row].map { String($0) }.joined(separator: " "))")
+                        ForEach(0..<size, id: \.self) { column in
+                            cell(game: game, index: row * size + column, row: row, column: column)
+                                .frame(width: cellWidth, height: cellWidth)
                         }
                     }
-                    .font(StillTypography.footnote.monospacedDigit())
-                    .foregroundStyle(game.isColumnSatisfied(column) ? StillTheme.textTertiary : StillTheme.textPrimary)
-                    .frame(maxWidth: .infinity)
-                    .accessibilityLabel("Column \(column + 1) clue \(columnClues[column].map { String($0) }.joined(separator: " "))")
                 }
             }
-            ForEach(0..<size, id: \.self) { row in
-                HStack(spacing: 4) {
-                    Text(rowClues[row].map { String($0) }.joined(separator: " "))
-                        .font(StillTypography.footnote.monospacedDigit())
-                        .foregroundStyle(game.isRowSatisfied(row) ? StillTheme.textTertiary : StillTheme.textPrimary)
-                        .frame(width: clueWidth, alignment: .trailing)
-                        .accessibilityLabel("Row \(row + 1) clue \(rowClues[row].map { String($0) }.joined(separator: " "))")
-                    ForEach(0..<size, id: \.self) { column in
-                        cell(game: game, index: row * size + column, row: row, column: column)
-                    }
-                }
-            }
+            .frame(width: proxy.size.width, alignment: .leading)
         }
-        .frame(maxWidth: 360)
+        .aspectRatio(1.02, contentMode: .fit)
         .frame(maxWidth: .infinity)
     }
 

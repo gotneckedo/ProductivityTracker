@@ -209,6 +209,30 @@ final class PuzzleTests: XCTestCase {
     }
 }
 
+final class TimerSnapshotTests: XCTestCase {
+    func testLiveEndDateUsesCurrentRenderTimeAndRemainingDuration() {
+        let engine = FocusTimerEngine()
+        let session = makeSession(.countdown(25), at: referenceDate)
+        let renderTime = referenceDate.addingTimeInterval(90)
+        let snapshot = engine.snapshot(of: session, at: renderTime)
+
+        XCTAssertEqual(
+            snapshot.endDate(from: renderTime),
+            referenceDate.addingTimeInterval(25 * 60),
+            "The status line is derived from now plus the live remaining duration."
+        )
+    }
+
+    func testPausedSnapshotHasNoFutureEndDate() {
+        let engine = FocusTimerEngine()
+        let session = makeSession(.countdown(25), at: referenceDate)
+        let paused = engine.pause(session, at: referenceDate.addingTimeInterval(60)).0
+        let snapshot = engine.snapshot(of: paused, at: referenceDate.addingTimeInterval(90))
+
+        XCTAssertNil(snapshot.endDate(from: referenceDate.addingTimeInterval(90)))
+    }
+}
+
 final class GuidedActivityTests: XCTestCase {
     func testBoxBreathingCycle() {
         let pattern = BreathingPattern.box

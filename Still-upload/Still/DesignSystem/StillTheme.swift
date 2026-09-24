@@ -192,6 +192,16 @@ enum StillTheme {
         static let screen: CGFloat = 20
     }
 
+    /// Insets owned by the shared scroll viewport rather than individual
+    /// screens. These values deliberately reserve the floating navigation
+    /// capsule and its shadow while allowing content to use the system's
+    /// actual safe-area height on every phone size.
+    enum Viewport {
+        static let statusBarBreathingRoom: CGFloat = 4
+        static let standardBottomClearance: CGFloat = Spacing.m
+        static let floatingTabBarClearance: CGFloat = 88
+    }
+
     enum Radius {
         static let small: CGFloat = 10
         static let medium: CGFloat = 20

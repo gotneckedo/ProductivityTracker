@@ -63,6 +63,7 @@ struct CalendarSettingsView: View {
                 .padding(.horizontal, StillTheme.Spacing.screen)
                 .padding(.vertical, StillTheme.Spacing.m)
             }
+            .stillScrollableViewport()
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)

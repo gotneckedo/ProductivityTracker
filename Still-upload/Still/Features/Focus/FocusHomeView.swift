@@ -92,8 +92,8 @@ struct FocusHomeView: View {
                     }
                     .padding(.horizontal, StillTheme.Spacing.screen)
                     .padding(.top, StillTheme.Spacing.s)
-                    .padding(.bottom, StillTheme.Spacing.xxl + 64)
                 }
+                .stillScrollableViewport()
                 .onAppear {
                     #if DEBUG
                     guard DemoLaunch.shouldScrollToBottom("home") else { return }

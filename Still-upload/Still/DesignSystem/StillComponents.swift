@@ -57,6 +57,32 @@ extension View {
     }
 }
 
+/// Applies the common viewport contract for every vertically scrollable Still
+/// screen. The system status-bar safe area remains intact, with a tiny visual
+/// breathing gap below it; the lower inset reserves room for the floating
+/// navigation capsule without relying on a view-specific, magic padding value.
+///
+/// This belongs on the `ScrollView`, rather than its inner stack, so Dynamic
+/// Type, sheets, and safe-area changes all retain the correct scroll range.
+struct StillScrollViewport: ViewModifier {
+    var reservesFloatingTabBar: Bool = true
+
+    func body(content: Content) -> some View {
+        content
+            .safeAreaPadding(.top, StillTheme.Viewport.statusBarBreathingRoom)
+            .safeAreaPadding(
+                .bottom,
+                reservesFloatingTabBar ? StillTheme.Viewport.floatingTabBarClearance : StillTheme.Viewport.standardBottomClearance
+            )
+    }
+}
+
+extension View {
+    func stillScrollableViewport(reservingFloatingTabBar: Bool = true) -> some View {
+        modifier(StillScrollViewport(reservesFloatingTabBar: reservingFloatingTabBar))
+    }
+}
+
 /// A large rounded card with a fine low-contrast border and restrained shadow.
 struct StillCard<Content: View>: View {
     var padding: CGFloat = StillTheme.Spacing.m

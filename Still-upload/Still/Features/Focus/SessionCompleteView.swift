@@ -50,6 +50,7 @@ struct SessionCompleteView: View {
                 .padding(.horizontal, StillTheme.Spacing.screen)
                 .padding(.vertical, StillTheme.Spacing.xl)
             }
+            .stillScrollableViewport(reservingFloatingTabBar: false)
         }
     }
 

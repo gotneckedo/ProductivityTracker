@@ -20,6 +20,7 @@ struct OnboardingView: View {
                 .padding(.horizontal, StillTheme.Spacing.screen)
                 .padding(.vertical, StillTheme.Spacing.xl)
             }
+            .stillScrollableViewport(reservingFloatingTabBar: false)
         }
     }
 
@@ -306,6 +307,7 @@ struct OnboardingPreferenceEditorView: View {
                 .padding(.horizontal, StillTheme.Spacing.screen)
                 .padding(.vertical, StillTheme.Spacing.l)
             }
+            .stillScrollableViewport()
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)

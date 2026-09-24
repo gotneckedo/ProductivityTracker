@@ -41,6 +41,7 @@ struct TaskDetailView: View {
                     EmptyState(symbol: "checklist", title: "Task removed", message: "This task isn't here anymore.")
                 }
             }
+            .stillScrollableViewport()
         }
         .navigationTitle("Details")
         .navigationBarTitleDisplayMode(.inline)

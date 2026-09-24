@@ -50,6 +50,7 @@ struct TasksSheet: View {
                     .padding(.horizontal, StillTheme.Spacing.screen)
                     .padding(.vertical, StillTheme.Spacing.m)
                 }
+                .stillScrollableViewport(reservingFloatingTabBar: false)
             }
             .navigationTitle("Tasks")
             .navigationBarTitleDisplayMode(.inline)

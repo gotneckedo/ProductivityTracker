@@ -123,7 +123,7 @@ jobs:
 
           xcrun simctl ui "$UDID" appearance light
           n=1
-          for screen in onboarding home calm active complete break sudoku wordsearch picross breathing read doodle journal tasks timeline presets gallery morning me scenes card; do
+          for screen in onboarding home calm active complete break sudoku wordsearch picross picross-320 breathing read doodle journal tasks timeline presets gallery morning me scenes card; do
             shoot "$screen" "$(printf '%02d' $n)-$screen"
             n=$((n + 1))
           done

@@ -29,8 +29,8 @@ struct MeView: View {
                     }
                     .padding(.horizontal, StillTheme.Spacing.screen)
                     .padding(.vertical, StillTheme.Spacing.m)
-                    .padding(.bottom, 72)
                 }
+                .stillScrollableViewport()
                 .onAppear {
                     #if DEBUG
                     guard DemoLaunch.shouldScrollToBottom("me") else { return }

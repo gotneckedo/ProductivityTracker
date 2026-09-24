@@ -30,6 +30,7 @@ struct RoomCollectionView: View {
                 .padding(.horizontal, StillTheme.Spacing.screen)
                 .padding(.vertical, StillTheme.Spacing.m)
             }
+            .stillScrollableViewport()
         }
         .navigationTitle(Copy.Collection.title)
         .navigationBarTitleDisplayMode(.inline)

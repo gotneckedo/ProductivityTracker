@@ -35,6 +35,7 @@ struct SessionOptionsView: View {
                         .padding(.vertical, StillTheme.Spacing.m)
                     }
                 }
+                .stillScrollableViewport(reservingFloatingTabBar: false)
             }
             .navigationTitle("Session setup")
             .navigationBarTitleDisplayMode(.inline)

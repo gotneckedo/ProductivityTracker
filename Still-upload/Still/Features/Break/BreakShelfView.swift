@@ -43,8 +43,8 @@ struct BreakShelfView: View {
                     }
                     .padding(.horizontal, StillTheme.Spacing.screen)
                     .padding(.vertical, StillTheme.Spacing.m)
-                    .padding(.bottom, 72)
                 }
+                .stillScrollableViewport()
                 .onAppear {
                     #if DEBUG
                     guard DemoLaunch.shouldScrollToBottom("break") else { return }

@@ -29,8 +29,8 @@ struct JournalView: View {
                     }
                     .padding(.horizontal, StillTheme.Spacing.screen)
                     .padding(.top, StillTheme.Spacing.m)
-                    .padding(.bottom, StillTheme.Spacing.xxl + 64)
                 }
+                .stillScrollableViewport()
                 .onAppear {
                     #if DEBUG
                     guard DemoLaunch.shouldScrollToBottom("journal") else { return }

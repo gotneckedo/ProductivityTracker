@@ -46,9 +46,11 @@ struct ActiveFocusView: View {
                     HStack {
                         soundChip(session: session)
                         Spacer()
-                        Text(scheduleLine(snapshot))
-                            .font(StillTypography.caption)
-                            .foregroundStyle(StillDayPhase.focus.secondaryInk)
+                        TimelineView(.periodic(from: .now, by: 1)) { timeline in
+                            Text(scheduleLine(snapshot, now: timeline.date))
+                                .font(StillTypography.caption)
+                                .foregroundStyle(StillDayPhase.focus.secondaryInk)
+                        }
                     }
                     .padding(.top, StillTheme.Spacing.s)
 
@@ -115,8 +117,8 @@ struct ActiveFocusView: View {
                     }
                 }
                 .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.bottom, StillTheme.Spacing.xl)
             }
+            .stillScrollableViewport(reservingFloatingTabBar: false)
         }
     }
 
@@ -180,8 +182,8 @@ struct ActiveFocusView: View {
         return snapshot.isPaused ? "Paused. \(base)" : base
     }
 
-    private func scheduleLine(_ snapshot: TimerSnapshot) -> String {
-        guard let end = snapshot.phaseEndDate else { return snapshot.isPaused ? "Paused" : "" }
+    private func scheduleLine(_ snapshot: TimerSnapshot, now: Date) -> String {
+        guard let end = snapshot.endDate(from: now) else { return snapshot.isPaused ? "Paused" : "" }
         return "Ends \(end.formatted(date: .omitted, time: .shortened))"
     }
 }

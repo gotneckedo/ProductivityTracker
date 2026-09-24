@@ -64,8 +64,8 @@ struct SceneCollectionView: View {
                         .frame(width: contentWidth, alignment: .leading)
                         .padding(.horizontal, StillTheme.Spacing.screen)
                         .padding(.vertical, StillTheme.Spacing.m)
-                        .padding(.bottom, StillTheme.Spacing.xxl + 64)
                     }
+                    .stillScrollableViewport()
                     .onAppear {
                         #if DEBUG
                         if DemoLaunch.shouldScrollToBottom("scenes-all") {

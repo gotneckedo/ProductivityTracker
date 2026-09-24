@@ -222,6 +222,7 @@ struct HabitsScreen: View {
                     .padding(.horizontal, StillTheme.Spacing.screen)
                     .padding(.vertical, StillTheme.Spacing.m)
             }
+            .stillScrollableViewport()
         }
         .navigationTitle("Habits")
         .navigationBarTitleDisplayMode(.inline)

@@ -7,7 +7,7 @@ import Foundation
 ///   xcrun simctl launch booted com.cocomedia.still -still-demo home
 ///
 /// Screens: onboarding, home, calm, active, complete, break, sudoku, wordsearch,
-/// picross, breathing, read, me, scenes, scenes-all, scenes-seasonal, card,
+/// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-seasonal, card,
 /// journal, presets, tasks, timeline, doodle, gallery, morning,
 /// calendar-settings, get-card.
 enum DemoLaunch {
@@ -49,6 +49,8 @@ enum DemoLaunch {
         case "wordsearch":
             return routed(.breakActivity(.wordSearch, .shelf))
         case "picross":
+            return routed(.breakActivity(.picross, .shelf))
+        case "picross-320":
             return routed(.breakActivity(.picross, .shelf))
         case "breathing":
             return routed(.breakActivity(.boxBreathing, .shelf))

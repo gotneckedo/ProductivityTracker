@@ -66,23 +66,29 @@ extension View {
 /// Type, sheets, and safe-area changes all retain the correct scroll range.
 struct StillScrollViewport: ViewModifier {
     var reservesFloatingTabBar: Bool = true
+    @Environment(\.stillDayPhase) private var phase
+    @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
+        let resolvedPhase = phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         content
             .safeAreaPadding(.top, StillTheme.Viewport.statusBarBreathingRoom)
             .safeAreaPadding(
                 .bottom,
                 reservesFloatingTabBar ? StillTheme.Viewport.floatingTabBarClearance : StillTheme.Viewport.standardBottomClearance
             )
-            // A short material fade is deliberately overlaid on the scroll
-            // viewport. It lets a row dissolve beneath the status chrome
-            // instead of colliding visibly with the clock or a back chevron.
+            // A short phase-aware material fade is deliberately overlaid on
+            // the scroll viewport. Its opaque top masks scrolled labels before
+            // they reach the status clock, then it dissolves them back into
+            // the content instead of leaving readable text under the chrome.
             .overlay(alignment: .top) {
-                Rectangle()
-                    .fill(.ultraThinMaterial)
+                ZStack {
+                    Rectangle().fill(resolvedPhase.gradient)
+                    Rectangle().fill(.ultraThinMaterial).opacity(0.38)
+                }
                     .mask(
                         LinearGradient(
-                            colors: [.black.opacity(0.82), .black.opacity(0.34), .clear],
+                            colors: [.black, .black.opacity(0.94), .black.opacity(0.58), .clear],
                             startPoint: .top,
                             endPoint: .bottom
                         )

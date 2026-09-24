@@ -239,23 +239,27 @@ struct PicrossActivityView: View {
     var body: some View {
         VStack(spacing: StillTheme.Spacing.l) {
             if let game {
-                VStack(spacing: StillTheme.Spacing.l) {
-                    Text(game.isSolved ? "Solved: \(game.puzzle.title)." : "Fill squares so each row and column matches its numbers.")
-                        .font(StillTypography.callout)
-                        .foregroundStyle(StillTheme.textSecondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    if !game.isSolved {
-                        SelectionPill(options: [PicrossTool.fill, PicrossTool.cross], selection: $tool) { option in
-                            option == .fill ? "Fill" : "Mark empty"
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    VStack(spacing: StillTheme.Spacing.l) {
+                        Text(game.isSolved ? "Solved: \(game.puzzle.title)." : "Fill squares so each row and column matches its numbers.")
+                            .font(StillTypography.callout)
+                            .foregroundStyle(StillTheme.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        if !game.isSolved {
+                            SelectionPill(options: [PicrossTool.fill, PicrossTool.cross], selection: $tool) { option in
+                                option == .fill ? "Fill" : "Mark empty"
+                            }
+                        }
+                        board(game)
+                            .frame(maxWidth: narrowProofWidth)
+                            .frame(maxWidth: .infinity)
+                        if game.isSolved {
+                            Button("Start over") { reset() }
+                                .buttonStyle(QuietSecondaryButtonStyle())
                         }
                     }
-                    board(game)
-                        .frame(maxWidth: narrowProofWidth)
-                        .frame(maxWidth: .infinity)
-                    if game.isSolved {
-                        Button("Start over") { reset() }
-                            .buttonStyle(QuietSecondaryButtonStyle())
-                    }
+                    Spacer(minLength: 0)
                 }
                 // `availableSize` is owned by the activity shell, rather than
                 // an unconstrained scroll child. It provides a real vertical

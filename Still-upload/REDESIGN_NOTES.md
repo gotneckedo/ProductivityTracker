@@ -2,9 +2,9 @@
 
 **Branch:** `redesign`  
 **Pull request:** [#1 — Redesign Still with a room-first focus flow](https://github.com/gotneckedo/ProductivityTracker/pull/1)  
-**Published head while this note was prepared:** `c496b14`
-**Local validation:** `swift test` — **205 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).  
-**GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 35672301284](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35672301284) completed successfully on `c496b14`; its `still-screenshots` artifact contains and was visually reviewed across 26 simulator captures.
+**Verified UI head:** `2ab8504`
+**Local validation:** `swift test` — **211 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).
+**GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 35946615524](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35946615524) completed successfully on `2ab8504`; its `still-screenshots` artifact contains and was visually reviewed across 38 simulator captures.
 
 ## Visual correction pass
 
@@ -13,6 +13,18 @@ The post-review correction pass explicitly registers the bundled Instrument Seri
 The original room renderer now floats over the phase background with a warm halo, lamp bloom, shadow, motes, two wall planes, and reduced-motion-aware motion. It is also the renderer used in Scene thumbnails. All major tab scroll views reserve bottom clearance for the floating tab bar. The active-focus screen now has one subject-or-Focus overline, a thin glowing progress line, one sound-state glyph, and a full-width Study Plan card.
 
 Sudoku presents six separated 2×3 boxes and keeps a keypad number available until all six placements exist. Short Read explicitly lists and opens the four bundled public-domain books. Wake up exposes time, days, preset, and Stop with Button/Focus Card controls without a Calendar settings detour; Box Breathing shows remaining time only once. Me begins with the personal glass card, and preview Focus Card acquisition is secondary glass. Student language is updated to US wording, including **studying**, **sessions**, and **focus days**.
+
+## Verified follow-up visual corrections
+
+The following corrections were accepted only after review of the **final** iPhone Simulator artifact from [run 35946615524](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35946615524). Earlier screenshot runs that still showed overlapping Scene cards were rejected and are not used as evidence here.
+
+| Correction | Implementation | Proving capture(s) | Review result |
+|---|---|---|---|
+| **Scenes grid stays within the phone** | `SceneCollectionView` uses the required two flexible `GridItem` columns with 12-point gaps. Its vertical scroll content is constrained to the actual viewport less the screen padding, and room thumbnails have no fixed intrinsic shadow width. There is no horizontal scroller or negative padding. | `26-scenes-all.png`, `27-scenes-seasonal.png`, `28-scenes-all-bottom.png` | The four core rooms, the two seasonal columns, and the final Spring Rain row are fully inside their card boundaries; Library Light and Night City are no longer clipped or overlapping. |
+| **Room geometry and lamp lighting** | `RoomArtwork` renders opaque back and side walls plus a floor. The lamp is rendered as clipped radial gradients on the floor and the back wall rather than a foreground tan oval. | `04-active.png` | The focus room visibly contains two solid wall planes and a floor; light falls from the lamp through the room and brightens the wall behind it. |
+| **Fresh Sudoku keypad** | `SudokuGame.isDigitComplete(_:)` retires a digit only after six placements. The keypad backgrounds now sit behind their labels instead of overlaying them. `PuzzleTests.testSudokuDigitCompletesOnlyAfterSixPlacements` pins both the fresh and completed states. | `07-sudoku.png`, `36-sudoku-dark.png` | All digits 1–6 are at full contrast on a fresh puzzle in both captured appearances; none is prematurely faded. |
+
+**Final screenshot artifact:** `still-screenshots` (artifact ID `10786252810`), **38 PNG files**, archive integrity checked locally before review.
 
 ## Delivery by priority
 
@@ -37,7 +49,7 @@ Sudoku presents six separated 2×3 boxes and keeps a keypad number available unt
 
 ## What is partial or requires later validation
 
-The Swift package suite is green locally, and the final iPhone Simulator build, test target, widget extension build, Live Activity-linked app target, and 26-screen screenshot capture passed in GitHub Actions. Accessibility labels, Dynamic Type-aware SwiftUI layouts, 44pt controls, and Reduce Motion support are implemented in code; however, VoiceOver and visual review on physical iPhone hardware remain release-validation tasks.
+The Swift package suite is green locally, and the final iPhone Simulator build, test target, widget extension build, Live Activity-linked app target, and 38-screen screenshot capture passed in GitHub Actions. Accessibility labels, Dynamic Type-aware SwiftUI layouts, 44pt controls, and Reduce Motion support are implemented in code; however, VoiceOver and visual review on physical iPhone hardware remain release-validation tasks.
 
 Family Controls shielding is deliberately **off** in `FeatureFlags.v1`, `current`, and `release`. The app contains truthful UI, a schedule state machine, and a mock/preview path, but Apple’s Family Controls Distribution entitlement, DeviceActivity monitor extension, and hardware verification are still required before shipping actual blocking. Core NFC writing similarly needs the paid-team capability and hardware test. App Group sharing for the widget and Live Activity needs paid-account provisioning verification. The Supporter product and alternate Home Screen icon assets need final App Store/App Icon review before a public release.
 
@@ -121,12 +133,12 @@ Still-upload/TESTFLIGHT_SETUP.md
 
 | Check | Result |
 |---|---|
-| `swift test` | **205 tests passed, 0 failures**. The suite includes new subject segmentation, shelf-state, book provenance/parser, preview-boundary, room collection, onboarding, recurrence, blocking schedule, and wording regressions. |
+| `swift test` | **211 tests passed, 0 failures**. The suite includes subject segmentation, shelf-state, book provenance/parser, preview-boundary, room collection, onboarding, recurrence, blocking schedule, wording, and fresh/complete Sudoku keypad regressions. |
 | SwiftUI source parse | Updated Focus, Break, Me, Morning Start, shared components, and room views parsed successfully with Swift 6.1. |
 | Static checks | `git diff --check` was clean before publishing. |
-| iPhone CI/screenshots | **Passed.** [Run 35672301284](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35672301284) built and tested the iPhone simulator app successfully, then uploaded 26 reviewed captures after the visual correction pass. |
+| iPhone CI/screenshots | **Passed.** [Run 35946615524](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35946615524) built and tested the iPhone simulator app successfully, then uploaded 38 reviewed captures after the final Scene-grid, room-lighting, and Sudoku correction pass. |
 
 ## CI and screenshots
 
-**Run:** [iOS build, tests & screenshots — 35672301284](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35672301284) — **success**.
-**Screenshot artifact:** `still-screenshots` (artifact ID `10671389621`), **26 PNG files**. The review covered onboarding, Home, focus, completion, Break, activities, Journal, Tasks, Day, presets, gallery, Wake up, Me, scenes, Focus Card, and the specified dark-mode screens. A side-by-side check against the supplied prototype screens confirmed the corrected serif display type, rounded glass clipping, room treatment, focus layout, Sudoku grouping, and personal Me header. The downloaded artifact is attached with this delivery.
+**Run:** [iOS build, tests & screenshots — 35946615524](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35946615524) — **success**.
+**Screenshot artifact:** `still-screenshots` (artifact ID `10786252810`), **38 PNG files**. The review covered onboarding, Home, focus, completion, Break, activities, Journal, Tasks, Day, presets, gallery, Wake up, Me, scenes, Focus Card, dark-mode screens, all core rooms, seasonal rooms, and tab-bottom proofs. `26-scenes-all.png`, `27-scenes-seasonal.png`, and `28-scenes-all-bottom.png` prove the final two-column Scene grid; `04-active.png` proves the two-wall room and radial lamp lighting; `07-sudoku.png` and `36-sudoku-dark.png` prove the fresh full-contrast Sudoku keypad. The downloaded artifact is attached with this delivery.

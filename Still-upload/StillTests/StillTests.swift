@@ -231,6 +231,17 @@ final class TimerSnapshotTests: XCTestCase {
 
         XCTAssertNil(snapshot.endDate(from: referenceDate.addingTimeInterval(90)))
     }
+
+    func testPreviewFixtureEndTimeMatchesItsInjectedClock() {
+        let start = referenceDate.addingTimeInterval(-7 * 60)
+        let state = PreviewSupport.appState(populated: true, activeSession: true, clockStart: start)
+        let now = state.container.clock.now
+
+        XCTAssertEqual(now, referenceDate)
+        let snapshot = try! XCTUnwrap(state.snapshot)
+        XCTAssertEqual(try! XCTUnwrap(snapshot.remainingInPhase), 18 * 60, accuracy: 0.1)
+        XCTAssertEqual(snapshot.endDate(from: now), referenceDate.addingTimeInterval(18 * 60))
+    }
 }
 
 final class GuidedActivityTests: XCTestCase {

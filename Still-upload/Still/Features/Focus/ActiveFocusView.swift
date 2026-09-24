@@ -46,11 +46,9 @@ struct ActiveFocusView: View {
                     HStack {
                         soundChip(session: session)
                         Spacer()
-                        TimelineView(.periodic(from: .now, by: 1)) { timeline in
-                            Text(scheduleLine(snapshot, now: timeline.date))
-                                .font(StillTypography.caption)
-                                .foregroundStyle(StillDayPhase.focus.secondaryInk)
-                        }
+                        Text(scheduleLine(snapshot, now: appState.container.clock.now))
+                            .font(StillTypography.caption)
+                            .foregroundStyle(StillDayPhase.focus.secondaryInk)
                     }
                     .padding(.top, StillTheme.Spacing.s)
 

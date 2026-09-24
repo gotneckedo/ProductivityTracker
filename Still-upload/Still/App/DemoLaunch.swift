@@ -47,7 +47,14 @@ enum DemoLaunch {
         case "calm":
             return PreviewSupport.appState(goal: .calmerPhone, renderMode: .calm)
         case "active":
-            return PreviewSupport.appState(populated: true, activeSession: true)
+            // The fixture advances seven minutes, so initialize it at 9:34 to
+            // match CI's fixed 9:41 status-bar clock. An 18-minute remaining
+            // face must therefore truthfully show 9:59 AM.
+            return PreviewSupport.appState(
+                populated: true,
+                activeSession: true,
+                clockStart: screenshotActiveSessionStart
+            )
         case "complete":
             // bootstrap() reopens the pending completion screen.
             return PreviewSupport.completedSession().state
@@ -106,6 +113,14 @@ enum DemoLaunch {
         let state = PreviewSupport.appState(populated: true)
         state.router.go(to: route)
         return state
+    }
+
+    private static var screenshotActiveSessionStart: Date {
+        var components = Calendar.autoupdatingCurrent.dateComponents([.year, .month, .day], from: .now)
+        components.hour = 9
+        components.minute = 34
+        components.second = 0
+        return Calendar.autoupdatingCurrent.date(from: components) ?? .now
     }
 }
 #endif

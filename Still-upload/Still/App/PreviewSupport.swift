@@ -8,9 +8,10 @@ enum PreviewSupport {
         populated: Bool = false,
         completedSessions: Int = 9,
         renderMode: RenderMode? = nil,
-        activeSession: Bool = false
+        activeSession: Bool = false,
+        clockStart: Date? = nil
     ) -> AppState {
-        let clock = ManualClock(Date())
+        let clock = ManualClock(clockStart ?? Date())
         let bundledBooks = BundledBookLocator.urls(in: Bundle(for: AppState.self))
         let bookLibrary = FileBookLibrary(
             directory: FileManager.default.temporaryDirectory.appendingPathComponent("StillPreviewBooks", isDirectory: true),

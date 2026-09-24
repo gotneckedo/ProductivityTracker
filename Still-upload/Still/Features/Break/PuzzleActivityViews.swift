@@ -214,6 +214,7 @@ struct SudokuActivityView: View {
 
 struct PicrossActivityView: View {
     let onSolved: () -> Void
+    var availableSize: CGSize = CGSize(width: 360, height: 620)
     @Environment(AppState.self) private var appState
     @Environment(\.stillDayPhase) private var phase
     @Environment(\.colorScheme) private var colorScheme
@@ -238,31 +239,29 @@ struct PicrossActivityView: View {
     var body: some View {
         VStack(spacing: StillTheme.Spacing.l) {
             if let game {
-                GeometryReader { viewport in
-                    VStack(spacing: StillTheme.Spacing.l) {
-                        Text(game.isSolved ? "Solved: \(game.puzzle.title)." : "Fill squares so each row and column matches its numbers.")
-                            .font(StillTypography.callout)
-                            .foregroundStyle(StillTheme.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        if !game.isSolved {
-                            SelectionPill(options: [PicrossTool.fill, PicrossTool.cross], selection: $tool) { option in
-                                option == .fill ? "Fill" : "Mark empty"
-                            }
-                        }
-                        board(game)
-                            .frame(maxWidth: narrowProofWidth)
-                            .frame(maxWidth: .infinity)
-                        if game.isSolved {
-                            Button("Start over") { reset() }
-                                .buttonStyle(QuietSecondaryButtonStyle())
+                VStack(spacing: StillTheme.Spacing.l) {
+                    Text(game.isSolved ? "Solved: \(game.puzzle.title)." : "Fill squares so each row and column matches its numbers.")
+                        .font(StillTypography.callout)
+                        .foregroundStyle(StillTheme.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if !game.isSolved {
+                        SelectionPill(options: [PicrossTool.fill, PicrossTool.cross], selection: $tool) { option in
+                            option == .fill ? "Fill" : "Mark empty"
                         }
                     }
-                    .frame(minHeight: max(390, viewport.size.height), alignment: .center)
+                    board(game)
+                        .frame(maxWidth: narrowProofWidth)
+                        .frame(maxWidth: .infinity)
+                    if game.isSolved {
+                        Button("Start over") { reset() }
+                            .buttonStyle(QuietSecondaryButtonStyle())
+                    }
                 }
-                // The activity shell supplies a generous scroll viewport. The
-                // centered game canvas uses it instead of leaving a large dead
-                // zone beneath a tiny 5×5 board.
-                .frame(minHeight: 430)
+                // `availableSize` is owned by the activity shell, rather than
+                // an unconstrained scroll child. It provides a real vertical
+                // viewport, so the small puzzle sits calmly in the middle of
+                // the activity instead of floating at its top.
+                .frame(minHeight: max(430, availableSize.height - 150), alignment: .center)
             }
         }
         .onAppear(perform: load)

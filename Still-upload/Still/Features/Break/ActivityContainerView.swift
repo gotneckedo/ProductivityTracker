@@ -33,22 +33,24 @@ struct ActivityContainerView: View {
                     onDone: done
                 )
                 ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            activityBody(startedAt: startedAt)
-                            Color.clear.frame(height: 1).id("activity-bottom")
+                    GeometryReader { viewport in
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                activityBody(startedAt: startedAt, availableSize: viewport.size)
+                                Color.clear.frame(height: 1).id("activity-bottom")
+                            }
+                            .padding(.horizontal, StillTheme.Spacing.screen)
+                            .padding(.vertical, StillTheme.Spacing.m)
                         }
-                        .padding(.horizontal, StillTheme.Spacing.screen)
-                        .padding(.vertical, StillTheme.Spacing.m)
-                    }
-                    .stillScrollableViewport()
-                    .onAppear {
-                        #if DEBUG
-                        let shouldScroll = (activityID == .shortRead && DemoLaunch.shouldScrollToBottom("read"))
-                            || (activityID == .sudoku && DemoLaunch.shouldScrollToBottom("sudoku"))
-                        guard shouldScroll else { return }
-                        DispatchQueue.main.async { proxy.scrollTo("activity-bottom", anchor: .bottom) }
-                        #endif
+                        .stillScrollableViewport()
+                        .onAppear {
+                            #if DEBUG
+                            let shouldScroll = (activityID == .shortRead && DemoLaunch.shouldScrollToBottom("read"))
+                                || (activityID == .sudoku && DemoLaunch.shouldScrollToBottom("sudoku"))
+                            guard shouldScroll else { return }
+                            DispatchQueue.main.async { proxy.scrollTo("activity-bottom", anchor: .bottom) }
+                            #endif
+                        }
                     }
                 }
                 if let outcome {
@@ -72,12 +74,12 @@ struct ActivityContainerView: View {
     }
 
     @ViewBuilder
-    private func activityBody(startedAt: Date) -> some View {
+    private func activityBody(startedAt: Date, availableSize: CGSize) -> some View {
         switch activityID {
         case .sudoku:
             SudokuActivityView(onSolved: { finish(.completed) })
         case .picross:
-            PicrossActivityView(onSolved: { finish(.completed) })
+            PicrossActivityView(onSolved: { finish(.completed) }, availableSize: availableSize)
         case .wordSearch:
             WordSearchActivityView(onSolved: { finish(.completed) })
         case .shortRead:

@@ -2,9 +2,9 @@
 
 **Branch:** `redesign`  
 **Pull request:** [#1 — Redesign Still with a room-first focus flow](https://github.com/gotneckedo/ProductivityTracker/pull/1)  
-**Verified UI head:** `2ab8504`
-**Local validation:** `swift test` — **211 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).
-**GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 35946615524](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35946615524) completed successfully on `2ab8504`; its `still-screenshots` artifact contains and was visually reviewed across 38 simulator captures.
+**Verified UI head:** `ce6fd8a`
+**Local validation:** `swift test` — **214 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).
+**GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 35997812807](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35997812807) completed successfully on `ce6fd8a`; its `still-screenshots` artifact contains and was visually reviewed across 45 simulator captures.
 
 ## Visual correction pass
 
@@ -25,6 +25,19 @@ The following corrections were accepted only after review of the **final** iPhon
 | **Fresh Sudoku keypad** | `SudokuGame.isDigitComplete(_:)` retires a digit only after six placements. The keypad backgrounds now sit behind their labels instead of overlaying them. `PuzzleTests.testSudokuDigitCompletesOnlyAfterSixPlacements` pins both the fresh and completed states. | `07-sudoku.png`, `36-sudoku-dark.png` | All digits 1–6 are at full contrast on a fresh puzzle in both captured appearances; none is prematurely faded. |
 
 **Final screenshot artifact:** `still-screenshots` (artifact ID `10787966480`), **38 PNG files**, archive integrity checked locally before review.
+
+## Verified pre-Phase 2 layout proof
+
+The pre-Phase 2 layout checkpoint was accepted only after review of [iOS build, tests & screenshots — run 35997812807](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35997812807) on `ce6fd8a`. The artifact `still-screenshots` (artifact ID `10807209976`) contains **45 PNG files** and was downloaded and inspected locally. The preceding run `35986265769` and intermediate replacement runs are not cited as final evidence.
+
+| Requirement | Proving capture(s) | Verified result |
+|---|---|---|
+| **Top material fade and safe status area** | `27-break-midpoint.png`, `28-journal-midpoint.png`, `29-me-midpoint.png`, `30-scenes-midpoint.png` | Break, Journal, Me, and pushed Scenes all keep scrolling content below a single phase-aware status chrome; labels are not readable behind the status clock. |
+| **Bottom clearance above the floating tab bar** | `24-break-bottom.png`, `25-journal-bottom.png`, `26-me-bottom.png`, `33-scenes-all-bottom.png`, `34-read-bottom.png`, `35-sudoku-bottom.png`, `36-card-bottom.png` | The final reachable content on Break, Journal, Me, Scenes, Short Read, Sudoku, and Focus Card remains fully visible and tappable above the persistent tab capsule. |
+| **Live focus end time** | `04-active.png` | The active 18-minute session visibly reports **Ends 9:59 AM**, matching the deterministic 9:41 AM capture clock and the remaining duration. |
+| **Centered, responsive Picross with spaced clues** | `09-picross.png`, `10-picross-320.png`, `45-picross-dark.png` | The standard and narrow layouts keep the complete board and all clues visible, centered in the activity viewport, with readable contrast in dark mode. |
+
+The shared `StillScreen` now owns the status material/fade, `StillScrollViewport` owns only safe-area scroll range, and `ActivityContainerView` supplies Picross a finite header/tab-adjusted viewport. These changes are pre-Phase 2 correction work only; no later Phase 2 feature section has been started.
 
 ## Delivery by priority
 
@@ -133,12 +146,12 @@ Still-upload/TESTFLIGHT_SETUP.md
 
 | Check | Result |
 |---|---|
-| `swift test` | **211 tests passed, 0 failures**. The suite includes subject segmentation, shelf-state, book provenance/parser, preview-boundary, room collection, onboarding, recurrence, blocking schedule, wording, and fresh/complete Sudoku keypad regressions. |
+| `swift test` | **214 tests passed, 0 failures**. The suite includes subject segmentation, shelf-state, book provenance/parser, preview-boundary, room collection, onboarding, recurrence, blocking schedule, wording, fresh/complete Sudoku keypad regressions, and deterministic focus end-time coverage. |
 | SwiftUI source parse | Updated Focus, Break, Me, Morning Start, shared components, and room views parsed successfully with Swift 6.1. |
 | Static checks | `git diff --check` was clean before publishing. |
-| iPhone CI/screenshots | **Passed.** [Run 35946615524](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35946615524) built and tested the iPhone simulator app successfully, then uploaded 38 reviewed captures after the final Scene-grid, room-lighting, and Sudoku correction pass. |
+| iPhone CI/screenshots | **Passed.** [Run 35997812807](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35997812807) built and tested the iPhone simulator app successfully, then uploaded 45 reviewed captures after the final pre-Phase 2 layout correction pass. |
 
 ## CI and screenshots
 
-**Run:** [iOS build, tests & screenshots — 35946615524](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35946615524) — **success**.
-**Screenshot artifact:** `still-screenshots` (artifact ID `10787966480`), **38 PNG files**. The review covered onboarding, Home, focus, completion, Break, activities, Journal, Tasks, Day, presets, gallery, Wake up, Me, scenes, Focus Card, dark-mode screens, all core rooms, seasonal rooms, and tab-bottom proofs. `26-scenes-all.png`, `27-scenes-seasonal.png`, and `28-scenes-all-bottom.png` prove the final two-column Scene grid; `04-active.png` proves the two-wall room and radial lamp lighting; `07-sudoku.png` and `36-sudoku-dark.png` prove the fresh full-contrast Sudoku keypad. The downloaded artifact is attached with this delivery.
+**Run:** [iOS build, tests & screenshots — 35997812807](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35997812807) — **success**.
+**Screenshot artifact:** `still-screenshots` (artifact ID `10807209976`), **45 PNG files**. The review covered onboarding, Home, active focus, completion, Break, activities, Journal, Tasks, Day, presets, gallery, Wake up, Me, scenes, Focus Card, dark-mode screens, all core rooms, seasonal rooms, top status-chrome proofs, and tab-bottom proofs. The exact evidence for pre-Phase 2 layout work is listed in the “Verified pre-Phase 2 layout proof” table above.

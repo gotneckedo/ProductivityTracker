@@ -74,6 +74,23 @@ struct StillScrollViewport: ViewModifier {
                 .bottom,
                 reservesFloatingTabBar ? StillTheme.Viewport.floatingTabBarClearance : StillTheme.Viewport.standardBottomClearance
             )
+            // A short material fade is deliberately overlaid on the scroll
+            // viewport. It lets a row dissolve beneath the status chrome
+            // instead of colliding visibly with the clock or a back chevron.
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .mask(
+                        LinearGradient(
+                            colors: [.black.opacity(0.82), .black.opacity(0.34), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(height: StillTheme.Viewport.topFadeHeight)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
     }
 }
 

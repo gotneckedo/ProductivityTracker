@@ -13,6 +13,7 @@ import Foundation
 enum DemoLaunch {
     static let argument = "-still-demo"
     static let scrollBottomArgument = "-still-scroll-bottom"
+    static let scrollMidpointArgument = "-still-scroll-midpoint"
 
     static var requestedScreen: String? {
         let arguments = ProcessInfo.processInfo.arguments
@@ -25,6 +26,14 @@ enum DemoLaunch {
     static func shouldScrollToBottom(_ screen: String) -> Bool {
         let arguments = ProcessInfo.processInfo.arguments
         guard let index = arguments.firstIndex(of: scrollBottomArgument), index + 1 < arguments.count else { return false }
+        return arguments[index + 1] == screen
+    }
+
+    /// Used only by screenshot CI to prove the short status-bar material fade
+    /// on content which has genuinely moved beneath the top edge.
+    static func shouldScrollToMidpoint(_ screen: String) -> Bool {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: scrollMidpointArgument), index + 1 < arguments.count else { return false }
         return arguments[index + 1] == screen
     }
 

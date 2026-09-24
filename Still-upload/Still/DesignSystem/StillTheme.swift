@@ -198,6 +198,7 @@ enum StillTheme {
     /// actual safe-area height on every phone size.
     enum Viewport {
         static let statusBarBreathingRoom: CGFloat = 4
+        static let topFadeHeight: CGFloat = 28
         static let standardBottomClearance: CGFloat = Spacing.m
         static let floatingTabBarClearance: CGFloat = 88
     }

@@ -12,8 +12,9 @@ struct FocusCardView: View {
 
     var body: some View {
         StillScreen {
-            ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
                         HStack(alignment: .firstTextBaseline) {
                             Text("Focus Card")
@@ -80,14 +81,24 @@ struct FocusCardView: View {
                         }
                     }
                     .accessibilityElement(children: .combine)
+                    Color.clear.frame(height: 1).id("focus-card-bottom")
+                    }
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.vertical, StillTheme.Spacing.m)
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.vertical, StillTheme.Spacing.m)
+                .stillScrollableViewport()
+                .onAppear {
+                    #if DEBUG
+                    guard DemoLaunch.shouldScrollToBottom("card") else { return }
+                    DispatchQueue.main.async { proxy.scrollTo("focus-card-bottom", anchor: .bottom) }
+                    #endif
+                }
             }
-            .stillScrollableViewport()
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
+        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
     }
 
     private func presetCard(_ preset: FocusPreset) -> some View {

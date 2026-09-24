@@ -44,7 +44,9 @@ struct ActivityContainerView: View {
                     .stillScrollableViewport()
                     .onAppear {
                         #if DEBUG
-                        guard activityID == .shortRead, DemoLaunch.shouldScrollToBottom("read") else { return }
+                        let shouldScroll = (activityID == .shortRead && DemoLaunch.shouldScrollToBottom("read"))
+                            || (activityID == .sudoku && DemoLaunch.shouldScrollToBottom("sudoku"))
+                        guard shouldScroll else { return }
                         DispatchQueue.main.async { proxy.scrollTo("activity-bottom", anchor: .bottom) }
                         #endif
                     }

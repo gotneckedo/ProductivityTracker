@@ -33,6 +33,7 @@ struct BreakShelfView: View {
                     categoryChips
                     pickedSection
                     activityGrid
+                    Color.clear.frame(height: 1).id("break-midpoint")
                     recentSection
                     Text(Copy.BreakShelf.wholeShelf)
                         .font(StillTypography.footnote)
@@ -47,8 +48,11 @@ struct BreakShelfView: View {
                 .stillScrollableViewport()
                 .onAppear {
                     #if DEBUG
-                    guard DemoLaunch.shouldScrollToBottom("break") else { return }
-                    DispatchQueue.main.async { proxy.scrollTo("break-bottom", anchor: .bottom) }
+                    if DemoLaunch.shouldScrollToBottom("break") {
+                        DispatchQueue.main.async { proxy.scrollTo("break-bottom", anchor: .bottom) }
+                    } else if DemoLaunch.shouldScrollToMidpoint("break") {
+                        DispatchQueue.main.async { proxy.scrollTo("break-midpoint", anchor: .top) }
+                    }
                     #endif
                 }
             }

@@ -23,6 +23,7 @@ struct JournalView: View {
                     }
 
                     TodayLineCard()
+                    Color.clear.frame(height: 1).id("journal-midpoint")
                     HabitsSection()
                     PastLinesSection()
                     Color.clear.frame(height: 1).id("journal-bottom")
@@ -33,8 +34,11 @@ struct JournalView: View {
                 .stillScrollableViewport()
                 .onAppear {
                     #if DEBUG
-                    guard DemoLaunch.shouldScrollToBottom("journal") else { return }
-                    DispatchQueue.main.async { proxy.scrollTo("journal-bottom", anchor: .bottom) }
+                    if DemoLaunch.shouldScrollToBottom("journal") {
+                        DispatchQueue.main.async { proxy.scrollTo("journal-bottom", anchor: .bottom) }
+                    } else if DemoLaunch.shouldScrollToMidpoint("journal") {
+                        DispatchQueue.main.async { proxy.scrollTo("journal-midpoint", anchor: .top) }
+                    }
                     #endif
                 }
                 .scrollDismissesKeyboard(.interactively)

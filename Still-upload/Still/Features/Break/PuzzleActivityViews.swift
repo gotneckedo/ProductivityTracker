@@ -238,22 +238,31 @@ struct PicrossActivityView: View {
     var body: some View {
         VStack(spacing: StillTheme.Spacing.l) {
             if let game {
-                Text(game.isSolved ? "Solved: \(game.puzzle.title)." : "Fill squares so each row and column matches its numbers.")
-                    .font(StillTypography.callout)
-                    .foregroundStyle(StillTheme.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                if !game.isSolved {
-                    SelectionPill(options: [PicrossTool.fill, PicrossTool.cross], selection: $tool) { option in
-                        option == .fill ? "Fill" : "Mark empty"
+                GeometryReader { viewport in
+                    VStack(spacing: StillTheme.Spacing.l) {
+                        Text(game.isSolved ? "Solved: \(game.puzzle.title)." : "Fill squares so each row and column matches its numbers.")
+                            .font(StillTypography.callout)
+                            .foregroundStyle(StillTheme.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        if !game.isSolved {
+                            SelectionPill(options: [PicrossTool.fill, PicrossTool.cross], selection: $tool) { option in
+                                option == .fill ? "Fill" : "Mark empty"
+                            }
+                        }
+                        board(game)
+                            .frame(maxWidth: narrowProofWidth)
+                            .frame(maxWidth: .infinity)
+                        if game.isSolved {
+                            Button("Start over") { reset() }
+                                .buttonStyle(QuietSecondaryButtonStyle())
+                        }
                     }
+                    .frame(minHeight: max(390, viewport.size.height), alignment: .center)
                 }
-                board(game)
-                    .frame(maxWidth: narrowProofWidth)
-                    .frame(maxWidth: .infinity)
-                if game.isSolved {
-                    Button("Start over") { reset() }
-                        .buttonStyle(QuietSecondaryButtonStyle())
-                }
+                // The activity shell supplies a generous scroll viewport. The
+                // centered game canvas uses it instead of leaving a large dead
+                // zone beneath a tiny 5×5 board.
+                .frame(minHeight: 430)
             }
         }
         .onAppear(perform: load)
@@ -274,7 +283,7 @@ struct PicrossActivityView: View {
                 HStack(alignment: .bottom, spacing: 4) {
                     Color.clear.frame(width: clueWidth, height: 40)
                     ForEach(0..<size, id: \.self) { column in
-                        VStack(spacing: 0) {
+                        VStack(spacing: 3) {
                             ForEach(Array(columnClues[column].enumerated()), id: \.offset) { item in
                                 Text("\(item.element)")
                             }
@@ -288,9 +297,13 @@ struct PicrossActivityView: View {
 
                 ForEach(0..<size, id: \.self) { row in
                     HStack(spacing: 4) {
-                        Text(rowClues[row].map { String($0) }.joined(separator: " "))
-                            .font(StillTypography.footnote.monospacedDigit())
-                            .foregroundStyle(game.isRowSatisfied(row) ? StillTheme.textTertiary : StillTheme.textPrimary)
+                        HStack(spacing: 6) {
+                            ForEach(Array(rowClues[row].enumerated()), id: \.offset) { clue in
+                                Text("\(clue.element)")
+                            }
+                        }
+                        .font(StillTypography.footnote.monospacedDigit())
+                        .foregroundStyle(game.isRowSatisfied(row) ? StillTheme.textTertiary : StillTheme.textPrimary)
                             .frame(width: clueWidth, height: cellWidth, alignment: .trailing)
                             .accessibilityLabel("Row \(row + 1) clue \(rowClues[row].map { String($0) }.joined(separator: " "))")
                         ForEach(0..<size, id: \.self) { column in

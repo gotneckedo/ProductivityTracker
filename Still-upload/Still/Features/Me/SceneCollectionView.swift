@@ -50,6 +50,7 @@ struct SceneCollectionView: View {
                             }
                         }
                     }
+                    Color.clear.frame(height: 1).id("scenes-midpoint")
 
                     if appState.container.flags.seasonalPurchasesPreview {
                         seasonalSection(preset: preset)
@@ -72,6 +73,8 @@ struct SceneCollectionView: View {
                             DispatchQueue.main.async { proxy.scrollTo("scenes-bottom", anchor: .bottom) }
                         } else if DemoLaunch.requestedScreen == "scenes-seasonal" {
                             DispatchQueue.main.async { proxy.scrollTo("seasonal-rooms", anchor: .top) }
+                        } else if DemoLaunch.shouldScrollToMidpoint("scenes") {
+                            DispatchQueue.main.async { proxy.scrollTo("scenes-midpoint", anchor: .top) }
                         }
                         #endif
                     }
@@ -80,6 +83,8 @@ struct SceneCollectionView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
+        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .onAppear { appState.acknowledgeUnlockedScenes() }
         .task {
             guard appState.container.flags.seasonalPurchasesPreview else { return }

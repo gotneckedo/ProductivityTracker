@@ -121,6 +121,16 @@ jobs:
             echo "Captured $2"
           }
 
+          # These midpoint captures show the status-bar material fade against
+          # real scrolled content; they are separate from the bottom-clearance
+          # captures so neither proof relies on an inferred scroll position.
+          shoot_midpoint() {
+            xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" -still-scroll-midpoint "$1" > /dev/null
+            sleep 12
+            xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
+            echo "Captured $2"
+          }
+
           xcrun simctl ui "$UDID" appearance light
           n=1
           for screen in onboarding home calm active complete break sudoku wordsearch picross picross-320 breathing read doodle journal tasks timeline presets gallery morning me scenes card; do
@@ -130,6 +140,11 @@ jobs:
 
           for screen in home break journal me; do
             shoot_bottom "$screen" "$(printf '%02d' $n)-$screen-bottom"
+            n=$((n + 1))
+          done
+
+          for screen in break journal me scenes; do
+            shoot_midpoint "$screen" "$(printf '%02d' $n)-$screen-midpoint"
             n=$((n + 1))
           done
 
@@ -146,6 +161,10 @@ jobs:
           shoot_bottom "scenes-all" "$(printf '%02d' $n)-scenes-all-bottom"
           n=$((n + 1))
           shoot_bottom "read" "$(printf '%02d' $n)-read-bottom"
+          n=$((n + 1))
+          shoot_bottom "sudoku" "$(printf '%02d' $n)-sudoku-bottom"
+          n=$((n + 1))
+          shoot_bottom "card" "$(printf '%02d' $n)-card-bottom"
           n=$((n + 1))
 
           xcrun simctl ui "$UDID" appearance dark

@@ -15,6 +15,7 @@ struct MeView: View {
 
                     StatsSection(stats: appState.stats)
                     BreakUsageSection(stats: appState.stats)
+                    Color.clear.frame(height: 1).id("me-midpoint")
                     scenesSection
                     focusSection
                     dailySection
@@ -33,8 +34,11 @@ struct MeView: View {
                 .stillScrollableViewport()
                 .onAppear {
                     #if DEBUG
-                    guard DemoLaunch.shouldScrollToBottom("me") else { return }
-                    DispatchQueue.main.async { proxy.scrollTo("me-bottom", anchor: .bottom) }
+                    if DemoLaunch.shouldScrollToBottom("me") {
+                        DispatchQueue.main.async { proxy.scrollTo("me-bottom", anchor: .bottom) }
+                    } else if DemoLaunch.shouldScrollToMidpoint("me") {
+                        DispatchQueue.main.async { proxy.scrollTo("me-midpoint", anchor: .top) }
+                    }
                     #endif
                 }
             }

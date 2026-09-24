@@ -262,10 +262,10 @@ struct PicrossActivityView: View {
                     Spacer(minLength: 0)
                 }
                 // `availableSize` is owned by the activity shell, rather than
-                // an unconstrained scroll child. It provides a real vertical
-                // viewport, so the small puzzle sits calmly in the middle of
-                // the activity instead of floating at its top.
-                .frame(minHeight: max(430, availableSize.height - 150), alignment: .center)
+                // an unconstrained scroll child. Filling that finite region
+                // gives the balanced spacers room to center the compact board
+                // between the fixed header and the floating tab bar.
+                .frame(height: max(430, availableSize.height), alignment: .center)
             }
         }
         .onAppear(perform: load)

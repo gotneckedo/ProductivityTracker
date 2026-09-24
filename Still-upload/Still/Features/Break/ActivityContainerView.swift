@@ -22,21 +22,21 @@ struct ActivityContainerView: View {
     var body: some View {
         let startedAt = usage?.startedAt ?? Date()
         StillScreen {
-            VStack(spacing: 0) {
-                ActivityHeader(
-                    title: activity?.name ?? "Activity",
-                    startedAt: startedAt,
-                    duration: activity?.estimatedDuration ?? 60,
-                    showsRemainingTime: activity?.category != .puzzle && activityID != .boxBreathing,
-                    isFinished: outcome != nil,
-                    onBack: backToBreak,
-                    onDone: done
-                )
-                ScrollViewReader { proxy in
-                    GeometryReader { viewport in
+            GeometryReader { screenViewport in
+                VStack(spacing: 0) {
+                    ActivityHeader(
+                        title: activity?.name ?? "Activity",
+                        startedAt: startedAt,
+                        duration: activity?.estimatedDuration ?? 60,
+                        showsRemainingTime: activity?.category != .puzzle && activityID != .boxBreathing,
+                        isFinished: outcome != nil,
+                        onBack: backToBreak,
+                        onDone: done
+                    )
+                    ScrollViewReader { proxy in
                         ScrollView {
                             VStack(spacing: 0) {
-                                activityBody(startedAt: startedAt, availableSize: viewport.size)
+                                activityBody(startedAt: startedAt, availableSize: activityViewport(in: screenViewport.size))
                                 Color.clear.frame(height: 1).id("activity-bottom")
                             }
                             .padding(.horizontal, StillTheme.Spacing.screen)
@@ -52,15 +52,15 @@ struct ActivityContainerView: View {
                             #endif
                         }
                     }
-                }
-                if let outcome {
-                    ActivityFinishedPanel(
-                        title: finishedTitle(outcome),
-                        message: finishedMessage(outcome),
-                        onFocus: { appState.returnToFocusFromActivity() },
-                        onShelf: { appState.returnToShelf() }
-                    )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    if let outcome {
+                        ActivityFinishedPanel(
+                            title: finishedTitle(outcome),
+                            message: finishedMessage(outcome),
+                            onFocus: { appState.returnToFocusFromActivity() },
+                            onShelf: { appState.returnToShelf() }
+                        )
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
                 }
             }
         }
@@ -100,6 +100,16 @@ struct ActivityContainerView: View {
         default:
             EmptyState(symbol: "questionmark.circle", title: "Not available", message: "This activity isn't part of this version.")
         }
+    }
+
+    /// This region sits below the fixed header and above the floating tab bar.
+    /// Passing a finite size prevents a puzzle from receiving the effectively
+    /// unbounded vertical proposal of a ScrollView.
+    private func activityViewport(in screenSize: CGSize) -> CGSize {
+        CGSize(
+            width: max(0, screenSize.width - (StillTheme.Spacing.screen * 2)),
+            height: max(0, screenSize.height - 132 - StillTheme.Viewport.floatingTabBarClearance)
+        )
     }
 
     // MARK: Actions

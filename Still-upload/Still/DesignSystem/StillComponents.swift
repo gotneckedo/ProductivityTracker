@@ -21,6 +21,32 @@ struct StillScreen<Content: View>: View {
             resolvedPhase.gradient.ignoresSafeArea()
             content
         }
+        // The status fade belongs to the full screen, not an individual
+        // ScrollView. Scrolled labels therefore disappear before they meet
+        // the system clock on roots and pushed routes alike.
+        .overlay(alignment: .top) {
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(resolvedPhase.gradient)
+                    .overlay(Rectangle().fill(.ultraThinMaterial).opacity(0.42))
+                    .frame(height: StillTheme.Viewport.statusBarChromeHeight)
+                Rectangle()
+                    .fill(resolvedPhase.gradient)
+                    .overlay(Rectangle().fill(.ultraThinMaterial).opacity(0.42))
+                    .mask(
+                        LinearGradient(
+                            colors: [.black, .black.opacity(0.72), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(height: StillTheme.Viewport.topFadeHeight - StillTheme.Viewport.statusBarChromeHeight)
+            }
+            .frame(height: StillTheme.Viewport.topFadeHeight)
+            .ignoresSafeArea(edges: .top)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
         .environment(\.stillDayPhase, resolvedPhase)
         .tint(resolvedPhase.accent)
         .preferredColorScheme(resolvedPhase == .night || resolvedPhase == .focus ? .dark : .light)
@@ -77,26 +103,6 @@ struct StillScrollViewport: ViewModifier {
                 .bottom,
                 reservesFloatingTabBar ? StillTheme.Viewport.floatingTabBarClearance : StillTheme.Viewport.standardBottomClearance
             )
-            // A short phase-aware material fade is deliberately overlaid on
-            // the scroll viewport. Its opaque top masks scrolled labels before
-            // they reach the status clock, then it dissolves them back into
-            // the content instead of leaving readable text under the chrome.
-            .overlay(alignment: .top) {
-                ZStack {
-                    Rectangle().fill(resolvedPhase.gradient)
-                    Rectangle().fill(.ultraThinMaterial).opacity(0.38)
-                }
-                    .mask(
-                        LinearGradient(
-                            colors: [.black, .black.opacity(0.94), .black.opacity(0.58), .clear],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .frame(height: StillTheme.Viewport.topFadeHeight)
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
-            }
     }
 }
 

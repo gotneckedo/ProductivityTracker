@@ -8,12 +8,12 @@ struct SceneCollectionView: View {
     @State private var supporterProducts: [SupporterProduct] = []
     @State private var purchasedProductIDs: Set<String> = []
 
-    /// Zero minimums let the grid derive its width from the phone rather than a
-    /// long scene title. A compact landscape always wraps instead of escaping
-    /// the right edge.
+    /// The collection stays inside the screen's horizontal padding. Flexible
+    /// columns, rather than card widths, leave equal space on both edges on
+    /// every iPhone width and Dynamic Type size.
     private let columns = [
-        GridItem(.flexible(minimum: 0), spacing: StillTheme.Spacing.s),
-        GridItem(.flexible(minimum: 0), spacing: StillTheme.Spacing.s)
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
     ]
 
     var body: some View {
@@ -33,7 +33,7 @@ struct SceneCollectionView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    LazyVGrid(columns: columns, alignment: .leading, spacing: StillTheme.Spacing.l) {
+                    LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(SceneCatalog.all) { scene in
                             SceneCard(
                                 scene: scene,
@@ -61,8 +61,11 @@ struct SceneCollectionView: View {
                 }
                 .onAppear {
                     #if DEBUG
-                    guard DemoLaunch.shouldScrollToBottom("scenes-all") else { return }
-                    DispatchQueue.main.async { proxy.scrollTo("scenes-bottom", anchor: .bottom) }
+                    if DemoLaunch.shouldScrollToBottom("scenes-all") {
+                        DispatchQueue.main.async { proxy.scrollTo("scenes-bottom", anchor: .bottom) }
+                    } else if DemoLaunch.requestedScreen == "scenes-seasonal" {
+                        DispatchQueue.main.async { proxy.scrollTo("seasonal-rooms", anchor: .top) }
+                    }
                     #endif
                 }
             }
@@ -86,7 +89,7 @@ struct SceneCollectionView: View {
                 )
                 PreviewTag()
             }
-            LazyVGrid(columns: columns, alignment: .leading, spacing: StillTheme.Spacing.l) {
+            LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(SceneCatalog.seasonal) { scene in
                     let entitled = scene.entitlementKey.map(purchasedProductIDs.contains) ?? true
                     SceneCard(
@@ -105,6 +108,7 @@ struct SceneCollectionView: View {
                 }
             }
         }
+        .id("seasonal-rooms")
     }
 
     private var supporterSection: some View {

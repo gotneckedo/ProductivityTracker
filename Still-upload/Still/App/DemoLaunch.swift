@@ -7,8 +7,9 @@ import Foundation
 ///   xcrun simctl launch booted com.cocomedia.still -still-demo home
 ///
 /// Screens: onboarding, home, calm, active, complete, break, sudoku, wordsearch,
-/// picross, breathing, read, me, scenes, card, journal, presets, tasks,
-/// timeline, doodle, gallery, morning, calendar-settings, get-card.
+/// picross, breathing, read, me, scenes, scenes-all, scenes-seasonal, card,
+/// journal, presets, tasks, timeline, doodle, gallery, morning,
+/// calendar-settings, get-card.
 enum DemoLaunch {
     static let argument = "-still-demo"
     static let scrollBottomArgument = "-still-scroll-bottom"
@@ -58,6 +59,10 @@ enum DemoLaunch {
         case "scenes":
             return routed(.sceneCollection)
         case "scenes-all":
+            let state = PreviewSupport.appState(populated: true, completedSessions: 30)
+            state.router.go(to: .sceneCollection)
+            return state
+        case "scenes-seasonal":
             let state = PreviewSupport.appState(populated: true, completedSessions: 30)
             state.router.go(to: .sceneCollection)
             return state

@@ -124,6 +124,23 @@ final class PuzzleTests: XCTestCase {
         XCTAssertFalse(game.erase(), "finished puzzles are read-only")
     }
 
+    func testSudokuDigitCompletesOnlyAfterSixPlacements() {
+        var game = SudokuGame(puzzle: BundledPuzzleLibrary.sudoku6)
+        let digit = 1
+        XCTAssertLessThan(game.placedCount(of: digit), game.puzzle.size)
+        XCTAssertFalse(game.isDigitComplete(digit), "Fresh keypad digits stay at full contrast")
+
+        for index in game.puzzle.givens.indices where game.placedCount(of: digit) < game.puzzle.size {
+            guard !game.puzzle.isGiven(index) else { continue }
+            game.select(index)
+            XCTAssertTrue(game.enter(digit))
+        }
+
+        XCTAssertEqual(game.placedCount(of: digit), game.puzzle.size)
+        XCTAssertTrue(game.isDigitComplete(digit), "Only the sixth placed instance retires the digit")
+        XCTAssertFalse(game.isDigitComplete(2), "Other keypad digits remain available")
+    }
+
     func testBundledPicrossIsUnique() {
         let puzzle = BundledPuzzleLibrary.sprout
         XCTAssertEqual(puzzle.size, 5)

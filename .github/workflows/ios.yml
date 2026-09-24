@@ -138,6 +138,11 @@ jobs:
           # bottom proves the complete bundled-book shelf is present.
           shoot "scenes-all" "$(printf '%02d' $n)-scenes-all"
           n=$((n + 1))
+          # This view opens at the seasonal section, completing the two-screen
+          # proof of the full core + seasonal collection without a horizontal
+          # carousel or clipped right-hand column.
+          shoot "scenes-seasonal" "$(printf '%02d' $n)-scenes-seasonal"
+          n=$((n + 1))
           shoot_bottom "scenes-all" "$(printf '%02d' $n)-scenes-all-bottom"
           n=$((n + 1))
           shoot_bottom "read" "$(printf '%02d' $n)-read-bottom"

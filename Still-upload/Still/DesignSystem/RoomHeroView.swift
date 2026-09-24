@@ -172,8 +172,11 @@ private enum RoomArtwork {
                      dimmed: Bool, plantStage: PlantGrowthStage, bookCount: Int, doodle: PixelDoodle?,
                      placedObjects: [RoomPlacement]) {
         let palette = Palette(phase: phase, sceneName: sceneName)
-        drawSlab(context: &context, palette: palette)
+        // The room is a complete corner: two opaque wall planes and a floor.
+        // All lighting is painted into those planes before furniture arrives,
+        // so it reads as light in the room rather than an oval on top of it.
         drawWalls(context: &context, palette: palette)
+        drawFloor(context: &context, palette: palette)
         switch sceneID {
         case .rainyBedroom, .autumnWindow, .snowDay:
             drawRainyBedroom(context: &context, palette: palette, time: time, motion: !dimmed, plantStage: plantStage, bookCount: bookCount)
@@ -192,15 +195,49 @@ private enum RoomArtwork {
         drawPlacedObjects(context: &context, palette: palette, placements: placedObjects, time: time, motion: !dimmed)
     }
 
-    private static func drawSlab(context: inout GraphicsContext, palette: Palette) {
-        polygon(&context, [iso(0, 0, 0), iso(60, 0, 0), iso(60, 60, 0), iso(0, 60, 0)], palette.floor)
+    private static func drawFloor(context: inout GraphicsContext, palette: Palette) {
+        let floorPoints = [iso(0, 0, 0), iso(60, 0, 0), iso(60, 60, 0), iso(0, 60, 0)]
+        let floorPath = shapePath(floorPoints)
+        context.fill(floorPath, with: .color(palette.floor))
+        let light = iso(40, 18, 0.1)
+        context.drawLayer { layer in
+            layer.clip(to: floorPath)
+            layer.fill(
+                Path(CGRect(x: light.x - 34, y: light.y - 25, width: 68, height: 52)),
+                with: .radialGradient(
+                    Gradient(colors: [palette.lampGlow.opacity(0.34), palette.lampGlow.opacity(0.10), .clear]),
+                    center: light,
+                    startRadius: 1,
+                    endRadius: 34
+                )
+            )
+        }
         polygon(&context, [iso(0, 60, 0), iso(60, 60, 0), iso(60, 60, -8), iso(0, 60, -8)], palette.slabRight)
         polygon(&context, [iso(60, 0, 0), iso(60, 60, 0), iso(60, 60, -8), iso(60, 0, -8)], palette.slabLeft)
     }
 
     private static func drawWalls(context: inout GraphicsContext, palette: Palette) {
-        polygon(&context, [iso(0, 0, 0), iso(60, 0, 0), iso(60, 0, 44), iso(0, 0, 44)], palette.wallLeft)
-        polygon(&context, [iso(60, 0, 0), iso(60, 60, 0), iso(60, 60, 44), iso(60, 0, 44)], palette.wallRight)
+        let backWall = shapePath([iso(0, 0, 0), iso(60, 0, 0), iso(60, 0, 44), iso(0, 0, 44)])
+        let sideWall = shapePath([iso(60, 0, 0), iso(60, 60, 0), iso(60, 60, 44), iso(60, 0, 44)])
+        context.fill(backWall, with: .color(palette.wallLeft))
+        context.fill(sideWall, with: .color(palette.wallRight))
+
+        // The warm pool rises behind the lamp. Clipping keeps both wall planes
+        // solid and makes the falloff part of the architecture, not a screen-
+        // space translucent layer.
+        let light = iso(40, 0, 25)
+        context.drawLayer { layer in
+            layer.clip(to: backWall)
+            layer.fill(
+                Path(CGRect(x: light.x - 38, y: light.y - 34, width: 76, height: 68)),
+                with: .radialGradient(
+                    Gradient(colors: [palette.lampGlow.opacity(0.40), palette.lampGlow.opacity(0.12), .clear]),
+                    center: light,
+                    startRadius: 1,
+                    endRadius: 38
+                )
+            )
+        }
         line(&context, iso(0, 0, 0), iso(60, 0, 0), out, width: 1)
         line(&context, iso(60, 0, 0), iso(60, 60, 0), out, width: 1)
         line(&context, iso(60, 0, 0), iso(60, 0, 44), out, width: 1)
@@ -304,8 +341,6 @@ private enum RoomArtwork {
             top: palette.wood, left: palette.woodShade, right: palette.woodShade)
         box(&context, x: 29, y: 21, z: 16, width: 10, depth: 3, height: 8,
             top: palette.wallRight, left: palette.wallLeft, right: palette.wallRight)
-        context.fill(Path(ellipseIn: CGRect(x: 102, y: 53, width: 38, height: 27)),
-                     with: .color(palette.lampGlow.opacity(motion ? 0.17 + 0.04 * sin(time) : 0.18)))
         box(&context, x: 43, y: 22, z: 17, width: 1, depth: 1, height: 9,
             top: out, left: out, right: out)
         box(&context, x: 40, y: 20, z: 26, width: 7, depth: 5, height: 3,
@@ -349,7 +384,6 @@ private enum RoomArtwork {
             let z = 19.0 + Double(index / 3) * 2.0
             box(&context, x: x, y: 9, z: z, width: 1.5, depth: 4, height: 3, top: index.isMultiple(of: 2) ? palette.book : palette.bookAlt, left: palette.book, right: palette.bookAlt)
         }
-        context.fill(Path(ellipseIn: CGRect(x: 105, y: 47, width: 34, height: 26)), with: .color(palette.lampGlow.opacity(motion ? 0.20 + 0.05 * sin(time * 0.8) : 0.18)))
         box(&context, x: 40, y: 16, z: 18, width: 1, depth: 1, height: 9, top: out, left: out, right: out)
         box(&context, x: 37, y: 14, z: 27, width: 7, depth: 5, height: 3, top: palette.lamp, left: palette.lamp, right: palette.lamp)
         box(&context, x: 33, y: 17, z: 19, width: 3, depth: 3, height: 2, top: palette.mug, left: palette.mug, right: palette.mug)
@@ -487,12 +521,17 @@ private enum RoomArtwork {
         CGPoint(x: 80 + (x - y), y: 54 + (x + y) / 2 - z)
     }
 
-    private static func polygon(_ context: inout GraphicsContext, _ points: [CGPoint], _ color: Color) {
-        guard let first = points.first else { return }
+    private static func shapePath(_ points: [CGPoint]) -> Path {
+        guard let first = points.first else { return Path() }
         var path = Path()
         path.move(to: first)
         for point in points.dropFirst() { path.addLine(to: point) }
         path.closeSubpath()
+        return path
+    }
+
+    private static func polygon(_ context: inout GraphicsContext, _ points: [CGPoint], _ color: Color) {
+        let path = shapePath(points)
         context.fill(path, with: .color(color))
     }
 

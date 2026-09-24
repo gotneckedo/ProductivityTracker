@@ -122,16 +122,19 @@ struct SudokuActivityView: View {
     private func numberPad(_ game: SudokuGame) -> some View {
         HStack(spacing: StillTheme.Spacing.xs) {
             ForEach(1...game.puzzle.size, id: \.self) { number in
-                let isUsed = game.placedCount(of: number) >= game.puzzle.size
+                let isUsed = game.isDigitComplete(number)
                 Button {
                     update(recordingMove: true) { _ = $0.enter(number) }
                 } label: {
                     Text("\(number)")
-                        .font(StillTypography.title3)
-                        .foregroundStyle(style.accentColor(for: resolvedPhase))
+                        .font(StillTypography.title3.weight(.semibold))
+                        .foregroundStyle(isUsed ? StillTheme.textTertiary : resolvedPhase.ink)
                         .frame(maxWidth: .infinity, minHeight: 48)
-                        .background(Capsule(style: .continuous).fill(.ultraThinMaterial))
-                        .overlay(Capsule(style: .continuous).fill(resolvedPhase.glassFill))
+                        // Backgrounds sit behind the digit. The prior overlay
+                        // order painted glass over every label, making a fresh
+                        // keypad look disabled before any six-count was met.
+                        .background(Capsule(style: .continuous).fill(resolvedPhase.glassFill))
+                        .background(.ultraThinMaterial, in: Capsule(style: .continuous))
                         .overlay(Capsule(style: .continuous).strokeBorder(resolvedPhase.glassBorder, lineWidth: StillTheme.Stroke.hairline))
                         .opacity(isUsed ? 0.32 : 1)
                 }

@@ -210,7 +210,7 @@ private struct SceneCard: View {
                         .background(Circle().fill(StillTheme.Palette.navyShadow.opacity(0.82)))
                 }
             }
-            .aspectRatio(160.0 / 132.0, contentMode: .fit)
+            .aspectRatio(RoomHeroView.artworkAspectRatio, contentMode: .fit)
             .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)

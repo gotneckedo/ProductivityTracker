@@ -105,9 +105,10 @@ struct ActiveFocusView: View {
                         plantStage: appState.plantStage,
                         bookCount: 2 + appState.books.count,
                         doodle: appState.doodles.max { $0.updatedAt < $1.updatedAt }?.doodle,
-                        placedObjects: appState.placedRoomObjects(in: scene.id)
+                        placedObjects: appState.placedRoomObjects(in: scene.id),
+                        showsControls: false
                     )
-                    .aspectRatio(160.0 / 132.0, contentMode: .fit)
+                    .aspectRatio(RoomHeroView.artworkAspectRatio, contentMode: .fit)
 
                     StillCard(padding: StillTheme.Spacing.l, phase: .focus) {
                         VStack(spacing: StillTheme.Spacing.s) {

@@ -232,7 +232,7 @@ private struct SceneChoice: View {
                     plantStage: .full,
                     showsControls: false
                 )
-                    .frame(width: 112, height: 100)
+                    .frame(width: 112, height: 112)
                     .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)

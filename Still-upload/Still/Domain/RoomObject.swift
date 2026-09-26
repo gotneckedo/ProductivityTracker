@@ -43,9 +43,9 @@ enum RoomObjectRenderKey: String, Codable, Hashable {
     case pencilCup, tinyClock, ceramicBird, paperStars, wateringCan
     case floorCushion, pinboard, radio, candle, telescope
 
-    /// Original 32px sprite authored in `Tools/generate_still_sprites.py`.
-    /// Keeping this key beside the code-drawn fallback lets every catalog item
-    /// render safely even if an asset is ever absent from a development build.
+    /// Supplied original pixel sprite extracted from the alpha-bounded
+    /// collectible sheet. Keeping this key beside the code-drawn fallback lets
+    /// every catalog item render safely even if an asset is absent in development.
     var spriteAssetName: String {
         switch self {
         case .trailingPlant: return "StillObjectTrailingPlant"
@@ -156,7 +156,9 @@ enum RoomObjectCatalog {
         object(.tinyClock, "Tiny clock", "A clock with no ticking sound.", .shelf, .completedActivities(5), .tinyClock),
         object(.wateringCan, "Watering can", "A little can for the windowsill.", .windowsill, .triedActivities(5), .wateringCan),
         object(.pinboard, "Class pinboard", "A place for a short study note.", .wall, .triedCategory(.puzzle), .pinboard),
-        object(.catBed, "Empty cat bed", "A soft round bed, with no character attached.", .floorCorner, .triedEveryActivity, .catBed)
+        // Preserve the stable legacy identifier while naming the supplied
+        // twentieth sprite honestly: it is a small cup, not a cat bed.
+        object(.catBed, "Tea cup", "A small cup for a quiet break.", .desk, .triedEveryActivity, .catBed)
         ]
         return values.enumerated().map { index, value in
             var copy = value

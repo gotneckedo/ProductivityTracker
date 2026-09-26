@@ -30,9 +30,10 @@ struct FocusHomeView: View {
                                 onNext: { cycleScene(from: preset, direction: 1) },
                                 // Object targets remain 44pt and fully named for VoiceOver,
                                 // but no persistent labels sit on top of the authored room art.
-                                onRoomTarget: open
+                                onRoomTarget: open,
+                                showsControls: false
                             )
-                            .aspectRatio(160.0 / 132.0, contentMode: .fit)
+                            .aspectRatio(RoomHeroView.artworkAspectRatio, contentMode: .fit)
 
                             focusActionCard(preset: preset)
                                 .padding(.horizontal, StillTheme.Spacing.xs)

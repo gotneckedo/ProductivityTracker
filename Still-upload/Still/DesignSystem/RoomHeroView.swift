@@ -1,10 +1,15 @@
 import SwiftUI
 import UIKit
 
-/// The room is Still's one hero object. It renders Still's original 160×132
-/// raster sprites first and retains a code-drawn fallback on the same grid.
+/// The room is Still's one hero object. It renders the supplied 512×512
+/// raster sprites first and retains a code-drawn fallback behind the same seam.
 /// Motion is limited to lamp warmth, rain, steam, dust, and leaves.
 struct RoomHeroView: View {
+    /// The externally authored room bases share a square transparent canvas.
+    /// Keeping this as one public contract prevents individual screens from
+    /// stretching the pixel art to an obsolete temporary-art ratio.
+    static let artworkAspectRatio: CGFloat = 1
+
     let sceneName: String
     var sceneID: SceneID = .rainyBedroom
     var catCoat: CatCoat = .ginger
@@ -39,12 +44,6 @@ struct RoomHeroView: View {
 
     var body: some View {
         ZStack {
-            Circle()
-                .fill(RadialGradient(colors: [resolvedPhase.roomHalo, .clear], center: .center, startRadius: 2, endRadius: 130))
-                .blur(radius: 18)
-                .scaleEffect(x: 1.25, y: 0.78)
-                .accessibilityHidden(true)
-
             Ellipse()
                 .fill(Color.black.opacity(dimmed ? 0.28 : 0.12))
                 .blur(radius: 13)
@@ -55,7 +54,7 @@ struct RoomHeroView: View {
                 .offset(y: 52)
                 .accessibilityHidden(true)
 
-            RoomMotes(phase: resolvedPhase, dimmed: dimmed)
+            RoomMotes(sceneID: sceneID, phase: resolvedPhase, dimmed: dimmed)
                 .accessibilityHidden(true)
 
             SpriteFirstRoomSurface(
@@ -69,7 +68,7 @@ struct RoomHeroView: View {
                 placedObjects: placedObjects,
                 reduceMotion: reduceMotion
             )
-            .aspectRatio(160.0 / 132.0, contentMode: .fit)
+            .aspectRatio(Self.artworkAspectRatio, contentMode: .fit)
             .offset(y: reduceMotion ? 0 : (isFloating ? -3 : 2))
 
             GeometryReader { proxy in
@@ -94,7 +93,7 @@ struct RoomHeroView: View {
             }
 
             if let onRoomTarget {
-                RoomHotspotOverlay(action: onRoomTarget)
+                RoomHotspotOverlay(sceneID: sceneID, action: onRoomTarget)
             }
 
             if showsControls {
@@ -150,14 +149,7 @@ struct RoomHeroView: View {
     }
 
     private func catPosition(in size: CGSize) -> CGPoint {
-        switch catState {
-        case .focus, .sleeping, .complete:
-            return CGPoint(x: size.width * 0.53, y: size.height * 0.68)
-        case .breakTime:
-            return CGPoint(x: size.width * 0.77, y: size.height * 0.47)
-        case .idle, .morning:
-            return CGPoint(x: size.width * 0.33, y: size.height * 0.62)
-        }
+        SpriteRoomLayout.forScene(sceneID).catPosition(for: catState, in: size)
     }
 
     private func reactToCat() {
@@ -188,13 +180,69 @@ struct RoomHeroView: View {
     }
 }
 
+/// Overlay anchors are re-derived from the supplied square 512px room bases.
+/// Values are normalized so the same data works at every Dynamic Type size and
+/// do not impose a second pixel grid on the authored artwork.
+private struct SpriteRoomLayout {
+    let idleCat: CGPoint
+    let focusCat: CGPoint
+    let breakCat: CGPoint
+    let lamp: CGPoint
+    let hotspots: [RoomHotspot: CGPoint]
+
+    static func forScene(_ id: SceneID) -> Self {
+        switch id {
+        case .libraryLight:
+            return Self(idleCat: CGPoint(x: 0.70, y: 0.71), focusCat: CGPoint(x: 0.66, y: 0.72), breakCat: CGPoint(x: 0.72, y: 0.57), lamp: CGPoint(x: 0.83, y: 0.50), hotspots: standardHotspots(desk: .init(x: 0.66, y: 0.63), shelf: .init(x: 0.28, y: 0.38), calendar: .init(x: 0.73, y: 0.41), plant: .init(x: 0.22, y: 0.39), window: .init(x: 0.58, y: 0.37)))
+        case .trainWindow:
+            return Self(idleCat: CGPoint(x: 0.69, y: 0.69), focusCat: CGPoint(x: 0.65, y: 0.70), breakCat: CGPoint(x: 0.50, y: 0.58), lamp: CGPoint(x: 0.60, y: 0.32), hotspots: standardHotspots(desk: .init(x: 0.50, y: 0.65), shelf: .init(x: 0.72, y: 0.34), calendar: .init(x: 0.72, y: 0.31), plant: .init(x: 0.72, y: 0.34), window: .init(x: 0.34, y: 0.34)))
+        case .nightCity:
+            return Self(idleCat: CGPoint(x: 0.31, y: 0.72), focusCat: CGPoint(x: 0.40, y: 0.73), breakCat: CGPoint(x: 0.70, y: 0.57), lamp: CGPoint(x: 0.63, y: 0.54), hotspots: standardHotspots(desk: .init(x: 0.62, y: 0.61), shelf: .init(x: 0.76, y: 0.35), calendar: .init(x: 0.26, y: 0.40), plant: .init(x: 0.73, y: 0.35), window: .init(x: 0.37, y: 0.35)))
+        case .autumnWindow:
+            return bedroom(idleCat: .init(x: 0.62, y: 0.72), focusCat: .init(x: 0.67, y: 0.73), lamp: .init(x: 0.29, y: 0.52))
+        case .snowDay:
+            return bedroom(idleCat: .init(x: 0.64, y: 0.72), focusCat: .init(x: 0.67, y: 0.73), lamp: .init(x: 0.68, y: 0.55))
+        case .springRain:
+            return bedroom(idleCat: .init(x: 0.66, y: 0.72), focusCat: .init(x: 0.65, y: 0.73), lamp: .init(x: 0.68, y: 0.55))
+        default:
+            return bedroom(idleCat: .init(x: 0.62, y: 0.72), focusCat: .init(x: 0.66, y: 0.73), lamp: .init(x: 0.68, y: 0.55))
+        }
+    }
+
+    private static func bedroom(idleCat: CGPoint, focusCat: CGPoint, lamp: CGPoint) -> Self {
+        Self(idleCat: idleCat, focusCat: focusCat, breakCat: .init(x: 0.77, y: 0.61), lamp: lamp,
+             hotspots: standardHotspots(desk: .init(x: 0.67, y: 0.60), shelf: .init(x: 0.76, y: 0.34), calendar: .init(x: 0.26, y: 0.42), plant: .init(x: 0.79, y: 0.37), window: .init(x: 0.39, y: 0.35)))
+    }
+
+    private static func standardHotspots(desk: CGPoint, shelf: CGPoint, calendar: CGPoint, plant: CGPoint, window: CGPoint) -> [RoomHotspot: CGPoint] {
+        [.desk: desk, .shelf: shelf, .calendar: calendar, .plant: plant, .window: window]
+    }
+
+    func catPosition(for state: CatRoomState, in size: CGSize) -> CGPoint {
+        let normalized: CGPoint
+        switch state {
+        case .focus, .sleeping, .complete: normalized = focusCat
+        case .breakTime: normalized = breakCat
+        case .idle, .morning: normalized = idleCat
+        }
+        return CGPoint(x: size.width * normalized.x, y: size.height * normalized.y)
+    }
+}
+
 private struct RoomMotes: View {
+    let sceneID: SceneID
     let phase: StillDayPhase
     let dimmed: Bool
 
     var body: some View {
         GeometryReader { proxy in
-            let points: [(CGFloat, CGFloat, CGFloat)] = [(0.19, 0.44, 2), (0.76, 0.30, 1.5), (0.84, 0.64, 2), (0.28, 0.24, 1)]
+            let lamp = SpriteRoomLayout.forScene(sceneID).lamp
+            let points: [(CGFloat, CGFloat, CGFloat)] = [
+                (lamp.x - 0.06, lamp.y - 0.04, 1.5),
+                (lamp.x + 0.05, lamp.y - 0.08, 2),
+                (lamp.x + 0.08, lamp.y + 0.04, 1.5),
+                (lamp.x - 0.10, lamp.y + 0.08, 1)
+            ]
             ForEach(Array(points.enumerated()), id: \.offset) { _, point in
                 Circle()
                     .fill(phase.roomHalo.opacity(dimmed ? 0.32 : 0.62))
@@ -244,10 +292,12 @@ enum RoomHotspot: String, CaseIterable, Identifiable {
 }
 
 private struct RoomHotspotOverlay: View {
+    let sceneID: SceneID
     let action: (RoomHotspot) -> Void
 
     var body: some View {
         GeometryReader { proxy in
+            let layout = SpriteRoomLayout.forScene(sceneID)
             ForEach(RoomHotspot.allCases) { hotspot in
                 Button { action(hotspot) } label: {
                     Color.clear
@@ -260,8 +310,10 @@ private struct RoomHotspotOverlay: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(hotspot.title)
                 .accessibilityHint(hotspot.hint)
-                .position(x: proxy.size.width * hotspot.normalizedPosition.x,
-                          y: proxy.size.height * hotspot.normalizedPosition.y)
+                .position(
+                    x: proxy.size.width * (layout.hotspots[hotspot] ?? hotspot.normalizedPosition).x,
+                    y: proxy.size.height * (layout.hotspots[hotspot] ?? hotspot.normalizedPosition).y
+                )
             }
         }
     }
@@ -325,6 +377,7 @@ private struct SpriteRoomObjectOverlay: View {
                     Image(assetName)
                         .resizable()
                         .interpolation(.none)
+                        .scaledToFit()
                         .frame(width: size(for: object.slot, in: proxy.size), height: size(for: object.slot, in: proxy.size))
                         .position(position(for: object.slot, in: proxy.size))
                         .accessibilityHidden(true)

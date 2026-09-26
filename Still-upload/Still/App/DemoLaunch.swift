@@ -7,7 +7,7 @@ import Foundation
 ///   xcrun simctl launch booted com.cocomedia.still -still-demo home
 ///
 /// Screens: onboarding, today, setup, home, focus-room, room-library, room-train, room-city,
-/// room-autumn, room-snow, room-spring, sprite-contact-sheet,
+/// room-autumn, room-snow, room-spring, room-sleep, sprite-contact-sheet,
 /// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, complete, break, sudoku, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, timeline, doodle, gallery, morning,
@@ -68,6 +68,11 @@ enum DemoLaunch {
             return focusRoomState(hour: 10, sceneID: .snowDay, stillPlus: true)
         case "room-spring":
             return focusRoomState(hour: 14, sceneID: .springRain, stillPlus: true)
+        case "room-sleep":
+            // The sleep room is reserved for a later DEBUG-only alarm preview;
+            // this direct review route verifies its bundled art without implying
+            // an armable production alarm.
+            return routed(.spriteContactSheet)
         case "cat-morning":
             return focusRoomState(hour: 9)
         case "cat-reaction":

@@ -29,6 +29,24 @@ do **not** claim that the corresponding feature has shipped or passed CI.
 
 ## Master Plan Wave 1 — perspective prerequisite verified
 
+### Supplied 512px room-art replacement — implementation pending CI review
+
+On 26 September 2026, the user supplied eight transparent **512×512** room
+PNGs plus one 5×4 collectible sheet and declared them AI-generated originals
+made for Still from written prompts, not reference-product derivatives. The
+new package replaces the temporary generated room bases and objects in the
+sprite-first renderer without downscaling or repainting the art. The room view
+now uses a square art contract, and cat, hotspot, collectible, and lamp-mote
+anchors are re-derived per supplied scene rather than carrying forward the old
+160×132 coordinates. All 20 objects are extracted from disconnected opaque
+alpha components rather than fixed grid cells.
+
+**Status: implementation only — not yet verified.** The next CI artifact must
+show full-size Rainy Bedroom, Library Light, Train Window, Night City, Autumn
+Window, Snow Day, Spring Rain, and the reserved Sleep room, along with Focus
+idle/running, completion, and the supplied collectible sheet. No completion
+claim for this replacement is made until those named captures are reviewed.
+
 The original perspective-room correction at `a7d7f58` was reviewed again
 through the complete current build at `a6979f7`. The latter adds deterministic
 CI routes for every currently selectable room; it does not claim an alarm-room
@@ -42,7 +60,7 @@ flow, which belongs to the later alarm wave.
 
 **Accepted boundary:** the bundled `still-room-alarmsleep.png` source asset is not yet presented as an armable alarm experience. It requires its own state-machine, DEBUG-only mock-flow, and CI proof in the later alarm wave; no release alarm behavior is implied here.
 
-## Phase 2 — verified sprite-first room checkpoint
+## Phase 2 — verified sprite-first room checkpoint (historical generated-art evidence)
 
 This checkpoint is limited to Phase 2’s original pixel package, sprite-first room seam, accessible object targets, and the evidence route. It does **not** claim the later Phase 2 cat behavior, full Today modes, alarm/wake flow, daily limits, or complete Still+ gating; those remain in progress.
 
@@ -50,7 +68,7 @@ The accepted artifact is `still-screenshots` from [run 36242555096](https://gith
 
 | Requirement | Implementation | Proving capture(s) | Review result |
 |---|---|---|---|
-| **Original 32-color pixel package** | `Tools/generate_still_sprites.py` deterministically creates eight original room bases, starter furniture, 20 collectible object sprites, break/empty-state/card assets, bird, and four six-frame cat coats. The asset catalog retains transparent PNG backgrounds and the policy records provenance. | `04-sprite-contact-sheet.png`, `29-sprite-contact-sheet-bottom.png` | The first capture shows the eight room bases and object package; the lower capture shows the remaining UI assets plus all four cat coats and their six-frame sets. The visible provenance statement confirms assets are generated locally from Still’s checked-in pixel geometry. |
+| **Historical generated 32-color package** | `Tools/generate_still_sprites.py` deterministically created the temporary room bases and objects at this checkpoint, alongside break/empty-state/card assets, bird, and four six-frame cat coats. | `04-sprite-contact-sheet.png`, `29-sprite-contact-sheet-bottom.png` | **Historical only.** The room and collectible portion was superseded on 26 September 2026 by the supplied 512px package recorded above. The fallback seam, cat art, and non-room utility sprites remain relevant. |
 | **Sprite-first Focus room** | `SceneDefinition.spriteAssetName`, `RoomObject.spriteAssetName`, and `SpriteFirstRoomSurface` select authored PNG rooms and object assets with pixel interpolation, retaining a code-drawn fallback for missing assets. Starter furniture is visible from the first room. | `03-focus-room.png` | Rainy Bedroom renders as a crisp pixel room with starter bed, desk, lamp, shelf, plant, window, and cat—without an empty-room reward state. |
 | **Accessible room object targets** | Desk, Bookshelf, Calendar, Plant, and Window retain 44pt targets, VoiceOver labels/hints, and app routes. Persistent visual labels have been removed because they obscured the authored room art; the replacement needs fresh CI proof. | Historical `03-focus-room.png` only | **Not currently accepted as proof.** The historical capture showed labels over the Rainy Bedroom art while the other room captures did not show the same treatment. The next screenshot artifact must verify the native, non-overlay targets and unoccluded art before this row can be closed. |
 | **Core room collection and seasonal seam** | The scene catalog binds the original art to Rainy Bedroom, Library Light, Train Window, Night City, and seasonal rooms; free core rooms remain distinct while seasonal Still+ cosmetics use the honest locked state. | `34-scenes-all.png`, `35-scenes-seasonal.png` | Four core room thumbnails are fully inside the two-column layout with visibly distinct window/light variants. Seasonal cards are visibly locked and described as Still+ cosmetics rather than session-earned digital access. |

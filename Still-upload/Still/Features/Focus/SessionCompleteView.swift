@@ -80,7 +80,7 @@ struct SessionCompleteView: View {
                 placedObjects: appState.placedRoomObjects(in: scene.id),
                 showsControls: false
             )
-            .aspectRatio(160.0 / 132.0, contentMode: .fit)
+            .aspectRatio(RoomHeroView.artworkAspectRatio, contentMode: .fit)
             .frame(maxWidth: .infinity)
             .frame(height: 190)
             .clipped()

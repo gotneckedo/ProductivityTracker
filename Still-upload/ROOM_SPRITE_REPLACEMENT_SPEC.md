@@ -1,97 +1,66 @@
 # Still room sprite replacement contract
 
-**Status:** Room art is frozen pending external replacement PNGs. The app already
-uses a sprite-first renderer, so a conforming file swap requires **no SwiftUI
-layout, anchor, navigation, or scene-model changes**.
+**Status:** The prior temporary 160 × 132 generated-room contract is retired.
+The renderer now accepts the **supplied 512 × 512 transparent pixel-art package**
+without resizing, redrawing, or regenerating it. The sprite-first seam, scene
+keys, navigation, cat behavior, and room interactions remain native SwiftUI.
 
-> Do not run `Tools/generate_still_sprites.py` after placing replacement room
-> art. That historical generator recreates the current room PNGs and would
-> overwrite the replacements. It is retained only as provenance for the old
-> temporary art.
+> Do not run `Tools/generate_still_sprites.py` after placing a replacement. That
+> historical utility recreates the old temporary room package and would overwrite
+> the supplied images. It is retained only as provenance for the retired art.
 
-## 1. Delivery format
+## 1. Current delivery contract
 
 | Requirement | Exact contract |
 |---|---|
 | File type | PNG with alpha (`RGBA`) |
-| Canvas | **160 × 132 px** exactly |
-| Scale | Native **1×** pixel-art canvas; no @2×/@3× files are needed |
-| Origin | `(0, 0)` is the top-left pixel of the exported PNG |
-| Alpha | Keep the exterior/background transparent. The app supplies the halo, room shadow, page background, cat, and optional collectible overlays. |
-| Resampling | Nearest-neighbor only. No antialiasing, blur, JPEG compression, or semi-transparent anti-aliased edge fringe. |
-| Text | Do not bake labels, UI, room names, arrows, pagination dots, or instructions into the art. Those are native accessible controls. |
-| Palette | The replacement can use the approved original Still palette or a newly commissioned original palette. It must not trace, sample, copy, or derive pixels from another app, game, illustration, or sprite sheet. |
+| Canvas | **512 × 512 px** exactly |
+| Scale | Native 1× square pixel-art canvas; the app does not downsample it to the old 160 × 132 format |
+| Origin | `(0, 0)` is the top-left source pixel |
+| Alpha | Preserve the supplied hardened alpha exactly: every pixel is either fully transparent (`0`) or fully opaque (`255`). Do not flatten onto a background. |
+| Resampling | Nearest-neighbor only. No JPEG compression, blur, smoothing, or hand repainting during integration. |
+| Text | Do not bake labels, room names, controls, arrows, pagination dots, or instructions into the art. Those remain native accessible UI. |
+| Runtime treatment | `Image(...).resizable().interpolation(.none).scaledToFit()` inside a **1:1** room frame. |
 
-The runtime loads the room from the asset catalog with `Image(...).resizable()
-.interpolation(.none).scaledToFit()`, inside a fixed **160:132** aspect-ratio
-box. A PNG at the exact canvas size therefore lands pixel-for-pixel at the
-existing layout scale.
+The square canvas is intentionally adopted as the renderer contract: forcing
+these supplied images into the retired landscape canvas would crop or distort
+the stronger three-dimensional room composition.
 
-## 2. Architectural anchor map
+## 2. Authoring and overlay map
 
-All coordinates below are in the 160 × 132 source-pixel canvas. The current
-renderer places the room at its existing SwiftUI frame; do **not** add a solid
-full-canvas background.
+The base artwork includes the architectural shell and starter furniture. Still
+renders a separate cat and optional collectible objects above it. Keep clear
+visual space around these **normalized** (canvas-independent) positions for
+future replacements.
 
-| Anchor | Coordinate | Purpose |
-|---|---:|---|
-| Back-wall top-left | `(10, 10)` | Start of the visible architectural shell |
-| Back/right wall top corner | `(108, 10)` | Top vertical room corner |
-| **Primary floor-corner anchor** | **`(108, 76)`** | The rear/right floor corner where the back wall, right wall, and floor meet. Keep this exact point so furniture and scene perspective remain aligned. |
-| Floor left/back corner | `(10, 76)` | Left edge of the floor along the back wall |
-| Floor right/front edge | `(153, 98)` | Outer right floor corner |
-| Floor front apex | `(52, 128)` | Nearest floor point; leave at least 3 px transparent canvas margin beneath it |
+| Overlay | Normalized center | 512 × 512 coordinate | Notes |
+|---|---:|---:|---|
+| Cat — idle/morning | `(0.33, 0.62)` | `(169, 317)` | Default resting position |
+| Cat — active focus/sleep/complete | `(0.53, 0.68)` | `(271, 348)` | Focus and completion position |
+| Cat — break | `(0.77, 0.47)` | `(394, 241)` | Break-state position |
+| Collectible — shelf | `(0.82, 0.24)` | `(420, 123)` | Optional earned object overlay |
+| Collectible — floor corner | `(0.23, 0.78)` | `(118, 399)` | Optional earned object overlay |
+| Collectible — wall | `(0.50, 0.30)` | `(256, 154)` | Optional earned object overlay |
+| Collectible — windowsill | `(0.26, 0.45)` | `(133, 230)` | Optional earned object overlay |
+| Collectible — desk | `(0.65, 0.58)` | `(333, 297)` | Optional earned object overlay |
 
-The current room floor is the quadrilateral:
+Five invisible, VoiceOver-labeled 44 pt room targets remain native controls.
+They intentionally have **no labels over the art**. Future replacement rooms
+should keep a recognizable counterpart close to each target.
 
-```text
-(10,76) ── (108,76)
-   ╲           ╲
-    ╲           (153,98)
-     ╲         ╱
-       (52,128)
-```
+| Native target | Normalized center | 512 × 512 coordinate | Expected illustrated area |
+|---|---:|---:|---|
+| Desk | `(0.64, 0.61)` | `(328, 312)` | Desk/work surface |
+| Bookshelf | `(0.80, 0.34)` | `(410, 174)` | Shelf/books |
+| Calendar / Today | `(0.43, 0.31)` | `(220, 159)` | Wall/planning object |
+| Plant / Stats | `(0.89, 0.49)` | `(456, 251)` | Plant area |
+| Window / Scenes | `(0.23, 0.40)` | `(118, 205)` | Window/exterior view |
 
-The back wall occupies `(10,10) → (108,10) → (108,76) → (10,76)`.
-The right wall occupies `(108,10) → (153,31) → (153,98) → (108,76)`.
-The replacement may improve the perspective, furniture, and lighting, but it
-must preserve these plane boundaries and the primary floor-corner anchor.
+## 3. Exact filenames and catalog keys
 
-## 3. Live overlay avoidance map
-
-The room base includes starter furniture, but Still may place a cat and earned
-collectibles on top. Leave visual breathing room around these centers so the
-interior reads clearly instead of becoming a collision of sprites.
-
-| Overlay | Source-pixel center / zone | Notes |
-|---|---:|---|
-| Cat — idle/morning | `(53, 82)` | Default cat resting position |
-| Cat — active focus/sleep/complete | `(85, 90)` | Cat sits here during focus and completion states |
-| Cat — break | `(123, 62)` | Cat’s break-state position |
-| Collectible — shelf | `(131, 32)` | Optional earned object overlay |
-| Collectible — floor corner | `(37, 103)` | Optional earned object overlay |
-| Collectible — wall | `(80, 40)` | Optional earned object overlay |
-| Collectible — windowsill | `(42, 59)` | Optional earned object overlay |
-| Collectible — desk | `(104, 77)` | Optional earned object overlay |
-
-Five invisible, VoiceOver-labeled 44 pt room targets are also retained in the
-native UI. Their visual labels are intentionally **not** shown over the art.
-Please keep the illustrated object recognizable at each center:
-
-| Native target | Center | Expected illustrated object |
-|---|---:|---|
-| Desk | `(102, 81)` | Desk/work surface |
-| Bookshelf | `(128, 45)` | Shelf/books |
-| Calendar | `(69, 41)` | Wall calendar or timeline object |
-| Plant | `(142, 65)` | Plant |
-| Window | `(37, 53)` | Window/exterior view |
-
-## 4. Exact filenames and catalog keys
-
-Deliver each PNG using the **source filename** below. The integration copies it
-into the paired asset-catalog image set using the **catalog filename** and
-existing image-set metadata. The `SceneCatalog` model already points at the
-catalog key; do not rename that key.
+Deliver or replace each PNG using the **source filename** below. Integration
+copies it to the paired asset catalog image set with the existing catalog
+filename and `Contents.json`. `SceneCatalog.spriteAssetName` must not change.
 
 | Scene | Source PNG path and filename | Xcode image-set path | Catalog filename | Runtime key |
 |---|---|---|---|---|
@@ -102,46 +71,46 @@ catalog key; do not rename that key.
 | Autumn Window (Still+) | `Still/Resources/Sprites/still-room-autumnwindow.png` | `Still/Assets.xcassets/StillRoomAutumnWindow.imageset/` | `StillRoomAutumnWindow.png` | `StillRoomAutumnWindow` |
 | Snow Day (Still+) | `Still/Resources/Sprites/still-room-snowday.png` | `Still/Assets.xcassets/StillRoomSnowDay.imageset/` | `StillRoomSnowDay.png` | `StillRoomSnowDay` |
 | Spring Rain (Still+) | `Still/Resources/Sprites/still-room-springrain.png` | `Still/Assets.xcassets/StillRoomSpringRain.imageset/` | `StillRoomSpringRain.png` | `StillRoomSpringRain` |
-| Alarm Sleep (reserved; not currently user-facing) | `Still/Resources/Sprites/still-room-alarmsleep.png` | `Still/Assets.xcassets/StillRoomAlarmSleep.imageset/` | `StillRoomAlarmSleep.png` | `StillRoomAlarmSleep` |
+| Alarm Sleep (reserved; not user-facing) | `Still/Resources/Sprites/still-room-alarmsleep.png` | `Still/Assets.xcassets/StillRoomAlarmSleep.imageset/` | `StillRoomAlarmSleep.png` | `StillRoomAlarmSleep` |
 
-## 5. Room-specific content direction
+The supplied sheet also lives at
+`Still/Resources/Sprites/still-collectible-sprite-sheet.png` and the asset key
+`StillExternalCollectibleSpriteSheet`. Its 5 × 4 row-major cells are integrated
+as Still’s 20 named collectible image sets.
 
-The four earned rooms are free and remain available permanently as people
-complete focus sessions. The three Still+ rooms are permanent additional rooms;
-there is no “seasonal,” rotation, countdown, or expiry framing.
+## 4. Room-specific visual identity
 
-| Room | Required visual identity |
+The four earned rooms stay free and permanent. The three Still+ rooms are
+permanent additional rooms: there is no “seasonal,” rotation, countdown, or
+expiry framing.
+
+| Room | Visual identity |
 |---|---|
-| Rainy Bedroom | Readable bedroom: rain window, bed with a real mattress/front face, desk, lamp with architectural bounce, shelf, plant. |
-| Library Light | Tall shelves, sunlit window, reading chair, compact writing desk; visibly different floor plan from bedroom. |
-| Train Window | Rail-car seat/back, wide landscape window, compact table; must not read as a bedroom re-color. |
-| Night City | Skyline window, desk facing city, foreground chair; must not read as a bedroom re-color. |
-| Autumn Window | Warm study with a distinct autumn exterior; permanent Still+ room. |
-| Snow Day | Blue snowlight and warm lamp; permanent Still+ room. |
-| Spring Rain | Green post-rain study with a distinct library-like layout; permanent Still+ room. |
-| Alarm Sleep | Dark sleep room reserved for a later, DEBUG-only alarm-preview state. Do not imply a shippable alarm in the art. |
+| Rainy Bedroom | Night bedroom, rain window, bed, desk, lamp, shelf, and plant. |
+| Library Light | Tall library shelving, sunlit window, reading chair, and compact table. |
+| Train Window | Rail-car sofa, wide landscape window, and compact table. |
+| Night City | City skyline, desk, window, shelf, and rug. |
+| Autumn Window | Warm autumn study; permanent Still+ room. |
+| Snow Day | Snowy bedroom with warm lamp; permanent Still+ room. |
+| Spring Rain | Green post-rain study; permanent Still+ room. |
+| Alarm Sleep | Dark sleep room reserved for a later DEBUG-only alarm-preview state. |
 
-## 6. Integration acceptance checklist
+## 5. Acceptance and provenance gate
 
-Before an external room PNG is accepted, Still will verify:
+1. Exactly 512 × 512 RGBA PNG, with intentional transparent exterior and only
+   0/255 alpha values.
+2. The current supplied package is declared as AI-generated original art made
+   for Still from written prompts, not derived from a reference product. Any
+   future replacement needs the same recorded source declaration and no copied
+   app, game, or sprite-pack pixels, trademarks, or reference-image tracing.
+3. Cat, collectible, and native target zones remain visually readable.
+4. Existing `StillRoom…` keys and image-set metadata remain unchanged.
+5. Full-size simulator screenshots for every changed room are captured and
+   manually reviewed before any completion claim is made in `REDESIGN_NOTES.md`.
+6. `ASSET_AND_CONTENT_POLICY.md` records the creator/source declaration,
+   prompt/assignment record, date, and reviewer before release.
 
-1. Exactly 160 × 132 px, RGBA PNG, with transparent exterior pixels.
-2. The back-wall/right-wall/floor shell aligns to the anchor map, especially
-   **the `(108,76)` floor corner** and `(52,128)` front apex.
-3. No text, controls, trademarks, copied assets, or reference-app pixels.
-4. The cat positions, optional object-overlay zones, desk/shelf/calendar/plant/
-   window target centers remain unobstructed.
-5. The `StillRoom…` image-set key and `SceneCatalog.spriteAssetName` are
-   unchanged.
-6. A simulator CI screenshot is captured at full room size for every changed
-   room and manually reviewed before any note calls the replacement complete.
-7. `ASSET_AND_CONTENT_POLICY.md` receives the commissioned/source provenance,
-   license/assignment, date, and reviewer before release.
-
-## 7. Copy command pattern for integrators
-
-For each delivered room, replace the source PNG and its asset-catalog PNG with
-identical image bytes, preserving the existing `Contents.json`:
+## 6. Integration command pattern
 
 ```bash
 # Example: Rainy Bedroom
@@ -151,5 +120,4 @@ cp /path/to/still-room-rainybedroom.png \
   Still/Assets.xcassets/StillRoomRainyBedroom.imageset/StillRoomRainyBedroom.png
 ```
 
-Then run the iOS screenshot workflow. No Swift code change is expected for a
-conforming replacement.
+A conforming future 512 × 512 replacement needs no Swift layout change.

@@ -22,9 +22,10 @@ struct RoomCollectionView: View {
                         plantStage: appState.plantStage,
                         bookCount: 2 + appState.books.count,
                         doodle: appState.doodles.max { $0.updatedAt < $1.updatedAt }?.doodle,
-                        placedObjects: placements
+                        placedObjects: placements,
+                        showsControls: false
                     )
-                    .aspectRatio(160.0 / 132.0, contentMode: .fit)
+                    .aspectRatio(RoomHeroView.artworkAspectRatio, contentMode: .fit)
 
                     roomPicker
                     slotPicker

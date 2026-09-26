@@ -147,6 +147,12 @@ jobs:
             n=$((n + 1))
           done
 
+          # Named correction proofs: screenshots, rather than Swift tests,
+          # decide whether these visual claims can be marked complete.
+          shoot "focus-room" "proof-focus-helper-clean"
+          shoot "focus-room" "proof-room-art-unoccluded"
+          shoot "today" "proof-light-theme"
+
           for screen in break journal me scenes; do
             shoot_midpoint "$screen" "$(printf '%02d' $n)-$screen-midpoint"
             n=$((n + 1))
@@ -193,7 +199,7 @@ jobs:
           # collection thumbnails alone are too small to verify room depth,
           # furniture planes, and distinct scene composition. The three
           # permanent Still+ rooms use an in-memory DEBUG entitlement only.
-          for screen in room-library room-train room-city room-autumn room-snow room-spring; do
+          for screen in room-library room-train room-city room-autumn room-snow room-spring room-sleep; do
             shoot "$screen" "$(printf '%02d' $n)-$screen"
             n=$((n + 1))
           done

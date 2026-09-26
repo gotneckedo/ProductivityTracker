@@ -198,8 +198,8 @@ struct TodayView: View {
                          catName: appState.catName,
                          catState: CatCompanion.state(hour: Calendar.autoupdatingCurrent.component(.hour, from: appState.container.clock.now)),
                          allowsCatInteraction: false,
-                         showsControls: false,
-                         plantStage: appState.plantStage, bookCount: appState.books.count)
+                         plantStage: appState.plantStage, bookCount: appState.books.count,
+                         showsControls: false)
                 .frame(maxWidth: .infinity)
                 .aspectRatio(RoomHeroView.artworkAspectRatio, contentMode: .fit)
                 .accessibilityLabel("Your focus room. Opens rooms.")

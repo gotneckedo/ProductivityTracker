@@ -166,6 +166,25 @@ enum RoomHotspot: String, CaseIterable, Identifiable {
         }
     }
 
+    /// Compact on-art copy; VoiceOver retains the fuller object title above.
+    /// These labels only appear during the first three focus days, when
+    /// immediate readability matters more than repeating the full noun phrase.
+    var displayLabel: String {
+        switch self {
+        case .calendar: return "Calendar"
+        default: return title
+        }
+    }
+
+    var labelWidth: CGFloat {
+        switch self {
+        case .shelf: return 86
+        case .calendar: return 76
+        case .desk: return 60
+        case .plant, .window: return 66
+        }
+    }
+
     var hint: String {
         switch self {
         case .desk: return "Opens today’s tasks."
@@ -197,8 +216,10 @@ private struct RoomHotspotOverlay: View {
                 Button { action(hotspot) } label: {
                     Group {
                         if showsLabels {
-                            Text(hotspot.title)
+                            Text(hotspot.displayLabel)
                                 .font(StillTypography.caption.weight(.semibold))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.78)
                                 .foregroundStyle(StillTheme.textPrimary)
                                 .padding(.horizontal, 7)
                                 .padding(.vertical, 5)
@@ -208,7 +229,12 @@ private struct RoomHotspotOverlay: View {
                             Color.clear
                         }
                     }
-                    .frame(width: max(44, proxy.size.width * 0.18), height: max(44, proxy.size.height * 0.18))
+                    .frame(
+                        width: showsLabels
+                            ? min(proxy.size.width * 0.28, max(44, hotspot.labelWidth))
+                            : max(44, proxy.size.width * 0.18),
+                        height: max(44, proxy.size.height * 0.18)
+                    )
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

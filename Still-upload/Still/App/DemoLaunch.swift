@@ -55,19 +55,9 @@ enum DemoLaunch {
         case "cat-reaction":
             return focusRoomState(hour: 14)
         case "cat-focus":
-            return PreviewSupport.appState(
-                populated: true,
-                activeSession: true,
-                activeSessionElapsed: 4 * 60,
-                clockStart: screenshotDate(hour: 14, minute: 0)
-            )
+            return activeCatState(elapsed: 4 * 60)
         case "cat-asleep":
-            return PreviewSupport.appState(
-                populated: true,
-                activeSession: true,
-                activeSessionElapsed: 12 * 60,
-                clockStart: screenshotDate(hour: 14, minute: 0)
-            )
+            return activeCatState(elapsed: 12 * 60)
         case "cat-complete":
             let completed = PreviewSupport.completedSession()
             completed.state.setCatName("Mochi")
@@ -153,6 +143,23 @@ enum DemoLaunch {
         )
         state.setCatName("Mochi")
         state.router.go(to: .focusHome)
+        return state
+    }
+
+    private static func activeCatState(elapsed: TimeInterval) -> AppState {
+        let state = PreviewSupport.appState(
+            populated: true,
+            activeSession: true,
+            activeSessionElapsed: elapsed,
+            clockStart: screenshotDate(hour: 14, minute: 0)
+        )
+        state.setCatName("Mochi")
+        // Starting a preview session does not implicitly choose the Focus tab.
+        // The explicit root route keeps the visual proof on ActiveFocusView
+        // rather than leaving Today visible while the tab bar is suppressed.
+        if let id = state.activeSession?.id {
+            state.router.go(to: .activeSession(id))
+        }
         return state
     }
 

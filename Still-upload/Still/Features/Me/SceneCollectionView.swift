@@ -194,8 +194,8 @@ private struct SceneCard: View {
                 RoomHeroView(
                     sceneName: scene.name,
                     sceneID: scene.id,
-                    phase: .afternoon,
                     allowsCatInteraction: false,
+                    phase: .afternoon,
                     plantStage: .full,
                     showsControls: false
                 )

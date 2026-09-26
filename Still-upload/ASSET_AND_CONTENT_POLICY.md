@@ -20,6 +20,8 @@ layouts, puzzles, or branding.
 | Calm plant nook | `DesignSystem/Scenes/SceneArtwork.swift` | Drawn in code for Still | Original |
 | App icon (pixel sprout) | `Assets.xcassets/AppIcon.appiconset` | Generated for Still from a 16×16 pixel design | Original |
 | Ambient loops (rain, café, fireplace, waves) | `Resources/AmbientAudio/*.m4a` | Procedurally generated (NumPy/SciPy, ffmpeg) | Original |
+| Ambient mixer architecture (12 independent layers, built-in combinations, locally saved mixes) | `Domain/AmbientMix.swift`, `Domain/Soundscape.swift`, `Services/Audio/AVAmbientAudioPlayer.swift` | Written for Still; no reference-app audio, interface, or branding used | Original |
+| Still cat sprite set (six poses × four coats) | `Assets.xcassets/StillCat{Ginger,Tabby,Cream,Midnight}SpriteSheet.imageset` and `StillCatSpriteContactSheet.imageset` | Original transparent pixel-art base sheet generated from a Still-specific prompt with no character/game reference; Ginger, Tabby, Cream, and Midnight coat variants were deterministically palette-edited by `create_still_cat_coats.py`. Contact sheet is included for review. | Original |
 | Short reads (4 micro-essays) | `Data/SeedData/ReadingLibrary.swift` | Written for Still | Original, owned by the publisher |
 | Creative prompts | `Data/SeedData/ReadingLibrary.swift` | Written for Still | Original |
 | Sudoku, Picross, Word Search puzzles | `Data/SeedData/PuzzleLibrary.swift` | Generated for Still; uniqueness verified in `PuzzleTests` | Original |
@@ -95,6 +97,7 @@ bundle, trying `.m4a`, then `.caf`, `.wav`, `.mp3`:
 | Café      | `ambient_cafe`      | `ambient_cafe.m4a` (generated)        |
 | Fireplace | `ambient_fireplace` | `ambient_fireplace.m4a` (generated)   |
 | Waves     | `ambient_waves`     | `ambient_waves.m4a` (generated)       |
+| Forest, wind, train, library, thunder, fan, brown noise, white noise | See `AmbientSource.all` | Architecture is wired; original or distribution-cleared loops must be supplied before shipping each layer |
 
 ### What ships today
 

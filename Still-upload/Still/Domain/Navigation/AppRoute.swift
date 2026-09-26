@@ -17,7 +17,8 @@ struct FeatureFlags: Equatable {
     var calendarEvents: Bool = false
     /// P9 Wake up planning and DEBUG card-wait simulation.
     var wakeUpPreview: Bool = false
-    /// P9 seasonal scenes and local StoreKit Supporter testing.
+    /// Legacy P9 preview flag retained for migration compatibility; seasonal
+    /// Still+ rooms now use StoreKit entitlement directly.
     var seasonalPurchasesPreview: Bool = false
     /// P9 direct-Google sample events and calendar settings.
     var googleCalendarPreview: Bool = false
@@ -63,37 +64,39 @@ struct FeatureFlags: Equatable {
 }
 
 enum AppTab: String, CaseIterable, Hashable {
+    case today
     case focus
     case breakShelf
-    case journal
     case me
 
     var title: String {
         switch self {
+        case .today: return "Today"
         case .focus: return "Focus"
         case .breakShelf: return "Break"
-        case .journal: return "Journal"
         case .me: return "Me"
         }
     }
 
     var systemImage: String {
         switch self {
+        case .today: return "sun.max"
         case .focus: return "circle.circle"
         case .breakShelf: return "cup.and.saucer"
-        case .journal: return "book.closed"
         case .me: return "person.crop.circle"
         }
     }
 
     static func visibleTabs(flags: FeatureFlags) -> [AppTab] {
-        flags.journalTab ? [.focus, .breakShelf, .journal, .me] : [.focus, .breakShelf, .me]
+        [.today, .focus, .breakShelf, .me]
     }
 }
 
 /// Every destination in the app. Views never decide presentation; they ask the
 /// router to go to a route, and `RouteResolver` decides tab, stack, and modal.
 enum AppRoute: Hashable {
+    case today
+    case nextStep
     case focusHome
     case focusConfiguration
     case activeSession(UUID)
@@ -114,6 +117,7 @@ enum AppRoute: Hashable {
     case habits
     case calendarSettings
     case getFocusCard
+    case stillPlus
     case onboardingGoalPreference
     case onboardingBreakPreference
     case onboardingLookPreference
@@ -123,6 +127,7 @@ enum SheetRoute: String, Identifiable, Hashable {
     case focusConfiguration
     case tasks
     case dayTimeline
+    case nextStep
 
     var id: String { rawValue }
 }
@@ -142,12 +147,16 @@ struct RouteResolver {
 
     func destination(for route: AppRoute, currentTab: AppTab) -> RouteDestination {
         switch route {
+        case .today:
+            return RouteDestination(tab: .today, stack: [], sheet: nil, completionSessionID: nil)
         case .focusHome, .activeSession:
             // The Focus root itself switches between home and the active session.
             return RouteDestination(tab: .focus, stack: [], sheet: nil, completionSessionID: nil)
         case .focusConfiguration:
             // Sheets open over whatever tab is showing and leave its stack alone.
             return RouteDestination(tab: currentTab, stack: [], sheet: .focusConfiguration, completionSessionID: nil)
+        case .nextStep:
+            return RouteDestination(tab: currentTab, stack: [], sheet: .nextStep, completionSessionID: nil)
         case .sessionComplete(let id):
             return RouteDestination(tab: .focus, stack: [], sheet: nil, completionSessionID: id)
         case .breakShelf:
@@ -161,21 +170,15 @@ struct RouteResolver {
         case .me:
             return RouteDestination(tab: .me, stack: [], sheet: nil, completionSessionID: nil)
         case .nfcSetup, .sceneCollection, .presets, .doodleGallery, .morningStart, .blockingSetup,
-             .calendarSettings, .getFocusCard, .onboardingGoalPreference, .onboardingBreakPreference,
+             .calendarSettings, .getFocusCard, .stillPlus, .onboardingGoalPreference, .onboardingBreakPreference,
              .onboardingLookPreference:
             return RouteDestination(tab: .me, stack: [route], sheet: nil, completionSessionID: nil)
         case .dayTimeline:
             return RouteDestination(tab: currentTab, stack: [], sheet: .dayTimeline, completionSessionID: nil)
         case .habits:
-            // Habits live on the Journal tab; without it they sit under Me.
-            return flags.journalTab
-                ? RouteDestination(tab: .journal, stack: [], sheet: nil, completionSessionID: nil)
-                : RouteDestination(tab: .me, stack: [route], sheet: nil, completionSessionID: nil)
+            return RouteDestination(tab: .today, stack: [], sheet: nil, completionSessionID: nil)
         case .journal:
-            // Hidden in V1: fall back to Me rather than show a placeholder.
-            return flags.journalTab
-                ? RouteDestination(tab: .journal, stack: [], sheet: nil, completionSessionID: nil)
-                : RouteDestination(tab: .me, stack: [], sheet: nil, completionSessionID: nil)
+            return RouteDestination(tab: .today, stack: [], sheet: nil, completionSessionID: nil)
         }
     }
 }

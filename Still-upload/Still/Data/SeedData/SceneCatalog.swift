@@ -38,7 +38,7 @@ enum SceneCatalog {
             accentAlt: RGBColor(0xC98E7A),
             highlight: RGBColor(0xFBEFD5)
         ),
-        unlockRule: .completedSessions(7),
+        unlockRule: .completedSessions(2),
         soundAffinity: .fireplace,
         motionElements: [.dustMotes, .lampGlow],
         accessibilityDescription: "A quiet library corner. Shelves of colored book spines, a tall window letting in a warm shaft of light, and dust drifting slowly through it.",
@@ -60,7 +60,7 @@ enum SceneCatalog {
             accentAlt: RGBColor(0x4B5A72),
             highlight: RGBColor(0xFBF1DC)
         ),
-        unlockRule: .completedSessions(15),
+        unlockRule: .completedSessions(6),
         soundAffinity: .rain,
         motionElements: [.passingLandscape],
         accessibilityDescription: "The view from a train window at dusk. Layers of soft hills drift past under a peach sky with a low sun.",
@@ -82,7 +82,7 @@ enum SceneCatalog {
             accentAlt: RGBColor(0xE3B5B8),
             highlight: RGBColor(0xFBF1DC)
         ),
-        unlockRule: .completedSessions(25),
+        unlockRule: .completedSessions(12),
         soundAffinity: .cafe,
         motionElements: [.windowLights],
         accessibilityDescription: "A city skyline at night under a pale moon. Apartment windows slowly light up and go dark.",
@@ -104,7 +104,7 @@ enum SceneCatalog {
         soundAffinity: .fireplace,
         motionElements: [.leafSway, .lampGlow],
         accessibilityDescription: "A warm study room with copper autumn colors beyond the window and a softly glowing desk lamp.",
-        entitlementKey: PurchaseProductCatalog.supporter,
+        entitlementKey: PurchaseProductCatalog.stillPlusMonthly,
         sortOrder: 100
     )
 
@@ -122,7 +122,7 @@ enum SceneCatalog {
         soundAffinity: .fireplace,
         motionElements: [.rain, .lampGlow],
         accessibilityDescription: "A blue winter room with pale snow outside the window and a warm lamp beside the desk.",
-        entitlementKey: PurchaseProductCatalog.supporter,
+        entitlementKey: PurchaseProductCatalog.stillPlusMonthly,
         sortOrder: 101
     )
 
@@ -140,7 +140,7 @@ enum SceneCatalog {
         soundAffinity: .rain,
         motionElements: [.rain, .leafSway],
         accessibilityDescription: "A green spring study room after rain, with fresh leaves and a bright window.",
-        entitlementKey: PurchaseProductCatalog.supporter,
+        entitlementKey: PurchaseProductCatalog.stillPlusMonthly,
         sortOrder: 102
     )
 

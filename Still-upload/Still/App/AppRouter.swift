@@ -11,11 +11,11 @@ struct CompletionPresentation: Identifiable, Hashable {
 /// tab, stack, and modal, so leaf views never make presentation decisions.
 @Observable
 final class AppRouter {
-    var selectedTab: AppTab = .focus
+    var selectedTab: AppTab = .today
+    var todayPath: [AppRoute] = []
     var focusPath: [AppRoute] = []
     var breakPath: [AppRoute] = []
     var mePath: [AppRoute] = []
-    var journalPath: [AppRoute] = []
     var sheet: SheetRoute? = nil
     var completion: CompletionPresentation? = nil
 
@@ -45,10 +45,10 @@ final class AppRouter {
         sheet = nil
         selectedTab = destination.tab
         switch destination.tab {
+        case .today: todayPath = destination.stack
         case .focus: focusPath = destination.stack
         case .breakShelf: breakPath = destination.stack
         case .me: mePath = destination.stack
-        case .journal: journalPath = destination.stack
         }
     }
 

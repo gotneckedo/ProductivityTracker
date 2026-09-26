@@ -141,6 +141,13 @@ struct MeView: View {
     private var cardAndBlockingSection: some View {
         let blocking = appState.container.blocking
         return VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            Button {
+                appState.router.go(to: .stillPlus)
+            } label: {
+                SettingRow(symbol: "sparkles", title: "Still+", value: appState.hasStillPlus ? "Active" : "Optional subscription",
+                           iconTint: StillTheme.warm, iconBackground: StillTheme.warmSoft)
+            }
+            .buttonStyle(.plain)
             SectionHeader(title: "Focus Card")
             Button {
                 appState.router.go(to: .nfcSetup)
@@ -643,6 +650,19 @@ private struct AppearanceSection: View {
                 selection: Binding(get: { appState.animationIntensity }, set: { appState.setAnimationIntensity($0) }),
                 title: { "\($0.displayName) motion" }
             )
+            VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
+                Text("Room cat")
+                    .font(StillTypography.bodyEmphasis)
+                    .foregroundStyle(StillTheme.textPrimary)
+                SelectionPill(
+                    options: CatCoat.allCases,
+                    selection: Binding(get: { appState.preferences.catCoat }, set: { appState.setCatCoat($0) }),
+                    title: { $0.title }
+                )
+                Text("Company only — no needs, scores, or streaks.")
+                    .font(StillTypography.footnote)
+                    .foregroundStyle(StillTheme.textSecondary)
+            }
         }
     }
 }

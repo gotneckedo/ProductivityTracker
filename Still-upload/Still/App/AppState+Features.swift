@@ -22,6 +22,11 @@ extension AppState {
         case .full: return nil
         }
     }
+
+    func setFocusNote(_ text: String) {
+        container.focus.setNote(text)
+        reload()
+    }
 }
 
 // MARK: - Journal
@@ -82,6 +87,29 @@ extension AppState {
 
 extension AppState {
     var canCreatePreset: Bool { container.preferences.canCreatePreset }
+
+    var hasStillPlus: Bool {
+        container.purchases.hasStillPlus
+    }
+
+    var savedSoundscapes: [SavedSoundscape] { preferences.savedSoundscapes }
+
+    func saveSoundscape(name: String, mix: AmbientMix) {
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanName.isEmpty else { return }
+        container.preferences.saveSoundscape(SavedSoundscape(name: cleanName, mix: mix))
+        reload()
+    }
+
+    func deleteSoundscape(_ id: UUID) {
+        container.preferences.deleteSoundscape(id)
+        reload()
+    }
+
+    func setCatCoat(_ coat: CatCoat) {
+        container.preferences.setCatCoat(coat)
+        reload()
+    }
 
     @discardableResult
     func createPreset(named name: String, basedOn base: FocusPreset) -> FocusPreset? {

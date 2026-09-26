@@ -16,19 +16,29 @@ enum PurchaseOutcome: Equatable {
 }
 
 enum PurchaseProductCatalog {
-    static let supporter = "com.cocomedia.still.supporter"
-    static let productIDs: Set<String> = [supporter]
+    /// The app contains no server paywall. Entitlement comes from StoreKit's
+    /// current transaction state and is deliberately named for the actual plan.
+    static let stillPlusMonthly = "com.cocomedia.still.plus.monthly"
+    static let stillPlusYearly = "com.cocomedia.still.plus.yearly"
+    static let productIDs: Set<String> = [stillPlusMonthly, stillPlusYearly]
 
-    static let supporterPreview = SupporterProduct(
-        id: supporter,
-        displayName: "Still Supporter",
-        description: "Seasonal rooms, extra palettes, and future alternate app icons. Focus tools and everything earned by using Still stay free.",
-        displayPrice: "$4.99 test price"
+    static let stillPlusPreview = SupporterProduct(
+        id: stillPlusMonthly,
+        displayName: "Still+ Monthly",
+        description: "Physical Focus Card access, seasonal rooms, extra palettes, and future subscriber tools. Focus, tasks, and every session-earned room stay free.",
+        displayPrice: "$4.99/month test price"
+    )
+
+    static let stillPlusYearlyPreview = SupporterProduct(
+        id: stillPlusYearly,
+        displayName: "Still+ Yearly",
+        description: "The same Still+ benefits with a year of quiet focus tools.",
+        displayPrice: "$39.99/year test price"
     )
 }
 
-/// StoreKit-facing boundary. Purchases are non-consumable cosmetics only; there
-/// are no subscriptions, timers, or server checks.
+/// StoreKit-facing boundary. Still+ is a renewable subscription; all entitlement
+/// state remains on-device in StoreKit. There are no servers or ad trackers.
 protocol PurchaseService: AnyObject {
     var isStandIn: Bool { get }
     var products: [SupporterProduct] { get }
@@ -36,6 +46,14 @@ protocol PurchaseService: AnyObject {
     func loadProducts() async
     func purchase(productID: String) async -> PurchaseOutcome
     func restorePurchases() async -> PurchaseOutcome
+}
+
+extension PurchaseService {
+    /// The only entitlement predicate product UI should need. StoreKit keeps it
+    /// current on-device for the real implementation; previews stay memory-only.
+    var hasStillPlus: Bool {
+        !purchasedProductIDs.isDisjoint(with: PurchaseProductCatalog.productIDs)
+    }
 }
 
 final class NoPurchaseService: PurchaseService {
@@ -55,7 +73,7 @@ final class LocalPurchaseService: PurchaseService {
     private(set) var products: [SupporterProduct]
     private(set) var purchasedProductIDs: Set<String>
 
-    init(products: [SupporterProduct] = [PurchaseProductCatalog.supporterPreview], purchased: Set<String> = []) {
+    init(products: [SupporterProduct] = [PurchaseProductCatalog.stillPlusPreview, PurchaseProductCatalog.stillPlusYearlyPreview], purchased: Set<String> = []) {
         self.products = products
         self.purchasedProductIDs = purchased
     }

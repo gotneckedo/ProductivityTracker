@@ -10,14 +10,33 @@
       "internalID" : "33C64C5B-1E0C-4DB3-8D34-F2D46B6548C6",
       "localizations" : [
         {
-          "description" : "Seasonal rooms, extra palettes, and future alternate app icons. Focus tools stay free.",
-          "displayName" : "Still Supporter",
+          "description" : "Focus Card access, seasonal rooms, and future subscriber tools. Focus tools stay free.",
+          "displayName" : "Still+ Monthly",
           "locale" : "en_US"
         }
       ],
-      "productID" : "com.cocomedia.still.supporter",
-      "referenceName" : "Still Supporter",
-      "type" : "NonConsumable"
+      "productID" : "com.cocomedia.still.plus.monthly",
+      "recurringSubscriptionPeriod" : "P1M",
+      "referenceName" : "Still+ Monthly",
+      "subscriptionGroupID" : "2A4C522A-7D06-4ED7-9C02-FA438A8D170A",
+      "type" : "Auto-Renewable Subscription"
+    },
+    {
+      "displayPrice" : "39.99",
+      "familyShareable" : false,
+      "internalID" : "6F29F34B-13A5-4B06-8B5A-F6D4B5BC36E1",
+      "localizations" : [
+        {
+          "description" : "Focus Card access, seasonal rooms, and future subscriber tools. Focus tools stay free.",
+          "displayName" : "Still+ Yearly",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.cocomedia.still.plus.yearly",
+      "recurringSubscriptionPeriod" : "P1Y",
+      "referenceName" : "Still+ Yearly",
+      "subscriptionGroupID" : "2A4C522A-7D06-4ED7-9C02-FA438A8D170A",
+      "type" : "Auto-Renewable Subscription"
     }
   ],
   "settings" : {
@@ -26,7 +45,16 @@
     "_storefront" : "USA"
   },
   "subscriptionGroups" : [
-
+    {
+      "id" : "2A4C522A-7D06-4ED7-9C02-FA438A8D170A",
+      "localizations" : [
+        {
+          "displayName" : "Still+",
+          "locale" : "en_US"
+        }
+      ],
+      "referenceName" : "Still Plus"
+    }
   ],
   "version" : {
     "major" : 3,

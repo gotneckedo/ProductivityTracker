@@ -477,11 +477,11 @@ final class AppState {
         isAudioMuted = false
         router.completion = nil
         router.sheet = nil
+        router.todayPath = []
         router.focusPath = []
         router.breakPath = []
         router.mePath = []
-        router.journalPath = []
-        router.selectedTab = .focus
+        router.selectedTab = .today
         reload()
     }
 

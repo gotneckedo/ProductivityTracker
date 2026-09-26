@@ -14,6 +14,7 @@ struct SessionCompleteView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                     completionHero(session: session)
+                    transitionRitual
                     metrics(session: session)
 
                     if let object = appState.newlyUnlockedRoomObjects.first {
@@ -25,7 +26,7 @@ struct SessionCompleteView: View {
                     }
 
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-                        Text(Copy.Completion.next)
+                        Text("What's next?")
                             .font(StillTypography.title)
                             .foregroundStyle(StillTheme.textPrimary)
                             .accessibilityAddTraits(.isHeader)
@@ -76,6 +77,26 @@ struct SessionCompleteView: View {
             .padding(.top, StillTheme.Spacing.xxl)
         }
         .stillEntrance()
+    }
+
+    private var transitionRitual: some View {
+        HStack(alignment: .top, spacing: StillTheme.Spacing.s) {
+            Image(systemName: "leaf")
+                .foregroundStyle(StillDayPhase.dusk.accent)
+                .frame(width: 30, height: 30)
+                .background(StillDayPhase.dusk.accent.opacity(0.12), in: Circle())
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Take a breath before choosing.")
+                    .font(StillTypography.bodyEmphasis)
+                    .foregroundStyle(StillTheme.textPrimary)
+                Text("You can focus again, take a short break, or be done with Still for now.")
+                    .font(StillTypography.footnote)
+                    .foregroundStyle(StillTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(StillTheme.Spacing.m)
+        .stillGlass(radius: StillTheme.Radius.medium, phase: .dusk)
     }
 
     private func newUnlock(_ object: RoomObject) -> some View {

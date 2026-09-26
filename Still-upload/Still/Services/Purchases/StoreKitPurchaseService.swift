@@ -5,7 +5,13 @@ import StoreKit
 /// Real StoreKit 2 boundary. In DEBUG it reads the checked-in local StoreKit
 /// configuration; App Store products with the same IDs can replace it later.
 final class StoreKitPurchaseService: PurchaseService {
-    var isStandIn: Bool { true }
+    var isStandIn: Bool {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
+    }
     private(set) var products: [SupporterProduct] = []
     private(set) var purchasedProductIDs: Set<String> = []
     private var storeProducts: [String: Product] = [:]

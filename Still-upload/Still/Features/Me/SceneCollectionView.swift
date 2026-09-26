@@ -1,11 +1,11 @@
 import SwiftUI
 
-/// Scenes and how they open. Unlock conditions are stated quietly; there is
-/// no reward burst, nothing to buy, and nothing to lose.
+/// Scenes and how they open. Session-earned rooms are always free; optional
+/// seasonal rooms use the clearly labelled Still+ StoreKit entitlement.
 struct SceneCollectionView: View {
     @Environment(AppState.self) private var appState
     @State private var purchaseMessage: String?
-    @State private var supporterProducts: [SupporterProduct] = []
+    @State private var stillPlusProducts: [SupporterProduct] = []
     @State private var purchasedProductIDs: Set<String> = []
 
     /// The collection stays inside the screen's horizontal padding. Flexible
@@ -52,10 +52,8 @@ struct SceneCollectionView: View {
                     }
                     Color.clear.frame(height: 1).id("scenes-midpoint")
 
-                    if appState.container.flags.seasonalPurchasesPreview {
-                        seasonalSection(preset: preset)
-                        supporterSection
-                    }
+                    seasonalSection(preset: preset)
+                    stillPlusSection
                     Color.clear.frame(height: 1).id("scenes-bottom")
                         }
                         // SwiftUI's vertical ScrollView otherwise measures the
@@ -87,7 +85,6 @@ struct SceneCollectionView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .onAppear { appState.acknowledgeUnlockedScenes() }
         .task {
-            guard appState.container.flags.seasonalPurchasesPreview else { return }
             await appState.container.purchases.loadProducts()
             refreshPurchaseState()
         }
@@ -100,17 +97,16 @@ struct SceneCollectionView: View {
                     title: "Seasonal rooms",
                     detail: "Optional cosmetics only. Every scene earned from focus sessions stays free."
                 )
-                PreviewTag()
             }
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(SceneCatalog.seasonal) { scene in
-                    let entitled = scene.entitlementKey.map(purchasedProductIDs.contains) ?? true
+                    let entitled = scene.entitlementKey == nil || appState.hasStillPlus
                     SceneCard(
                         scene: scene,
                         isUnlocked: entitled,
                         isSelected: preset.sceneID == scene.id && preset.renderMode == .scene,
                         remaining: 0,
-                        lockedText: "Supporter cosmetic · local StoreKit preview"
+                        lockedText: "Still+ seasonal room"
                     ) {
                         guard entitled else { return }
                         var edited = preset
@@ -124,27 +120,26 @@ struct SceneCollectionView: View {
         .id("seasonal-rooms")
     }
 
-    private var supporterSection: some View {
+    private var stillPlusSection: some View {
         StillCard {
             VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
                 HStack {
-                    SectionHeader(title: "Supporter")
-                    PreviewTag()
+                    SectionHeader(title: "Still+")
                 }
-                Text("One optional, non-consumable cosmetic pack: seasonal rooms, extra palettes, and future alternate app icons. No subscription, countdown, or limited offer.")
+                Text("An optional monthly subscription for Focus Card access, seasonal rooms, extra palettes, and future subscriber tools. Focus tools and earned rooms stay free.")
                     .font(StillTypography.callout)
                     .foregroundStyle(StillTheme.textSecondary)
-                if purchasedProductIDs.contains(PurchaseProductCatalog.supporter) {
-                    Text("Local StoreKit test entitlement is active on this device.")
+                if purchasedProductIDs.contains(PurchaseProductCatalog.stillPlusMonthly) {
+                    Text("Still+ is active on this device.")
                         .font(StillTypography.footnote)
                         .foregroundStyle(StillTheme.textSecondary)
-                } else if let product = supporterProducts.first {
-                    Button("Test Supporter · \(product.displayPrice)") {
+                } else if let product = stillPlusProducts.first {
+                    Button("Start Still+ · \(product.displayPrice)") {
                         runPurchase { await appState.container.purchases.purchase(productID: product.id) }
                     }
                     .buttonStyle(QuietPrimaryButtonStyle())
                 } else {
-                    Text("Open this Debug scheme with StillProducts.storekit to load the local test product.")
+                    Text("Still+ products appear after a StoreKit configuration or App Store Connect product is available.")
                         .font(StillTypography.footnote)
                         .foregroundStyle(StillTheme.textSecondary)
                 }
@@ -169,7 +164,7 @@ struct SceneCollectionView: View {
             case .purchased:
                 purchaseMessage = appState.container.purchases.isStandIn
                     ? "Local StoreKit test entitlement updated. No production charge was made."
-                    : "Purchase restored."
+                    : "Still+ is active."
             case .pending:
                 purchaseMessage = "StoreKit says the test transaction is pending."
             case .cancelled:
@@ -182,7 +177,7 @@ struct SceneCollectionView: View {
 
     @MainActor
     private func refreshPurchaseState() {
-        supporterProducts = appState.container.purchases.products
+        stillPlusProducts = appState.container.purchases.products
         purchasedProductIDs = appState.container.purchases.purchasedProductIDs
     }
 }

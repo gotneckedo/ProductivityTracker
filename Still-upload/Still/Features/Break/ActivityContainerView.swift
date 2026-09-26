@@ -57,7 +57,8 @@ struct ActivityContainerView: View {
                             title: finishedTitle(outcome),
                             message: finishedMessage(outcome),
                             onFocus: { appState.returnToFocusFromActivity() },
-                            onShelf: { appState.returnToShelf() }
+                            onShelf: { appState.returnToShelf() },
+                            onToday: { appState.router.go(to: .today) }
                         )
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
@@ -209,6 +210,7 @@ struct ActivityFinishedPanel: View {
     let message: String
     let onFocus: () -> Void
     let onShelf: () -> Void
+    let onToday: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
@@ -220,10 +222,16 @@ struct ActivityFinishedPanel: View {
                 .font(StillTypography.callout)
                 .foregroundStyle(StillTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Button("Return to Focus", action: onFocus)
+            Text("What feels right next?")
+                .font(StillTypography.bodyEmphasis)
+                .foregroundStyle(StillTheme.textPrimary)
+            Button("Focus again", action: onFocus)
                 .buttonStyle(QuietPrimaryButtonStyle())
-            Button("Back to Break", action: onShelf)
+            Button("One more small break", action: onShelf)
                 .buttonStyle(QuietSecondaryButtonStyle())
+                .frame(maxWidth: .infinity)
+            Button("I'm done for now", action: onToday)
+                .buttonStyle(QuietTextButtonStyle())
                 .frame(maxWidth: .infinity)
         }
         .padding(StillTheme.Spacing.l)

@@ -6,6 +6,7 @@ import SwiftUI
 struct RoomHeroView: View {
     let sceneName: String
     var sceneID: SceneID = .rainyBedroom
+    var catCoat: CatCoat = .ginger
     var phase: StillDayPhase? = nil
     var dimmed = false
     var plantStage: PlantGrowthStage = .full
@@ -60,6 +61,15 @@ struct RoomHeroView: View {
             .aspectRatio(160.0 / 132.0, contentMode: .fit)
             .drawingGroup(opaque: false, colorMode: .extendedLinear)
             .offset(y: reduceMotion ? 0 : (isFloating ? -3 : 2))
+
+            GeometryReader { proxy in
+                let side = max(20, min(proxy.size.width * 0.20, proxy.size.height * 0.28))
+                RoomCatSprite(coat: catCoat, reduceMotion: reduceMotion)
+                    .frame(width: side, height: side)
+                    .position(x: proxy.size.width * 0.35, y: proxy.size.height * 0.76)
+                    .offset(y: reduceMotion ? 0 : (isFloating ? -3 : 2))
+            }
+            .accessibilityHidden(true)
 
             if showsControls {
                 VStack {
@@ -124,6 +134,41 @@ private struct RoomMotes: View {
                     .position(x: proxy.size.width * point.0, y: proxy.size.height * point.1)
             }
         }
+    }
+}
+
+/// Uses Still's original six-frame sprite sheet. The clipping geometry chooses
+/// one of the 3×2 cells without smoothing its deliberately crisp pixels.
+private struct RoomCatSprite: View {
+    let coat: CatCoat
+    let reduceMotion: Bool
+
+    var body: some View {
+        Group {
+            if reduceMotion {
+                sprite(frame: 0)
+            } else {
+                TimelineView(.periodic(from: .now, by: 2.4)) { timeline in
+                    let frame = Int(timeline.date.timeIntervalSinceReferenceDate / 2.4) % 6
+                    sprite(frame: frame)
+                }
+            }
+        }
+        .accessibilityLabel("A small \(coat.title.lowercased()) cat resting in the room")
+    }
+
+    private func sprite(frame: Int) -> some View {
+        GeometryReader { proxy in
+            let column = frame % 3
+            let row = frame / 3
+            Image(coat.spriteAssetName)
+                .resizable()
+                .interpolation(.none)
+                .frame(width: proxy.size.width * 3, height: proxy.size.height * 2)
+                .offset(x: -CGFloat(column) * proxy.size.width,
+                        y: -CGFloat(row) * proxy.size.height)
+        }
+        .clipped()
     }
 }
 

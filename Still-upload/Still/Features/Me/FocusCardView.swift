@@ -42,6 +42,20 @@ struct FocusCardView: View {
                             .foregroundStyle(StillTheme.textSecondary)
                     }
 
+                    if !appState.hasStillPlus {
+                        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+                            Label("Focus Card is a Still+ perk", systemImage: "lock.fill")
+                                .font(StillTypography.bodyEmphasis)
+                                .foregroundStyle(StillTheme.textPrimary)
+                            Text("Still+ supports optional physical card access and seasonal rooms. Your regular focus timer and every session-earned room stay free.")
+                                .font(StillTypography.callout)
+                                .foregroundStyle(StillTheme.textSecondary)
+                            Button("Explore Still+") { appState.router.go(to: .stillPlus) }
+                                .buttonStyle(QuietSecondaryButtonStyle())
+                        }
+                        .padding(StillTheme.Spacing.m)
+                        .stillGlass()
+                    } else {
                     StillCard {
                         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
                             ForEach(Array(FocusCardGuide.steps.enumerated()), id: \.offset) { entry in
@@ -81,6 +95,7 @@ struct FocusCardView: View {
                         }
                     }
                     .accessibilityElement(children: .combine)
+                    }
                     Color.clear.frame(height: 1).id("focus-card-bottom")
                     }
                     .padding(.horizontal, StillTheme.Spacing.screen)

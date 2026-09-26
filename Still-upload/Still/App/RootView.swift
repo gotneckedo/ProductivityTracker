@@ -53,6 +53,8 @@ struct MainTabView: View {
                     }
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
+                case .nextStep:
+                    NextStepGuideView()
                 }
             }
             .environment(appState)
@@ -66,14 +68,14 @@ struct MainTabView: View {
     @ViewBuilder
     private func tabContent(_ tab: AppTab) -> some View {
         switch tab {
+        case .today:
+            TodayTab()
         case .focus:
             FocusTab()
         case .breakShelf:
             BreakTab()
         case .me:
             MeTab()
-        case .journal:
-            JournalTab()
         }
     }
 }
@@ -144,13 +146,13 @@ struct BreakTab: View {
     }
 }
 
-struct JournalTab: View {
+struct TodayTab: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
         let router = appState.router
-        NavigationStack(path: Binding(get: { router.journalPath }, set: { router.journalPath = $0 })) {
-            JournalView()
+        NavigationStack(path: Binding(get: { router.todayPath }, set: { router.todayPath = $0 })) {
+            TodayView()
                 .navigationDestination(for: AppRoute.self) { route in
                     RouteView(route: route)
                 }
@@ -178,6 +180,8 @@ struct RouteView: View {
 
     var body: some View {
         switch route {
+        case .today, .nextStep:
+            EmptyView()
         case .breakActivity(let id, let context):
             ActivityContainerView(activityID: id, context: context)
         case .nfcSetup:
@@ -198,6 +202,8 @@ struct RouteView: View {
             CalendarSettingsView()
         case .getFocusCard:
             GetFocusCardView()
+        case .stillPlus:
+            StillPlusView()
         case .habits:
             HabitsScreen()
         case .onboardingGoalPreference:

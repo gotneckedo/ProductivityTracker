@@ -88,6 +88,25 @@ final class PreferencesController {
         applyIcon(for: palette)
     }
 
+    func setCatCoat(_ coat: CatCoat) {
+        update { $0.catCoat = coat }
+    }
+
+    func saveSoundscape(_ soundscape: SavedSoundscape) {
+        update { prefs in
+            let normalized = SavedSoundscape(id: soundscape.id, name: soundscape.name, mix: soundscape.mix.normalized())
+            if let index = prefs.savedSoundscapes.firstIndex(where: { $0.id == normalized.id }) {
+                prefs.savedSoundscapes[index] = normalized
+            } else {
+                prefs.savedSoundscapes.append(normalized)
+            }
+        }
+    }
+
+    func deleteSoundscape(_ id: UUID) {
+        update { $0.savedSoundscapes.removeAll { $0.id == id } }
+    }
+
     var supportsAlternateAppIcons: Bool {
         alternateAppIcons.supportsAlternateIcons
     }

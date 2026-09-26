@@ -91,6 +91,26 @@ enum AppAccentPalette: String, Codable, CaseIterable, Hashable {
     }
 }
 
+/// A visual choice for Still's ambient room companion. It never affects
+/// progress, unlocks, or the cat's behavior.
+enum CatCoat: String, Codable, CaseIterable, Hashable {
+    case ginger
+    case tabby
+    case cream
+    case midnight
+
+    var title: String { rawValue.capitalized }
+
+    var spriteAssetName: String {
+        switch self {
+        case .ginger: return "StillCatGingerSpriteSheet"
+        case .tabby: return "StillCatTabbySpriteSheet"
+        case .cream: return "StillCatCreamSpriteSheet"
+        case .midnight: return "StillCatMidnightSpriteSheet"
+        }
+    }
+}
+
 struct OnboardingAnswers: Equatable {
     var goal: OnboardingGoal?
     var breakAppeal: BreakAppeal?
@@ -133,9 +153,13 @@ struct UserPreferences: Codable, Equatable {
     var showsCalendarEvents: Bool = false
     /// DEBUG/CI-demo sample Google events only. No account or token is stored.
     var showsGoogleCalendarEvents: Bool = false
+    /// Named local sound mixes; the active mix remains on the current preset.
+    var savedSoundscapes: [SavedSoundscape] = []
+    /// Cosmetic room-company preference. Missing legacy values use Ginger.
+    var catCoat: CatCoat = .ginger
     var schemaVersion: Int = UserPreferences.currentSchemaVersion
 
-    static let currentSchemaVersion = 2
+    static let currentSchemaVersion = 4
 
     init() {}
 
@@ -143,7 +167,7 @@ struct UserPreferences: Codable, Equatable {
         case hasCompletedOnboarding, onboardingGoal, breakAppeal, appAccentPalette, defaultPresetID, selectedTaskID
         case animationIntensity, hasRequestedNotificationPermission, notificationPermissionGranted
         case pendingCompletionSessionID, acknowledgedUnlockedSceneCount, morningStart, wakeUpStopMethod
-        case showsCalendarEvents, showsGoogleCalendarEvents, schemaVersion
+        case showsCalendarEvents, showsGoogleCalendarEvents, savedSoundscapes, catCoat, schemaVersion
     }
 
     init(from decoder: Decoder) throws {
@@ -164,6 +188,8 @@ struct UserPreferences: Codable, Equatable {
         wakeUpStopMethod = (try? c.decodeIfPresent(WakeUpStopMethod.self, forKey: .wakeUpStopMethod)) ?? .button
         showsCalendarEvents = (try? c.decodeIfPresent(Bool.self, forKey: .showsCalendarEvents)) ?? false
         showsGoogleCalendarEvents = (try? c.decodeIfPresent(Bool.self, forKey: .showsGoogleCalendarEvents)) ?? false
+        savedSoundscapes = (try? c.decodeIfPresent([SavedSoundscape].self, forKey: .savedSoundscapes)) ?? []
+        catCoat = (try? c.decodeIfPresent(CatCoat.self, forKey: .catCoat)) ?? .ginger
         schemaVersion = try c.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
         self = migrated()
     }
@@ -175,6 +201,14 @@ struct UserPreferences: Codable, Equatable {
         // version makes the migration explicit and idempotent.
         if result.schemaVersion < 2 {
             result.appAccentPalette = appAccentPalette
+        }
+        if result.schemaVersion < 3 {
+            result.savedSoundscapes = savedSoundscapes.map {
+                SavedSoundscape(id: $0.id, name: $0.name, mix: $0.mix.normalized())
+            }
+        }
+        if result.schemaVersion < 4 {
+            result.catCoat = .ginger
         }
         result.schemaVersion = Self.currentSchemaVersion
         return result

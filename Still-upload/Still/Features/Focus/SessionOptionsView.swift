@@ -6,6 +6,8 @@ struct SessionOptionsView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
     @State private var draft: FocusPreset?
+    @State private var savedSoundscapeName = ""
+    @State private var isNamingSoundscape = false
 
     var body: some View {
         NavigationStack {
@@ -170,13 +172,35 @@ struct SessionOptionsView: View {
 
     private var soundSection: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Sound")
+            SectionHeader(title: "Soundscape", detail: "Mix your room's layers locally. Nothing is streamed or shared.")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: StillTheme.Spacing.xs) {
+                    ForEach(SoundscapeCatalog.builtIns) { soundscape in
+                        SoundscapeChip(name: soundscape.name) { draft?.ambientMix = soundscape.mix }
+                    }
+                    ForEach(appState.savedSoundscapes) { soundscape in
+                        SoundscapeChip(name: soundscape.name, isCustom: true) { draft?.ambientMix = soundscape.mix }
+                    }
+                }
+            }
             AmbientMixEditor(mix: binding(\.ambientMix, fallback: .silent), status: appState.audioStatus) { source in
                 appState.container.audio.isAssetAvailable(source)
             }
+            Button("Save this soundscape") {
+                savedSoundscapeName = ""
+                isNamingSoundscape = true
+            }
+            .buttonStyle(QuietSecondaryButtonStyle())
         }
         .padding(StillTheme.Spacing.m)
         .stillGlass()
+        .alert("Save soundscape", isPresented: $isNamingSoundscape) {
+            TextField("Name", text: $savedSoundscapeName)
+            Button("Save") { appState.saveSoundscape(name: savedSoundscapeName, mix: draft?.ambientMix ?? .silent) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Saved only on this device. You can change every layer later.")
+        }
     }
 
     private var blockingSection: some View {
@@ -296,6 +320,29 @@ struct AmbientMixEditor: View {
                     .foregroundStyle(StillTheme.textTertiary)
             }
         }
+    }
+}
+
+private struct SoundscapeChip: View {
+    let name: String
+    var isCustom = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: isCustom ? "person.crop.circle" : "cloud")
+                Text(name)
+            }
+            .font(StillTypography.caption)
+            .foregroundStyle(StillTheme.textPrimary)
+            .padding(.horizontal, StillTheme.Spacing.s)
+            .frame(minHeight: 34)
+            .background(.white.opacity(0.24), in: Capsule())
+            .overlay(Capsule().strokeBorder(StillTheme.border, lineWidth: StillTheme.Stroke.hairline))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Apply \(name) soundscape")
     }
 }
 

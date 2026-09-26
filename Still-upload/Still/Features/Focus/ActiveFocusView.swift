@@ -6,6 +6,8 @@ struct ActiveFocusView: View {
     @Environment(AppState.self) private var appState
     @State private var isConfirmingEnd = false
     @State private var isConfirmingUnblock = false
+    @State private var isAddingNote = false
+    @State private var focusNote = ""
 
     var body: some View {
         Group {
@@ -35,6 +37,32 @@ struct ActiveFocusView: View {
         } message: {
             Text("Your apps open again right away. The session keeps going.")
         }
+        .sheet(isPresented: $isAddingNote) {
+            NavigationStack {
+                StillScreen(phase: .focus) {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
+                        Text("A note for this focus session")
+                            .font(StillTypography.title)
+                            .foregroundStyle(StillDayPhase.focus.ink)
+                        TextField("Remember to…", text: $focusNote, axis: .vertical)
+                            .font(StillTypography.body)
+                            .lineLimit(3...8)
+                            .padding(StillTheme.Spacing.s)
+                            .background(.white.opacity(0.10), in: RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
+                    }
+                    .padding(StillTheme.Spacing.screen)
+                }
+                .navigationTitle("Focus note")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") { appState.setFocusNote(focusNote); isAddingNote = false }
+                    }
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { isAddingNote = false } }
+                }
+            }
+            .presentationDetents([.medium])
+        }
     }
 
     private func content(session: FocusSession, snapshot: TimerSnapshot) -> some View {
@@ -45,6 +73,15 @@ struct ActiveFocusView: View {
                 VStack(spacing: StillTheme.Spacing.m) {
                     HStack {
                         soundChip(session: session)
+                        Button {
+                            appState.toggleMute()
+                        } label: {
+                            Image(systemName: appState.isAudioMuted ? "speaker.slash" : "speaker.wave.2")
+                                .frame(width: StillTheme.minimumTapSize, height: StillTheme.minimumTapSize)
+                                .background(.white.opacity(0.08), in: Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(appState.isAudioMuted ? "Turn sound on" : "Mute sound")
                         Spacer()
                         Text(scheduleLine(snapshot, now: appState.container.clock.now))
                             .font(StillTypography.caption)
@@ -55,6 +92,7 @@ struct ActiveFocusView: View {
                     RoomHeroView(
                         sceneName: scene.name,
                         sceneID: scene.id,
+                        catCoat: appState.preferences.catCoat,
                         phase: .focus,
                         dimmed: true,
                         plantStage: appState.plantStage,
@@ -100,6 +138,10 @@ struct ActiveFocusView: View {
                         FocusPlanCard(task: task)
                     }
 
+                    if snapshot.isPaused {
+                        FocusRescueCard { appState.resume() }
+                    }
+
                     HStack(spacing: StillTheme.Spacing.s) {
                         if appState.isShieldingApps {
                             Button("End blocking") { isConfirmingUnblock = true }
@@ -110,6 +152,11 @@ struct ActiveFocusView: View {
                                 .foregroundStyle(StillDayPhase.focus.secondaryInk)
                         }
                         Spacer()
+                        Button("+ Note") {
+                            focusNote = session.note ?? ""
+                            isAddingNote = true
+                        }
+                        .buttonStyle(QuietTextButtonStyle(foreground: StillDayPhase.focus.secondaryInk))
                         Button("End early") { isConfirmingEnd = true }
                             .buttonStyle(QuietTextButtonStyle(foreground: StillDayPhase.focus.secondaryInk))
                     }
@@ -143,15 +190,15 @@ struct ActiveFocusView: View {
     private func soundChip(session: FocusSession) -> some View {
         let mix = appState.presets.first { $0.id == session.presetID }?.ambientMix ?? .silent
         return Button {
-            appState.toggleMute()
+            appState.router.go(to: .focusConfiguration)
         } label: {
             HStack(spacing: 5) {
-                if mix.isSilent || appState.isAudioMuted {
+                if mix.isSilent {
                     Image(systemName: "speaker.slash")
                 } else {
                     SoundBars()
                 }
-                Text(mix.isSilent || appState.isAudioMuted ? "Sound off" : mix.summaryLine)
+                Text(mix.isSilent ? "Sound off" : mix.summaryLine)
             }
             .font(StillTypography.caption)
             .foregroundStyle(StillDayPhase.focus.ink)
@@ -161,7 +208,7 @@ struct ActiveFocusView: View {
             .overlay(Capsule().strokeBorder(StillDayPhase.focus.glassBorder, lineWidth: StillTheme.Stroke.hairline))
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(mix.isSilent || appState.isAudioMuted ? "Sound off" : "Sound: \(mix.summaryLine)")
+        .accessibilityLabel(mix.isSilent ? "Sound off. Opens soundscape." : "Sound: \(mix.summaryLine). Opens soundscape.")
     }
 
     private func timeText(_ snapshot: TimerSnapshot) -> String {
@@ -244,6 +291,31 @@ private struct FocusPlanCard: View {
             }
         }
         .padding(StillTheme.Spacing.s)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .stillGlass(radius: StillTheme.Radius.medium, phase: .focus)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct FocusRescueCard: View {
+    let resume: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            Text("FOCUS RESCUE · 2 MINUTES")
+                .font(StillTypography.caption)
+                .tracking(1.1)
+                .foregroundStyle(StillDayPhase.focus.secondaryInk)
+            Text("A pause is not a failure.")
+                .font(StillTypography.title3)
+                .foregroundStyle(StillDayPhase.focus.ink)
+            Text("Stand up. Take one breath. Drink water if you want. Then decide whether to come back.")
+                .font(StillTypography.callout)
+                .foregroundStyle(StillDayPhase.focus.secondaryInk)
+            Button("I'm back · Resume") { resume() }
+                .buttonStyle(QuietSecondaryButtonStyle(foreground: StillDayPhase.focus.ink, border: StillDayPhase.focus.glassBorder))
+        }
+        .padding(StillTheme.Spacing.m)
         .frame(maxWidth: .infinity, alignment: .leading)
         .stillGlass(radius: StillTheme.Radius.medium, phase: .focus)
         .accessibilityElement(children: .combine)

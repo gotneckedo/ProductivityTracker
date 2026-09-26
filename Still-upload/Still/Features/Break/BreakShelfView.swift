@@ -9,7 +9,7 @@ struct BreakShelfView: View {
 
     private var visibleActivities: [BreakActivity] {
         let ranked = BreakShelfRanking().ranked(
-            catalog: ActivityCatalog.available,
+            catalog: ActivityCatalog.launchShelf,
             usages: appState.usages,
             personalization: appState.personalization
         )

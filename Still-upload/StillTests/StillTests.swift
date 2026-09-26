@@ -576,7 +576,7 @@ final class AppFlowTests: XCTestCase {
 
     func testSceneUnlockIsNoticedOnceThenAcknowledged() {
         state.completeOnboarding(goal: .focusBetter)
-        for _ in 0..<7 {
+        for _ in 0..<2 {
             state.startFocus()
             clock.advance(by: minutes(25))
             state.tick()
@@ -1319,14 +1319,10 @@ final class RouteResolverTests: XCTestCase {
         XCTAssertEqual(resolver.destination(for: .nfcSetup, currentTab: .focus).stack, [.nfcSetup])
     }
 
-    func testJournalIsHiddenInV1AndReadyBehindFlag() {
-        XCTAssertEqual(AppTab.visibleTabs(flags: .v1), [.focus, .breakShelf, .me])
-        XCTAssertEqual(RouteResolver(flags: .v1).destination(for: .journal, currentTab: .focus).tab, .me)
-
-        var flags = FeatureFlags.v1
-        flags.journalTab = true
-        XCTAssertEqual(AppTab.visibleTabs(flags: flags), [.focus, .breakShelf, .journal, .me])
-        XCTAssertEqual(RouteResolver(flags: flags).destination(for: .journal, currentTab: .focus).tab, .journal)
+    func testTodayOwnsReflectionAndIsAlwaysTheHomeTab() {
+        XCTAssertEqual(AppTab.visibleTabs(flags: .v1), [.today, .focus, .breakShelf, .me])
+        XCTAssertEqual(RouteResolver(flags: .v1).destination(for: .journal, currentTab: .focus).tab, .today)
+        XCTAssertEqual(RouteResolver(flags: .current).destination(for: .today, currentTab: .focus).tab, .today)
     }
 }
 
@@ -1692,6 +1688,13 @@ final class CopyCountTests: XCTestCase {
         XCTAssertEqual(Copy.Count.focusDayLabel(1), "focus day")
         XCTAssertEqual(RoomUnlockRule.focusDays(1).plainLanguage, "Focus on 1 focus day total")
     }
+
+    func testCatCoatsHaveDistinctSpriteAssetsAndLegacyDefault() throws {
+        XCTAssertEqual(Set(CatCoat.allCases.map(\.spriteAssetName)).count, CatCoat.allCases.count)
+        let legacy = try RecordCoding.decoder().decode(UserPreferences.self, from: Data(#"{"schemaVersion":3}"#.utf8))
+        XCTAssertEqual(legacy.catCoat, .ginger)
+        XCTAssertEqual(legacy.schemaVersion, UserPreferences.currentSchemaVersion)
+    }
 }
 
 final class ProgressionTests: XCTestCase {
@@ -1700,9 +1703,9 @@ final class ProgressionTests: XCTestCase {
 
     func testMilestonesMatchSpecification() {
         XCTAssertEqual(SceneCatalog.rainyBedroom.unlockRule, .initiallyUnlocked)
-        XCTAssertEqual(SceneCatalog.libraryLight.unlockRule, .completedSessions(7))
-        XCTAssertEqual(SceneCatalog.trainWindow.unlockRule, .completedSessions(15))
-        XCTAssertEqual(SceneCatalog.nightCity.unlockRule, .completedSessions(25))
+        XCTAssertEqual(SceneCatalog.libraryLight.unlockRule, .completedSessions(2))
+        XCTAssertEqual(SceneCatalog.trainWindow.unlockRule, .completedSessions(6))
+        XCTAssertEqual(SceneCatalog.nightCity.unlockRule, .completedSessions(12))
     }
 
     func testCoreScenesUseFourDistinctRendererLayouts() {
@@ -1714,10 +1717,9 @@ final class ProgressionTests: XCTestCase {
 
     func testUnlocksAtExactThresholds() {
         XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 0).map(\.id), [.rainyBedroom])
-        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 6).map(\.id), [.rainyBedroom])
-        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 7).map(\.id), [.rainyBedroom, .libraryLight])
-        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 15).count, 3)
-        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 25).count, 4)
+        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 2).map(\.id), [.rainyBedroom, .libraryLight])
+        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 6).map(\.id), [.rainyBedroom, .libraryLight, .trainWindow])
+        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 12).count, 4)
     }
 
     func testAllUnlockedPreviewFixtureSeedsRequestedSessionCount() {
@@ -1732,14 +1734,14 @@ final class ProgressionTests: XCTestCase {
 
     func testNextLockedSceneAndRemaining() {
         let next = evaluator.nextLockedScene(in: catalog, completedSessions: 4)
-        XCTAssertEqual(next?.scene.id, .libraryLight)
-        XCTAssertEqual(next?.remaining, 3)
+        XCTAssertEqual(next?.scene.id, .trainWindow)
+        XCTAssertEqual(next?.remaining, 2)
         XCTAssertNil(evaluator.nextLockedScene(in: catalog, completedSessions: 30))
     }
 
     func testNewlyUnlockedBetweenCounts() {
-        XCTAssertEqual(evaluator.newlyUnlocked(in: catalog, before: 6, after: 7).map(\.id), [.libraryLight])
-        XCTAssertTrue(evaluator.newlyUnlocked(in: catalog, before: 7, after: 8).isEmpty)
+        XCTAssertEqual(evaluator.newlyUnlocked(in: catalog, before: 1, after: 2).map(\.id), [.libraryLight])
+        XCTAssertTrue(evaluator.newlyUnlocked(in: catalog, before: 2, after: 3).isEmpty)
         XCTAssertEqual(evaluator.newlyUnlocked(in: catalog, before: 0, after: 30).count, 3)
     }
 
@@ -1766,13 +1768,13 @@ final class ProgressionTests: XCTestCase {
 // MARK: - V1.1+ features
 
 final class FeatureFlagTests: XCTestCase {
-    func testCurrentFlagsShipJournalPlantAndWidgetsButNotBlocking() {
+    func testCurrentFlagsShipTodayPlantAndWidgetsButNotBlocking() {
         let flags = FeatureFlags.current
         XCTAssertTrue(flags.journalTab)
         XCTAssertTrue(flags.plantGrowthStages)
         XCTAssertTrue(flags.liveActivities)
         XCTAssertFalse(flags.appBlocking, "Blocking stays off until Apple approves the entitlement.")
-        XCTAssertEqual(AppTab.visibleTabs(flags: flags), [.focus, .breakShelf, .journal, .me])
+        XCTAssertEqual(AppTab.visibleTabs(flags: flags), [.today, .focus, .breakShelf, .me])
     }
 
     func testEveryP9StandInIsOffInV1CurrentAndRelease() {
@@ -1810,18 +1812,18 @@ final class FeatureFlagTests: XCTestCase {
         XCTAssertEqual(resolver.destination(for: .presets, currentTab: .focus), RouteDestination(tab: .me, stack: [.presets], sheet: nil, completionSessionID: nil))
         XCTAssertEqual(resolver.destination(for: .dayTimeline, currentTab: .breakShelf).sheet, .dayTimeline)
         XCTAssertEqual(resolver.destination(for: .dayTimeline, currentTab: .breakShelf).tab, .breakShelf)
-        XCTAssertEqual(resolver.destination(for: .habits, currentTab: .focus).tab, .journal)
-        XCTAssertEqual(RouteResolver(flags: .v1).destination(for: .habits, currentTab: .focus).stack, [.habits])
+        XCTAssertEqual(resolver.destination(for: .habits, currentTab: .focus).tab, .today)
+        XCTAssertEqual(RouteResolver(flags: .v1).destination(for: .habits, currentTab: .focus).stack, [])
         XCTAssertEqual(resolver.destination(for: .doodleGallery, currentTab: .focus).stack, [.doodleGallery])
         XCTAssertEqual(resolver.destination(for: .calendarSettings, currentTab: .focus).stack, [.calendarSettings])
         XCTAssertEqual(resolver.destination(for: .getFocusCard, currentTab: .focus).stack, [.getFocusCard])
     }
 
-    func testRouterKeepsAJournalStack() {
+    func testRouterKeepsATodayStack() {
         let router = AppRouter(flags: .current)
         router.go(to: .journal)
-        XCTAssertEqual(router.selectedTab, .journal)
-        XCTAssertEqual(router.journalPath, [])
+        XCTAssertEqual(router.selectedTab, .today)
+        XCTAssertEqual(router.todayPath, [])
     }
 }
 
@@ -1924,12 +1926,14 @@ final class HabitControllerTests: XCTestCase {
 }
 
 final class PresetManagementTests: XCTestCase {
-    func testBuiltInsIncludeDeepWorkAndQuickFocus() {
+    func testBuiltInsIncludeDeepWorkQuickFocusAndLowEnergyStarts() {
         let container = makeContainer()
         let ids = container.presets.allPresets().map(\.id)
-        XCTAssertEqual(ids, [.defaultPreset, .study, .deepWork, .quickFocus])
+        XCTAssertEqual(ids, [.defaultPreset, .study, .deepWork, .quickFocus, .lowEnergy, .tinyStart])
         XCTAssertEqual(PresetCatalog.deepWork.timer.focusDuration, 90 * 60)
         XCTAssertEqual(PresetCatalog.quickFocus.timer.focusDuration, 15 * 60)
+        XCTAssertEqual(PresetCatalog.lowEnergy.timer.focusDuration, 10 * 60)
+        XCTAssertEqual(PresetCatalog.tinyStart.timer.focusDuration, 5 * 60)
     }
 
     func testCreateRenameDeleteCustomPreset() {
@@ -2637,15 +2641,27 @@ final class MorningStartAndWidgetTests: XCTestCase {
     func testSeasonalScenesAreCosmeticAndEarnedScenesRemainFree() async {
         XCTAssertTrue(SceneCatalog.all.allSatisfy { $0.entitlementKey == nil })
         XCTAssertEqual(SceneCatalog.seasonal.count, 3)
-        XCTAssertTrue(SceneCatalog.seasonal.allSatisfy { $0.entitlementKey == PurchaseProductCatalog.supporter })
+        XCTAssertTrue(SceneCatalog.seasonal.allSatisfy { $0.entitlementKey == PurchaseProductCatalog.stillPlusMonthly })
 
         let purchases = LocalPurchaseService()
         XCTAssertTrue(purchases.purchasedProductIDs.isEmpty)
-        let purchase = await purchases.purchase(productID: PurchaseProductCatalog.supporter)
+        let purchase = await purchases.purchase(productID: PurchaseProductCatalog.stillPlusMonthly)
         XCTAssertEqual(purchase, .purchased)
-        XCTAssertTrue(purchases.purchasedProductIDs.contains(PurchaseProductCatalog.supporter))
+        XCTAssertTrue(purchases.purchasedProductIDs.contains(PurchaseProductCatalog.stillPlusMonthly))
         let restore = await purchases.restorePurchases()
         XCTAssertEqual(restore, .purchased)
+    }
+
+    func testEitherStillPlusPlanGrantsTheSameLocalEntitlement() async {
+        let purchases = LocalPurchaseService()
+        XCTAssertFalse(purchases.hasStillPlus)
+        let outcome = await purchases.purchase(productID: PurchaseProductCatalog.stillPlusYearly)
+        XCTAssertEqual(outcome, .purchased)
+        XCTAssertTrue(purchases.hasStillPlus)
+        XCTAssertEqual(PurchaseProductCatalog.productIDs, [
+            PurchaseProductCatalog.stillPlusMonthly,
+            PurchaseProductCatalog.stillPlusYearly
+        ])
     }
 
     func testAppPublishesAWidgetSnapshot() throws {

@@ -254,6 +254,16 @@ final class FocusFlowController {
         }
     }
 
+    /// A brief local capture during focus. It remains attached to this session
+    /// and never becomes an analytics event.
+    func setNote(_ raw: String) {
+        guard var session = activeSession else { return }
+        let cleaned = String(raw.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500))
+        session.note = cleaned.isEmpty ? nil : cleaned
+        activeSession = session
+        persist(session)
+    }
+
     // MARK: - Completion moment
 
     /// Clears the pending "What instead?" screen.

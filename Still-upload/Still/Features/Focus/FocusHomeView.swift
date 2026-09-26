@@ -15,6 +15,7 @@ struct FocusHomeView: View {
                     RoomHeroView(
                         sceneName: scene.name,
                         sceneID: scene.id,
+                        catCoat: appState.preferences.catCoat,
                         plantStage: appState.plantStage,
                         bookCount: 2 + appState.books.count,
                         doodle: appState.doodles.max { $0.updatedAt < $1.updatedAt }?.doodle,

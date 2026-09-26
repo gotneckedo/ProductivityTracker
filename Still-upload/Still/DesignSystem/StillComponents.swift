@@ -60,15 +60,22 @@ struct StillGlassSurface: ViewModifier {
     var phase: StillDayPhase? = nil
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.stillDayPhase) private var environmentPhase
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     func body(content: Content) -> some View {
         let resolvedPhase = phase ?? environmentPhase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
         content
             .background(
-                shape
-                    .fill(.ultraThinMaterial)
-                    .overlay(shape.fill(resolvedPhase.glassFill))
+                Group {
+                    if reduceTransparency {
+                        shape.fill(resolvedPhase.glassControlFallback)
+                    } else {
+                        shape
+                            .fill(.ultraThinMaterial)
+                            .overlay(shape.fill(resolvedPhase.glassFill))
+                    }
+                }
             )
             // Keep material, fill, and decorative content inside one contour.
             .clipShape(shape)
@@ -80,6 +87,129 @@ struct StillGlassSurface: ViewModifier {
 extension View {
     func stillGlass(radius: CGFloat = StillTheme.Radius.large, phase: StillDayPhase? = nil) -> some View {
         modifier(StillGlassSurface(radius: radius, phase: phase))
+    }
+}
+
+/// A compact, interactive group: settings, controls, selectors, or a related
+/// run of navigation rows. It is never the default visual wrapper for passive
+/// content or every row in a list.
+struct GlassControlGroup<Content: View>: View {
+    var padding: CGFloat = StillTheme.Spacing.m
+    var radius: CGFloat = StillTheme.Radius.large
+    var phase: StillDayPhase? = nil
+    private let content: Content
+
+    init(
+        padding: CGFloat = StillTheme.Spacing.m,
+        radius: CGFloat = StillTheme.Radius.large,
+        phase: StillDayPhase? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.padding = padding
+        self.radius = radius
+        self.phase = phase
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(padding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .stillGlass(radius: radius, phase: phase)
+    }
+}
+
+/// A grouped, non-material list surface. It gives rows a shared home without
+/// adding a floating card around each of them.
+struct StillInsetList<Content: View>: View {
+    var padding: CGFloat = StillTheme.Spacing.s
+    var radius: CGFloat = StillTheme.Radius.medium
+    var phase: StillDayPhase? = nil
+    private let content: Content
+    @Environment(\.stillDayPhase) private var environmentPhase
+    @Environment(\.colorScheme) private var colorScheme
+
+    init(
+        padding: CGFloat = StillTheme.Spacing.s,
+        radius: CGFloat = StillTheme.Radius.medium,
+        phase: StillDayPhase? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.padding = padding
+        self.radius = radius
+        self.phase = phase
+        self.content = content()
+    }
+
+    var body: some View {
+        let resolved = phase ?? environmentPhase ?? StillDayPhase.automatic(colorScheme: colorScheme)
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        content
+            .padding(.horizontal, padding)
+            .padding(.vertical, padding / 2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(shape.fill(resolved.plainGroupFill))
+            .clipShape(shape)
+            .overlay(shape.strokeBorder(resolved.insetSeparator.opacity(0.72), lineWidth: StillTheme.Stroke.hairline))
+    }
+}
+
+/// The single separator style used within an inset list or glass control group.
+/// Its leading inset preserves the visual alignment after a row's leading icon.
+struct InsetRowDivider: View {
+    var leading: CGFloat = 0
+    var phase: StillDayPhase? = nil
+    @Environment(\.stillDayPhase) private var environmentPhase
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let resolved = phase ?? environmentPhase ?? StillDayPhase.automatic(colorScheme: colorScheme)
+        Rectangle()
+            .fill(resolved.insetSeparator)
+            .frame(height: StillTheme.Stroke.hairline)
+            .padding(.leading, leading)
+            .accessibilityHidden(true)
+    }
+}
+
+extension View {
+    /// Standard row rhythm for one action inside a shared list or control group.
+    func stillInsetRow(verticalPadding: CGFloat = StillTheme.Spacing.xs) -> some View {
+        padding(.vertical, verticalPadding)
+            .frame(maxWidth: .infinity, minHeight: StillTheme.minimumTapSize, alignment: .leading)
+            .contentShape(Rectangle())
+    }
+}
+
+/// An opaque or near-opaque pastel canvas reserved for an activity's primary
+/// content—never a generic setting or navigation card.
+struct MatteActivityCanvas<Content: View>: View {
+    var tint: Color = StillTheme.calmSoft
+    var radius: CGFloat = StillTheme.Radius.large
+    var phase: StillDayPhase? = nil
+    private let content: Content
+    @Environment(\.stillDayPhase) private var environmentPhase
+    @Environment(\.colorScheme) private var colorScheme
+
+    init(
+        tint: Color = StillTheme.calmSoft,
+        radius: CGFloat = StillTheme.Radius.large,
+        phase: StillDayPhase? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.tint = tint
+        self.radius = radius
+        self.phase = phase
+        self.content = content()
+    }
+
+    var body: some View {
+        let resolved = phase ?? environmentPhase ?? StillDayPhase.automatic(colorScheme: colorScheme)
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        content
+            .background(shape.fill(tint.opacity(resolved == .night || resolved == .focus ? 0.42 : 0.84)))
+            .clipShape(shape)
+            .overlay(shape.strokeBorder(resolved.insetSeparator.opacity(0.72), lineWidth: StillTheme.Stroke.hairline))
     }
 }
 
@@ -112,7 +242,9 @@ extension View {
     }
 }
 
-/// A large rounded card with a fine low-contrast border and restrained shadow.
+/// Legacy spelling for a glass **control** group. New feature work should name
+/// `GlassControlGroup` directly so passive content is not accidentally styled
+/// as an interactive panel.
 struct StillCard<Content: View>: View {
     var padding: CGFloat = StillTheme.Spacing.m
     var tint: Color = StillTheme.surface
@@ -127,14 +259,9 @@ struct StillCard<Content: View>: View {
     }
 
     var body: some View {
-        content
-            .padding(padding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous)
-                    .fill(tint.opacity(0.24))
-            )
-            .stillGlass(phase: phase)
+        GlassControlGroup(padding: padding, phase: phase) {
+            content
+        }
     }
 }
 
@@ -146,8 +273,9 @@ extension ActivityVisualStyle {
     var glowColor: Color { Color(hex: glowHex) }
 }
 
-/// The shared surface for activity instructions, editors, boards, and reading
-/// choices. The glow is intentionally decorative and never conveys state alone.
+/// The shared matte surface for activity instructions, editors, and boards.
+/// Activity content deliberately avoids material blur so it remains a distinct
+/// role from compact control groups.
 struct ActivityGlassCard<Content: View>: View {
     let activityID: BreakActivityID
     var padding: CGFloat = StillTheme.Spacing.m
@@ -161,18 +289,11 @@ struct ActivityGlassCard<Content: View>: View {
 
     var body: some View {
         let style = ActivityPresentation.visualStyle(for: activityID)
-        content
-            .padding(padding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(alignment: .topTrailing) {
-                Circle()
-                    .fill(style.glowColor.opacity(0.42))
-                    .frame(width: 124, height: 124)
-                    .blur(radius: 36)
-                    .offset(x: 30, y: -34)
-                    .accessibilityHidden(true)
-            }
-            .stillGlass()
+        MatteActivityCanvas(tint: style.glowColor.opacity(0.56)) {
+            content
+                .padding(padding)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 
@@ -511,17 +632,7 @@ struct ActivityTile: View {
                 }
             }
         }
-        .padding(StillTheme.Spacing.s)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
-                .fill(StillTheme.surface)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
-                .strokeBorder(StillTheme.border, lineWidth: StillTheme.Stroke.hairline)
-        )
-        .contentShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
+        .stillInsetRow(verticalPadding: StillTheme.Spacing.s)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(activity.name)
         .accessibilityValue("About \(activity.estimatedMinutes) minutes. \(activity.summary)\(isDoneToday ? " Done today." : "")")
@@ -603,7 +714,8 @@ struct SettingRow: View {
     }
 }
 
-/// A calm inline note, e.g. "Ambient audio is ready when sound files are added."
+/// A calm inline note. Containers decide the surrounding surface; this view
+/// never creates a nested glass card of its own.
 struct QuietNote: View {
     let text: String
     var symbol: String = "info.circle"
@@ -622,7 +734,6 @@ struct QuietNote: View {
         }
         .font(StillTypography.footnote)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(StillTheme.Spacing.s)
-        .stillGlass(radius: StillTheme.Radius.medium, phase: resolved)
+        .padding(.vertical, StillTheme.Spacing.xs)
     }
 }

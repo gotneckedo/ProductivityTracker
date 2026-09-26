@@ -5,12 +5,12 @@
   ],
   "products" : [
     {
-      "displayPrice" : "4.99",
+      "displayPrice" : "2.99",
       "familyShareable" : false,
       "internalID" : "33C64C5B-1E0C-4DB3-8D34-F2D46B6548C6",
       "localizations" : [
         {
-          "description" : "Focus Card access, seasonal rooms, and future subscriber tools. Focus tools stay free.",
+          "description" : "Permanent extra rooms, alternate cat coats, and future subscriber tools. Focus tools stay free.",
           "displayName" : "Still+ Monthly",
           "locale" : "en_US"
         }
@@ -22,12 +22,12 @@
       "type" : "Auto-Renewable Subscription"
     },
     {
-      "displayPrice" : "39.99",
+      "displayPrice" : "24.99",
       "familyShareable" : false,
       "internalID" : "6F29F34B-13A5-4B06-8B5A-F6D4B5BC36E1",
       "localizations" : [
         {
-          "description" : "Focus Card access, seasonal rooms, and future subscriber tools. Focus tools stay free.",
+          "description" : "Permanent extra rooms, alternate cat coats, and future subscriber tools. Focus tools stay free.",
           "displayName" : "Still+ Yearly",
           "locale" : "en_US"
         }

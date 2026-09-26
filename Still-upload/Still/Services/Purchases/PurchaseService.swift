@@ -25,15 +25,15 @@ enum PurchaseProductCatalog {
     static let stillPlusPreview = SupporterProduct(
         id: stillPlusMonthly,
         displayName: "Still+ Monthly",
-        description: "Physical Focus Card access, seasonal rooms, extra palettes, and future subscriber tools. Focus, tasks, and every session-earned room stay free.",
-        displayPrice: "$4.99/month test price"
+        description: "Permanent extra rooms, alternate cat coats, additional sound layers, and future subscriber tools. Focus, tasks, breaks, local history, and every session-earned room stay free.",
+        displayPrice: "$2.99/month"
     )
 
     static let stillPlusYearlyPreview = SupporterProduct(
         id: stillPlusYearly,
         displayName: "Still+ Yearly",
         description: "The same Still+ benefits with a year of quiet focus tools.",
-        displayPrice: "$39.99/year test price"
+        displayPrice: "$24.99/year"
     )
 }
 

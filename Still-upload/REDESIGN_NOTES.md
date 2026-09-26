@@ -2,9 +2,9 @@
 
 **Branch:** `redesign`  
 **Pull request:** [#1 — Redesign Still with a room-first focus flow](https://github.com/gotneckedo/ProductivityTracker/pull/1)  
-**Latest verified UI head:** `8dd3f9d`
-**Latest local validation:** `swift test` — **217 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).
-**Latest GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 36242555096](https://github.com/gotneckedo/ProductivityTracker/actions/runs/36242555096) completed successfully on `8dd3f9d`; its `still-screenshots` artifact contains and was visually reviewed across 48 simulator captures.
+**Latest verified UI head:** `a6979f7`
+**Latest local validation:** `swift test` — **221 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).
+**Latest GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 36253225295](https://github.com/gotneckedo/ProductivityTracker/actions/runs/36253225295) completed successfully on `a6979f7`; its `still-screenshots` artifact contains and was visually reviewed across **59** simulator captures.
 
 ## Master Plan decisions — product direction, not implementation proof
 
@@ -25,6 +25,21 @@ do **not** claim that the corresponding feature has shipped or passed CI.
 
 - **A13 — study anchor:** accepted for Wave 3 as one optional pinned study anchor. It will remain silent when unmet, create no streak, and never produce a catch-up prompt; this preserves the useful “return point” without turning it into a daily obligation.
 - **F9 — settle-in fade:** accepted with the Master Plan condition: any 30-second sound fade happens **during the first 30 seconds of a started session**, never before Start, so Still never delays the first action.
+
+## Master Plan Wave 1 — perspective prerequisite verified
+
+The original perspective-room correction at `a7d7f58` was reviewed again
+through the complete current build at `a6979f7`. The latter adds deterministic
+CI routes for every currently selectable room; it does not claim an alarm-room
+flow, which belongs to the later alarm wave.
+
+| Requirement | Proving capture(s) | Review result |
+|---|---|---|
+| **Rainy Bedroom perspective** | `03-focus-room.png` | A distinct back wall, right side wall, converging floorboards, bed, desk, lamp, shelf, and plant read as one inhabitable room rather than flat geometry. |
+| **Four earned core rooms** | `03-focus-room.png`, `54-room-library.png`, `55-room-train.png`, `56-room-city.png` | Rainy Bedroom, Library Light, Train Window, and Night City all keep the same readable two-wall/floor shell while changing the window, built-in shelf, bed, lighting, and palette composition. |
+| **Three permanent Still+ room cosmetics** | `57-room-autumn.png`, `58-room-snow.png`, `59-room-spring.png` | Autumn Window, Snow Day, and Spring Rain retain the established perspective shell while presenting distinct exterior/window and furnishing color treatments. DEBUG-only in-memory entitlement unlocks these for screenshot review; this is not a production purchase claim. |
+
+**Accepted boundary:** the bundled `still-room-alarmsleep.png` source asset is not yet presented as an armable alarm experience. It requires its own state-machine, DEBUG-only mock-flow, and CI proof in the later alarm wave; no release alarm behavior is implied here.
 
 ## Phase 2 — verified sprite-first room checkpoint
 

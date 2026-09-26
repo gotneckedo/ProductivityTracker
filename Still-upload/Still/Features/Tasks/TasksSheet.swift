@@ -21,28 +21,30 @@ struct TasksSheet: View {
                             Text("Today")
                                 .font(StillTypography.display)
                                 .foregroundStyle(StillTheme.textPrimary)
-                            Text("Keep the next thing small and visible.")
-                                .font(StillTypography.callout)
-                                .foregroundStyle(StillTheme.textSecondary)
                         }
                         addBox(phase: phase)
                         if appState.todaysTasks.isEmpty {
                             EmptyState(symbol: "checklist", title: "Nothing here yet", message: "A task is optional. One clear thing is usually enough.")
                                 .padding(.vertical, StillTheme.Spacing.xl)
                         } else {
-                            VStack(spacing: StillTheme.Spacing.s) {
-                                ForEach(appState.todaysTasks) { task in
-                                    TaskFocusCard(
-                                        task: task,
-                                        detailLine: detailLine(for: task),
-                                        isSelected: appState.preferences.selectedTaskID == task.id && !task.isCompleted,
-                                        onSelect: { toggleSelection(task) },
-                                        onToggleDone: { appState.setTaskCompleted(task.id, !task.isCompleted) },
-                                        onToggleStep: { step in appState.toggleTaskStep(taskID: task.id, stepID: step.id) },
-                                        onDetails: { detailTaskID = task.id },
-                                        onDelete: { appState.deleteTask(task.id) },
-                                        phase: phase
-                                    )
+                            StillInsetList {
+                                VStack(spacing: 0) {
+                                    ForEach(Array(appState.todaysTasks.enumerated()), id: \.element.id) { index, task in
+                                        TaskFocusCard(
+                                            task: task,
+                                            detailLine: detailLine(for: task),
+                                            isSelected: appState.preferences.selectedTaskID == task.id && !task.isCompleted,
+                                            onSelect: { toggleSelection(task) },
+                                            onToggleDone: { appState.setTaskCompleted(task.id, !task.isCompleted) },
+                                            onToggleStep: { step in appState.toggleTaskStep(taskID: task.id, stepID: step.id) },
+                                            onDetails: { detailTaskID = task.id },
+                                            onDelete: { appState.deleteTask(task.id) },
+                                            phase: phase
+                                        )
+                                        if index < appState.todaysTasks.count - 1 {
+                                            InsetRowDivider(leading: StillTheme.minimumTapSize + StillTheme.Spacing.s)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -195,8 +197,7 @@ private struct TaskFocusCard: View {
                 .padding(.leading, StillTheme.minimumTapSize + StillTheme.Spacing.s)
             }
         }
-        .padding(StillTheme.Spacing.s)
-        .stillGlass(radius: StillTheme.Radius.medium, phase: phase)
+        .stillInsetRow(verticalPadding: StillTheme.Spacing.s)
         .accessibilityElement(children: .contain)
     }
 

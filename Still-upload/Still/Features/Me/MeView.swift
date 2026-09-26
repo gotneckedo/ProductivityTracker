@@ -57,83 +57,99 @@ struct MeView: View {
     private var scenesSection: some View {
         let unlocked = SceneCatalog.all.filter { appState.isUnlocked($0) }.count
         return VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Scenes", detail: nextUnlockLine)
-            Button {
-                appState.router.go(to: .sceneCollection)
-            } label: {
-                SettingRow(symbol: "square.grid.2x2", title: "Scene collection", value: "\(unlocked) of \(SceneCatalog.all.count) open",
-                           iconTint: StillTheme.calm, iconBackground: StillTheme.calmSoft)
+            SectionHeader(title: "Scenes")
+            GlassControlGroup(padding: StillTheme.Spacing.s, radius: StillTheme.Radius.medium) {
+                Button {
+                    appState.router.go(to: .sceneCollection)
+                } label: {
+                    SettingRow(symbol: "square.grid.2x2", title: "Scene collection", value: "\(unlocked) of \(SceneCatalog.all.count) open",
+                               iconTint: StillTheme.calm, iconBackground: StillTheme.calmSoft)
+                        .stillInsetRow()
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
-    }
-
-    private var nextUnlockLine: String {
-        guard let next = appState.nextLockedScene else { return "Every scene is open." }
-        return "\(next.scene.name) opens after \(Copy.Count.session(next.remaining)) more."
     }
 
     private var focusSection: some View {
         let preset = appState.currentPreset
         return VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
             SectionHeader(title: "Focus settings")
-            Button {
-                appState.router.go(to: .focusConfiguration)
-            } label: {
-                SettingRow(symbol: "timer", title: "Focus defaults", value: "\(preset.name) · \(DurationSummaryText.short(preset.timer))",
-                           iconTint: StillTheme.accent, iconBackground: StillTheme.accentSoft)
+            GlassControlGroup(padding: StillTheme.Spacing.s, radius: StillTheme.Radius.medium) {
+                VStack(spacing: 0) {
+                    settingLink(
+                        symbol: "timer",
+                        title: "Focus defaults",
+                        value: "\(preset.name) · \(DurationSummaryText.short(preset.timer))",
+                        iconTint: StillTheme.accent,
+                        iconBackground: StillTheme.accentSoft,
+                        route: .focusConfiguration
+                    )
+                    InsetRowDivider(leading: 52)
+                    settingLink(
+                        symbol: "square.stack",
+                        title: "Presets",
+                        value: "\(appState.presets.count)",
+                        iconTint: StillTheme.warm,
+                        iconBackground: StillTheme.warmSoft,
+                        route: .presets
+                    )
+                    InsetRowDivider(leading: 52)
+                    settingLink(
+                        symbol: "checklist",
+                        title: "Today's tasks",
+                        value: "\(appState.todaysTasks.filter { !$0.isCompleted }.count) open",
+                        iconTint: StillTheme.highlight,
+                        iconBackground: StillTheme.highlightSoft,
+                        route: .tasks
+                    )
+                    InsetRowDivider(leading: 52)
+                    settingLink(
+                        symbol: "calendar.day.timeline.left",
+                        title: "Day timeline",
+                        iconTint: StillTheme.calm,
+                        iconBackground: StillTheme.calmSoft,
+                        route: .dayTimeline
+                    )
+                }
             }
-            .buttonStyle(.plain)
-            Button {
-                appState.router.go(to: .presets)
-            } label: {
-                SettingRow(symbol: "square.stack", title: "Presets", value: "\(appState.presets.count)",
-                           iconTint: StillTheme.warm, iconBackground: StillTheme.warmSoft)
-            }
-            .buttonStyle(.plain)
-            Button {
-                appState.router.go(to: .tasks)
-            } label: {
-                SettingRow(symbol: "checklist", title: "Today's tasks", value: "\(appState.todaysTasks.filter { !$0.isCompleted }.count) open",
-                           iconTint: StillTheme.highlight, iconBackground: StillTheme.highlightSoft)
-            }
-            .buttonStyle(.plain)
-            Button {
-                appState.router.go(to: .dayTimeline)
-            } label: {
-                SettingRow(symbol: "calendar.day.timeline.left", title: "Day timeline",
-                           iconTint: StillTheme.calm, iconBackground: StillTheme.calmSoft)
-            }
-            .buttonStyle(.plain)
         }
     }
 
     private var dailySection: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
             SectionHeader(title: "Your days")
-            Button {
-                appState.router.go(to: .morningStart)
-            } label: {
-                SettingRow(symbol: "sunrise", title: "Morning Start",
-                           value: appState.preferences.morningStart.isEnabled ? appState.preferences.morningStart.summary : "Off",
-                           iconTint: StillTheme.warm, iconBackground: StillTheme.warmSoft)
-            }
-            .buttonStyle(.plain)
-            Button {
-                appState.router.go(to: .doodleGallery)
-            } label: {
-                SettingRow(symbol: "paintbrush.pointed", title: "Doodles", value: appState.doodles.isEmpty ? "None yet" : "\(appState.doodles.count) saved",
-                           iconTint: StillTheme.attention, iconBackground: StillTheme.attentionSoft)
-            }
-            .buttonStyle(.plain)
-            if !appState.container.flags.journalTab {
-                Button {
-                    appState.router.go(to: .habits)
-                } label: {
-                    SettingRow(symbol: "checkmark.circle", title: "Small habits", value: "\(appState.habitDays.count)",
-                               iconTint: StillTheme.accent, iconBackground: StillTheme.accentSoft)
+            GlassControlGroup(padding: StillTheme.Spacing.s, radius: StillTheme.Radius.medium) {
+                VStack(spacing: 0) {
+                    settingLink(
+                        symbol: "sunrise",
+                        title: "Morning Start",
+                        value: appState.preferences.morningStart.isEnabled ? appState.preferences.morningStart.summary : "Off",
+                        iconTint: StillTheme.warm,
+                        iconBackground: StillTheme.warmSoft,
+                        route: .morningStart
+                    )
+                    InsetRowDivider(leading: 52)
+                    settingLink(
+                        symbol: "paintbrush.pointed",
+                        title: "Doodles",
+                        value: appState.doodles.isEmpty ? "None yet" : "\(appState.doodles.count) saved",
+                        iconTint: StillTheme.attention,
+                        iconBackground: StillTheme.attentionSoft,
+                        route: .doodleGallery
+                    )
+                    if !appState.container.flags.journalTab {
+                        InsetRowDivider(leading: 52)
+                        settingLink(
+                            symbol: "checkmark.circle",
+                            title: "Small habits",
+                            value: "\(appState.habitDays.count)",
+                            iconTint: StillTheme.accent,
+                            iconBackground: StillTheme.accentSoft,
+                            route: .habits
+                        )
+                    }
                 }
-                .buttonStyle(.plain)
             }
         }
     }
@@ -141,88 +157,110 @@ struct MeView: View {
     private var cardAndBlockingSection: some View {
         let blocking = appState.container.blocking
         return VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            Button {
-                appState.router.go(to: .stillPlus)
-            } label: {
-                SettingRow(symbol: "sparkles", title: "Still+", value: appState.hasStillPlus ? "Active" : "Optional subscription",
-                           iconTint: StillTheme.warm, iconBackground: StillTheme.warmSoft)
-            }
-            .buttonStyle(.plain)
-            SectionHeader(title: "Focus Card")
-            Button {
-                appState.router.go(to: .nfcSetup)
-            } label: {
-                SettingRow(symbol: "wave.3.right", title: "Set up a Focus Card", value: "NFC",
-                           iconTint: StillTheme.warm, iconBackground: StillTheme.warmSoft)
-            }
-            .buttonStyle(.plain)
-            if appState.container.flags.appBlocking {
-                Button {
-                    appState.router.go(to: .blockingSetup)
-                } label: {
-                    SettingRow(symbol: "shield", title: "Blocking and schedule",
-                               iconTint: StillTheme.calm, iconBackground: StillTheme.calmSoft)
+            SectionHeader(title: "Still+")
+            GlassControlGroup(padding: StillTheme.Spacing.s, radius: StillTheme.Radius.medium) {
+                VStack(spacing: 0) {
+                    settingLink(
+                        symbol: "sparkles",
+                        title: "Still+",
+                        value: appState.hasStillPlus ? "Active" : "Optional subscription",
+                        iconTint: StillTheme.warm,
+                        iconBackground: StillTheme.warmSoft,
+                        route: .stillPlus
+                    )
+                    InsetRowDivider(leading: 52)
+                    settingLink(
+                        symbol: "wave.3.right",
+                        title: "Set up a Focus Card",
+                        value: "NFC",
+                        iconTint: StillTheme.warm,
+                        iconBackground: StillTheme.warmSoft,
+                        route: .nfcSetup
+                    )
+                    if appState.container.flags.appBlocking {
+                        InsetRowDivider(leading: 52)
+                        settingLink(
+                            symbol: "shield",
+                            title: "Blocking and schedule",
+                            iconTint: StillTheme.calm,
+                            iconBackground: StillTheme.calmSoft,
+                            route: .blockingSetup
+                        )
+                    }
+                    InsetRowDivider(leading: 52)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(BlockingCopy.title(for: blocking.capability, isShielding: blocking.isShielding))
+                            .font(StillTypography.bodyEmphasis)
+                            .foregroundStyle(StillTheme.textPrimary)
+                        Text(BlockingCopy.detail(for: blocking.capability))
+                            .font(StillTypography.footnote)
+                            .foregroundStyle(StillTheme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .stillInsetRow()
                 }
-                .buttonStyle(.plain)
             }
-            StillCard {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
-                    Text(BlockingCopy.title(for: blocking.capability, isShielding: blocking.isShielding))
-                        .font(StillTypography.bodyEmphasis)
-                        .foregroundStyle(StillTheme.textPrimary)
-                    Text(BlockingCopy.detail(for: blocking.capability))
-                        .font(StillTypography.footnote)
-                        .foregroundStyle(StillTheme.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .accessibilityElement(children: .combine)
         }
     }
 
     private var privacySection: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Your preferences", detail: "Change one answer without resetting anything else.")
-            Button {
-                appState.router.go(to: .onboardingGoalPreference)
-            } label: {
-                SettingRow(symbol: "scope", title: "Focus goal", value: appState.preferences.onboardingGoal?.title ?? "Not set")
+            SectionHeader(title: "Your preferences")
+            GlassControlGroup(padding: StillTheme.Spacing.s, radius: StillTheme.Radius.medium) {
+                VStack(spacing: 0) {
+                    settingLink(symbol: "scope", title: "Focus goal", value: appState.preferences.onboardingGoal?.title ?? "Not set", route: .onboardingGoalPreference)
+                    InsetRowDivider(leading: 52)
+                    settingLink(symbol: "cup.and.saucer", title: "Break preference", value: appState.preferences.breakAppeal?.title ?? "Not set", route: .onboardingBreakPreference)
+                    InsetRowDivider(leading: 52)
+                    settingLink(symbol: "paintpalette", title: "Look & app icon", value: appState.preferences.appAccentPalette.title, route: .onboardingLookPreference)
+                }
             }
-            .buttonStyle(.plain)
-            Button {
-                appState.router.go(to: .onboardingBreakPreference)
-            } label: {
-                SettingRow(symbol: "cup.and.saucer", title: "Break preference", value: appState.preferences.breakAppeal?.title ?? "Not set")
-            }
-            .buttonStyle(.plain)
-            Button {
-                appState.router.go(to: .onboardingLookPreference)
-            } label: {
-                SettingRow(symbol: "paintpalette", title: "Look & app icon", value: appState.preferences.appAccentPalette.title)
-            }
-            .buttonStyle(.plain)
 
             SectionHeader(title: "Privacy")
                 .padding(.top, StillTheme.Spacing.s)
             QuietNote(text: "Processed on this device. No account. No servers.", symbol: "lock")
-            Button {
-                isConfirmingReset = true
-            } label: {
-                HStack(spacing: StillTheme.Spacing.s) {
-                    Image(systemName: "trash")
-                        .frame(width: 26)
-                        .accessibilityHidden(true)
-                    Text("Reset local data")
-                    Spacer()
+            StillInsetList(padding: StillTheme.Spacing.s) {
+                Button {
+                    isConfirmingReset = true
+                } label: {
+                    HStack(spacing: StillTheme.Spacing.s) {
+                        Image(systemName: "trash")
+                            .frame(width: 26)
+                            .accessibilityHidden(true)
+                        Text("Reset local data")
+                        Spacer()
+                    }
+                    .font(StillTypography.body)
+                    .foregroundStyle(StillTheme.attention)
+                    .stillInsetRow()
                 }
-                .font(StillTypography.body)
-                .foregroundStyle(StillTheme.attention)
-                .frame(minHeight: StillTheme.minimumTapSize)
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .accessibilityHint("Asks before deleting everything on this device.")
             }
-            .buttonStyle(.plain)
-            .accessibilityHint("Asks before deleting everything on this device.")
         }
+    }
+
+    private func settingLink(
+        symbol: String,
+        title: String,
+        value: String? = nil,
+        iconTint: Color = StillTheme.accent,
+        iconBackground: Color = StillTheme.accentSoft,
+        route: AppRoute
+    ) -> some View {
+        Button {
+            appState.router.go(to: route)
+        } label: {
+            SettingRow(
+                symbol: symbol,
+                title: title,
+                value: value,
+                iconTint: iconTint,
+                iconBackground: iconBackground
+            )
+            .stillInsetRow()
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -259,8 +297,7 @@ private struct ProfileHero: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(StillTheme.Spacing.m)
-        .stillGlass(radius: StillTheme.Radius.large)
+        .padding(.vertical, StillTheme.Spacing.s)
         .accessibilityElement(children: .combine)
     }
 
@@ -275,7 +312,7 @@ private struct ProfileHero: View {
     private var profileLine: String {
         let sessions = stats.completedSessions
         let sessionLine = Copy.Count.session(sessions)
-        guard stats.hasHistory else { return "\(sessionLine) · a quiet place to notice what helps." }
+        guard stats.hasHistory else { return sessionLine }
         return "\(sessionLine) · \(StatsCalculator.streakLine(current: max(1, stats.currentStreak)))"
     }
 }

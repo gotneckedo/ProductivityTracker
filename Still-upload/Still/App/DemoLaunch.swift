@@ -6,10 +6,10 @@ import Foundation
 ///
 ///   xcrun simctl launch booted com.cocomedia.still -still-demo home
 ///
-/// Screens: onboarding, home, focus-room, room-library, room-train, room-city,
+/// Screens: onboarding, today, setup, home, focus-room, room-library, room-train, room-city,
 /// room-autumn, room-snow, room-spring, sprite-contact-sheet,
 /// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, complete, break, sudoku, wordsearch,
-/// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-seasonal, card,
+/// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, timeline, doodle, gallery, morning,
 /// calendar-settings, get-card.
 enum DemoLaunch {
@@ -44,6 +44,10 @@ enum DemoLaunch {
         switch screen {
         case "onboarding":
             return PreviewSupport.appState(onboarded: false)
+        case "today":
+            return routed(.today)
+        case "setup":
+            return routed(.focusConfiguration)
         case "home":
             return PreviewSupport.appState(populated: true)
         case "focus-room":
@@ -110,7 +114,7 @@ enum DemoLaunch {
             let state = PreviewSupport.appState(populated: true, completedSessions: 30)
             state.router.go(to: .sceneCollection)
             return state
-        case "scenes-seasonal":
+        case "scenes-extra":
             let state = PreviewSupport.appState(populated: true, completedSessions: 30)
             state.router.go(to: .sceneCollection)
             return state

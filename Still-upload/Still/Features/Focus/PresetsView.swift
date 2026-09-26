@@ -24,42 +24,45 @@ struct PresetsView: View {
                             .font(StillTypography.display)
                             .foregroundStyle(StillTheme.textPrimary)
                             .accessibilityAddTraits(.isHeader)
-                        Text("A preset is a timer, a scene, and a sound. Tap one to make it your default. Each one has its own Focus Card link.")
-                            .font(StillTypography.callout)
-                            .foregroundStyle(StillTheme.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    VStack(spacing: StillTheme.Spacing.s) {
-                        ForEach(appState.presets) { preset in
-                            PresetRow(
-                                preset: preset,
-                                isDefault: preset.id == appState.currentPreset.id,
-                                onSelect: { appState.setDefaultPreset(preset.id) },
-                                onDuplicate: { beginNaming(.create(basedOn: preset)) },
-                                onRename: { beginNaming(.rename(preset)) },
-                                onDelete: { deleting = preset }
-                            )
+                    StillInsetList {
+                        VStack(spacing: 0) {
+                            ForEach(Array(appState.presets.enumerated()), id: \.element.id) { index, preset in
+                                PresetRow(
+                                    preset: preset,
+                                    isDefault: preset.id == appState.currentPreset.id,
+                                    onSelect: { appState.setDefaultPreset(preset.id) },
+                                    onDuplicate: { beginNaming(.create(basedOn: preset)) },
+                                    onRename: { beginNaming(.rename(preset)) },
+                                    onDelete: { deleting = preset }
+                                )
+                                if index < appState.presets.count - 1 {
+                                    InsetRowDivider(leading: 46)
+                                }
+                            }
+                            if appState.canCreatePreset {
+                                InsetRowDivider(leading: 46)
+                                Button {
+                                    beginNaming(.create(basedOn: appState.currentPreset))
+                                } label: {
+                                    Label("New preset", systemImage: "plus")
+                                        .font(StillTypography.bodyEmphasis)
+                                        .foregroundStyle(StillTheme.accent)
+                                        .stillInsetRow()
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            InsetRowDivider(leading: 46)
+                            Button {
+                                appState.router.go(to: .focusConfiguration)
+                            } label: {
+                                SettingRow(symbol: "slider.horizontal.3", title: "Edit \(appState.currentPreset.name)", value: "Session options")
+                                    .stillInsetRow()
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
-
-                    if appState.canCreatePreset {
-                        Button {
-                            beginNaming(.create(basedOn: appState.currentPreset))
-                        } label: {
-                            Label("New preset", systemImage: "plus")
-                        }
-                        .buttonStyle(QuietSecondaryButtonStyle())
-                    } else {
-                        QuietNote(text: "Ten presets is the limit. Delete one to make room.")
-                    }
-
-                    Button {
-                        appState.router.go(to: .focusConfiguration)
-                    } label: {
-                        SettingRow(symbol: "slider.horizontal.3", title: "Edit \(appState.currentPreset.name)", value: "Session options")
-                    }
-                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, StillTheme.Spacing.screen)
                 .padding(.vertical, StillTheme.Spacing.m)
@@ -173,13 +176,7 @@ private struct PresetRow: View {
             }
             .accessibilityLabel("More for \(preset.name)")
         }
-        .padding(.horizontal, StillTheme.Spacing.s)
-        .padding(.vertical, StillTheme.Spacing.s)
-        .stillGlass(radius: StillTheme.Radius.medium)
-        .overlay(
-            RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
-                .strokeBorder(isDefault ? StillTheme.accent : Color.clear, lineWidth: isDefault ? 2 : 0)
-        )
+        .stillInsetRow(verticalPadding: StillTheme.Spacing.s)
     }
 
     private var detail: String {

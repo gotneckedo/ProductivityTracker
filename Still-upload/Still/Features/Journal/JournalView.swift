@@ -17,9 +17,6 @@ struct JournalView: View {
                             .font(StillTypography.display)
                             .foregroundStyle(phase.ink)
                             .accessibilityAddTraits(.isHeader)
-                        Text("One line a day is plenty.")
-                            .font(StillTypography.callout)
-                            .foregroundStyle(phase.secondaryInk)
                     }
 
                     TodayLineCard()
@@ -64,7 +61,7 @@ private struct TodayLineCard: View {
     }
 
     var body: some View {
-        StillCard {
+        MatteActivityCanvas(tint: StillTheme.warmSoft) {
             VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
                 Text(Date().formatted(.dateTime.weekday(.wide).month(.wide).day()))
                     .font(StillTypography.footnote.weight(.medium))
@@ -96,15 +93,9 @@ private struct TodayLineCard: View {
                 }
 
                 HStack {
-                    if saved != nil && !isDirty {
-                        Label("Saved on this device", systemImage: "checkmark")
-                            .font(StillTypography.caption)
-                            .foregroundStyle(StillTheme.textTertiary)
-                    } else {
-                        Text("\(text.count)/\(JournalEntry.maximumLength)")
-                            .font(StillTypography.caption.monospacedDigit())
-                            .foregroundStyle(StillTheme.textTertiary)
-                    }
+                    Text("\(text.count)/\(JournalEntry.maximumLength)")
+                        .font(StillTypography.caption.monospacedDigit())
+                        .foregroundStyle(StillTheme.textTertiary)
                     Spacer()
                     if isDirty {
                         Button("Save", action: save)
@@ -112,6 +103,7 @@ private struct TodayLineCard: View {
                     }
                 }
             }
+            .padding(StillTheme.Spacing.m)
         }
         .onAppear(perform: load)
         .onChange(of: appState.journalToday) { _, _ in
@@ -146,7 +138,7 @@ private struct MoodChip: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .padding(.horizontal, StillTheme.Spacing.xs)
-                .frame(maxWidth: .infinity, minHeight: 36)
+                .frame(maxWidth: .infinity, minHeight: StillTheme.minimumTapSize)
                 .background(Capsule(style: .continuous).fill(isSelected ? StillTheme.accentSoft : StillTheme.surfaceSunken))
                 .overlay(Capsule(style: .continuous).strokeBorder(isSelected ? StillTheme.accent : Color.clear, lineWidth: StillTheme.Stroke.hairline))
                 .contentShape(Capsule())
@@ -167,8 +159,8 @@ struct HabitsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Small habits", detail: "Tap to mark today. A missed day doesn't count against anything.")
-            StillCard {
+            SectionHeader(title: "Small habits")
+            StillInsetList {
                 VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
                     if appState.habitDays.isEmpty {
                         Text("Try one or two: water the plants, a short walk, read a page.")
@@ -194,11 +186,11 @@ struct HabitsSection: View {
                             }
                         }
                         if day.id != appState.habitDays.last?.id {
-                            Divider()
+                            InsetRowDivider(leading: 46)
                         }
                     }
                     if appState.canAddHabit {
-                        if !appState.habitDays.isEmpty { Divider() }
+                        if !appState.habitDays.isEmpty { InsetRowDivider(leading: 46) }
                         HStack(spacing: StillTheme.Spacing.s) {
                             Image(systemName: "plus")
                                 .foregroundStyle(StillTheme.textTertiary)
@@ -213,10 +205,6 @@ struct HabitsSection: View {
                             }
                         }
                         .frame(minHeight: StillTheme.minimumTapSize)
-                    } else {
-                        Text("Five is the limit, so the list stays light.")
-                            .font(StillTypography.caption)
-                            .foregroundStyle(StillTheme.textTertiary)
                     }
                 }
             }
@@ -298,11 +286,11 @@ private struct PastLinesSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Earlier", detail: runDetail)
+            SectionHeader(title: "Earlier")
             if appState.journalPast.isEmpty {
                 QuietNote(text: "Lines from earlier days will collect here. They stay on this device.", symbol: "book.closed")
             } else {
-                StillCard {
+                StillInsetList {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
                         ForEach(appState.journalPast) { entry in
                             PastLineRow(entry: entry)
@@ -312,9 +300,9 @@ private struct PastLinesSection: View {
                                     } label: {
                                         Label("Delete line", systemImage: "trash")
                                     }
-                                }
+                            }
                             if entry.id != appState.journalPast.last?.id {
-                                Divider()
+                                InsetRowDivider(leading: 60)
                             }
                         }
                     }
@@ -323,10 +311,6 @@ private struct PastLinesSection: View {
         }
     }
 
-    private var runDetail: String? {
-        let run = appState.journalRun
-        return run >= 2 ? "You've written \(run) days in a row." : nil
-    }
 }
 
 private struct PastLineRow: View {

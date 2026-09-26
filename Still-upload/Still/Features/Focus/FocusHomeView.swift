@@ -99,10 +99,6 @@ struct FocusHomeView: View {
                 .foregroundStyle(StillTheme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-            Text(Copy.Home.roomDetail(scene.name))
-                .font(StillTypography.callout)
-                .foregroundStyle(StillTheme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

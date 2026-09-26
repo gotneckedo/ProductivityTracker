@@ -51,6 +51,40 @@ enum StillDayPhase: String, CaseIterable, Hashable, Codable {
         }
     }
 
+    /// An opaque, phase-aware fallback for compact controls when the person has
+    /// reduced transparency. It is intentionally distinct from the page field
+    /// and from the matte activity canvas.
+    var glassControlFallback: Color {
+        switch self {
+        case .morning: return Color(hex: 0xFFF8F0, opacity: 0.96)
+        case .afternoon: return Color(hex: 0xF6FBF7, opacity: 0.96)
+        case .dusk: return Color(hex: 0xFCEFF0, opacity: 0.96)
+        case .night: return Color(hex: 0x282644, opacity: 0.98)
+        case .focus: return Color(hex: 0x242038, opacity: 0.98)
+        }
+    }
+
+    /// A quiet, non-material surface for grouped rows and passive data. It
+    /// avoids turning every piece of content into floating glass.
+    var plainGroupFill: Color {
+        switch self {
+        case .morning: return Color(hex: 0xFFF8F0, opacity: 0.68)
+        case .afternoon: return Color(hex: 0xF8FCF8, opacity: 0.68)
+        case .dusk: return Color(hex: 0xFFF0EF, opacity: 0.66)
+        case .night: return Color(hex: 0x292742, opacity: 0.88)
+        case .focus: return Color(hex: 0x222035, opacity: 0.90)
+        }
+    }
+
+    /// Hairlines keep related rows readable without adding a second card
+    /// boundary or relying on a low-contrast material effect.
+    var insetSeparator: Color {
+        switch self {
+        case .morning, .afternoon, .dusk: return Color(hex: 0x5A4B58, opacity: 0.18)
+        case .night, .focus: return Color(hex: 0xF5EEF8, opacity: 0.18)
+        }
+    }
+
     var accent: Color {
         switch self {
         case .night, .focus: return Color(hex: 0x8FDCC0)

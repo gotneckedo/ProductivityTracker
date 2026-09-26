@@ -30,13 +30,22 @@ struct SessionCompleteView: View {
                             .font(StillTypography.title)
                             .foregroundStyle(StillTheme.textPrimary)
                             .accessibilityAddTraits(.isHeader)
-                        ForEach(Array(suggestions.activities.enumerated()), id: \.element.id) { rank, activity in
-                            Button {
-                                appState.openSuggestion(activity, rank: rank, sessionID: sessionID)
-                            } label: {
-                                CompletionActivityCard(activity: activity)
+                        MatteActivityCanvas(tint: StillTheme.warmSoft, phase: .dusk) {
+                            VStack(spacing: 0) {
+                                ForEach(Array(suggestions.activities.enumerated()), id: \.element.id) { rank, activity in
+                                    Button {
+                                        appState.openSuggestion(activity, rank: rank, sessionID: sessionID)
+                                    } label: {
+                                        CompletionActivityCard(activity: activity)
+                                    }
+                                    .buttonStyle(.plain)
+                                    if rank < suggestions.activities.count - 1 {
+                                        InsetRowDivider(leading: 42, phase: .dusk)
+                                    }
+                                }
                             }
-                            .buttonStyle(.plain)
+                            .padding(.horizontal, StillTheme.Spacing.s)
+                            .padding(.vertical, StillTheme.Spacing.xs)
                         }
                     }
 
@@ -93,9 +102,8 @@ struct SessionCompleteView: View {
                         .foregroundStyle(StillDayPhase.dusk.accent)
                 }
             }
-            .padding(StillTheme.Spacing.m)
+            .padding(.vertical, StillTheme.Spacing.s)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .stillGlass(radius: StillTheme.Radius.large, phase: .dusk)
         }
         .stillEntrance()
     }
@@ -116,8 +124,7 @@ struct SessionCompleteView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(StillTheme.Spacing.m)
-        .stillGlass(radius: StillTheme.Radius.medium, phase: .dusk)
+        .padding(.vertical, StillTheme.Spacing.s)
     }
 
     private func newUnlock(_ object: RoomObject) -> some View {
@@ -161,8 +168,7 @@ struct SessionCompleteView: View {
             CompletionMetric(value: DurationFormatter.short(appState.stats.weekFocus), label: "this week")
             CompletionMetric(value: focusDays == 0 ? "—" : "\(focusDays)", label: Copy.Count.focusDayLabel(focusDays))
         }
-        .padding(StillTheme.Spacing.m)
-        .stillGlass(radius: StillTheme.Radius.medium, phase: .dusk)
+        .padding(.vertical, StillTheme.Spacing.s)
         .accessibilityElement(children: .contain)
     }
 
@@ -188,8 +194,7 @@ struct SessionCompleteView: View {
                 .buttonStyle(QuietSecondaryButtonStyle())
             }
         }
-        .padding(StillTheme.Spacing.s)
-        .stillGlass(radius: StillTheme.Radius.medium, phase: .dusk)
+        .stillInsetRow(verticalPadding: StillTheme.Spacing.s)
     }
 
     private var usualLine: String {
@@ -263,9 +268,7 @@ private struct CompletionActivityCard: View {
                 .font(StillTypography.footnote)
                 .foregroundStyle(StillTheme.textTertiary)
         }
-        .padding(StillTheme.Spacing.s)
-        .stillGlass(radius: StillTheme.Radius.medium, phase: .dusk)
-        .contentShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
+        .stillInsetRow(verticalPadding: StillTheme.Spacing.s)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(activity.name), about \(activity.estimatedMinutes) minutes. \(activity.summary)")
     }

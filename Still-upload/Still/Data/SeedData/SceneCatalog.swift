@@ -153,8 +153,10 @@ enum SceneCatalog {
 
     /// Free forever: these are earned only through the person's own sessions.
     static let all: [SceneDefinition] = [rainyBedroom, libraryLight, trainWindow, nightCity]
-    static let seasonal: [SceneDefinition] = [autumnWindow, snowDay, springRain]
-    static let completeCatalog: [SceneDefinition] = all + seasonal
+    /// Permanent Still+ room variations. They never rotate, expire, or use a
+    /// limited-time frame; the name mirrors their entitlement rather than a season.
+    static let extraRooms: [SceneDefinition] = [autumnWindow, snowDay, springRain]
+    static let completeCatalog: [SceneDefinition] = all + extraRooms
 
     static func scene(_ id: SceneID) -> SceneDefinition {
         completeCatalog.first { $0.id == id } ?? rainyBedroom

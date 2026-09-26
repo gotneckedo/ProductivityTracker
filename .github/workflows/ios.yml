@@ -135,7 +135,7 @@ jobs:
           n=1
           # Phase 2 sprite checkpoint: Focus room has labeled object targets;
           # the review sheet proves the authored package is bundled.
-          for screen in onboarding home focus-room sprite-contact-sheet calm active complete break sudoku wordsearch picross picross-320 breathing read doodle journal tasks timeline presets gallery morning me scenes card; do
+          for screen in onboarding today setup home focus-room sprite-contact-sheet calm active complete break sudoku wordsearch picross picross-320 breathing read doodle journal tasks timeline presets gallery morning me scenes card; do
             shoot "$screen" "$(printf '%02d' $n)-$screen"
             n=$((n + 1))
           done
@@ -157,10 +157,10 @@ jobs:
           # bottom proves the complete bundled-book shelf is present.
           shoot "scenes-all" "$(printf '%02d' $n)-scenes-all"
           n=$((n + 1))
-          # This view opens at the seasonal section, completing the two-screen
-          # proof of the full core + seasonal collection without a horizontal
-          # carousel or clipped right-hand column.
-          shoot "scenes-seasonal" "$(printf '%02d' $n)-scenes-seasonal"
+          # This view opens at the permanent extra-room section, completing the
+          # two-screen proof of the full collection without a horizontal
+          # scroll wrapper or clipped second column.
+          shoot "scenes-extra" "$(printf '%02d' $n)-scenes-extra"
           n=$((n + 1))
           shoot_bottom "scenes-all" "$(printf '%02d' $n)-scenes-all-bottom"
           n=$((n + 1))

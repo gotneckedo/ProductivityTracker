@@ -25,7 +25,7 @@ struct StillPlusView: View {
                     }
 
                     benefit("wave.3.right", "Focus Card access", "Set up a physical NFC card for a favorite focus preset.")
-                    benefit("sparkles", "Seasonal rooms", "Optional original room variations and extra palettes.")
+                    benefit("sparkles", "More rooms", "Three permanent original room variations.")
                     benefit("paintpalette", "Future subscriber tools", "New optional tools, without ads, streak pressure, or a feed.")
 
                     if appState.hasStillPlus {
@@ -81,8 +81,7 @@ struct StillPlusView: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(StillTheme.Spacing.m)
-        .stillGlass(radius: StillTheme.Radius.medium)
+        .stillInsetRow(verticalPadding: StillTheme.Spacing.s)
     }
 
     private func purchase(_ product: SupporterProduct) {

@@ -2687,10 +2687,10 @@ final class MorningStartAndWidgetTests: XCTestCase {
         XCTAssertEqual(adapter.access, .notDetermined)
     }
 
-    func testSeasonalScenesAreCosmeticAndEarnedScenesRemainFree() async {
+    func testPermanentExtraRoomsAreCosmeticAndEarnedScenesRemainFree() async {
         XCTAssertTrue(SceneCatalog.all.allSatisfy { $0.entitlementKey == nil })
-        XCTAssertEqual(SceneCatalog.seasonal.count, 3)
-        XCTAssertTrue(SceneCatalog.seasonal.allSatisfy { $0.entitlementKey == PurchaseProductCatalog.stillPlusMonthly })
+        XCTAssertEqual(SceneCatalog.extraRooms.count, 3)
+        XCTAssertTrue(SceneCatalog.extraRooms.allSatisfy { $0.entitlementKey == PurchaseProductCatalog.stillPlusMonthly })
 
         let purchases = LocalPurchaseService()
         XCTAssertTrue(purchases.purchasedProductIDs.isEmpty)
@@ -2711,6 +2711,12 @@ final class MorningStartAndWidgetTests: XCTestCase {
             PurchaseProductCatalog.stillPlusMonthly,
             PurchaseProductCatalog.stillPlusYearly
         ])
+    }
+
+    func testPreviewStillPlusFixtureGrantsTheLocalEntitlement() {
+        let state = PreviewSupport.appState(populated: true, stillPlus: true)
+        XCTAssertTrue(state.hasStillPlus)
+        XCTAssertTrue(state.isUnlocked(SceneCatalog.extraRooms[0]))
     }
 
     func testAppPublishesAWidgetSnapshot() throws {

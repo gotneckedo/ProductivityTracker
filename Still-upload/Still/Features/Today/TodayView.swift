@@ -16,11 +16,10 @@ struct TodayView: View {
     var body: some View {
         StillScreen {
             ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
-                    greeting
-                    nextAction
-                    quickChoices
-                    afterSection
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+                        greeting
+                        nextAction
+                        afterSection
                     dayContext
                     reflectionCard
                     roomMoment
@@ -61,32 +60,33 @@ struct TodayView: View {
                 .tracking(1.2)
                 .foregroundStyle(StillTheme.textTertiary)
             if let task = nextTask {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
-                    HStack(alignment: .firstTextBaseline) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            if let subject = task.subject {
-                                Text(subject.name.uppercased())
-                                    .font(StillTypography.caption)
-                                    .foregroundStyle(Color(hex: subject.color.hex))
+                GlassControlGroup {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
+                        HStack(alignment: .firstTextBaseline) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                if let subject = task.subject {
+                                    Text(subject.name.uppercased())
+                                        .font(StillTypography.caption)
+                                        .foregroundStyle(Color(hex: subject.color.hex))
+                                }
+                                Text(task.title)
+                                    .font(StillTypography.title)
+                                    .foregroundStyle(StillTheme.textPrimary)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
-                            Text(task.title)
-                                .font(StillTypography.title)
-                                .foregroundStyle(StillTheme.textPrimary)
-                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer()
+                            Text(durationText(task.plannedDuration))
+                                .font(StillTypography.bodyEmphasis.monospacedDigit())
+                                .foregroundStyle(StillTheme.textSecondary)
                         }
-                        Spacer()
-                        Text(durationText(task.plannedDuration))
-                            .font(StillTypography.bodyEmphasis.monospacedDigit())
-                            .foregroundStyle(StillTheme.textSecondary)
+                        Button("Start next task") {
+                            appState.selectTask(task.id)
+                            appState.startFocus(source: .manual)
+                        }
+                        .buttonStyle(QuietPrimaryButtonStyle())
+                        nextActionChoices
                     }
-                    Button("Start next task") {
-                        appState.selectTask(task.id)
-                        appState.startFocus(source: .manual)
-                    }
-                    .buttonStyle(QuietPrimaryButtonStyle())
                 }
-                .padding(StillTheme.Spacing.m)
-                .stillGlass(radius: StillTheme.Radius.large)
             } else {
                 VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
                     Text("Nothing is asking for your attention yet.")
@@ -97,61 +97,52 @@ struct TodayView: View {
                         .foregroundStyle(StillTheme.textSecondary)
                     Button("Start a 25 min focus") { appState.startFocus(source: .manual) }
                         .buttonStyle(QuietPrimaryButtonStyle())
+                    nextActionChoices
                 }
-                .padding(StillTheme.Spacing.m)
-                .stillGlass(radius: StillTheme.Radius.large)
+                .modifier(NextActionSurface())
             }
         }
     }
 
-    private var quickChoices: some View {
-        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            Button("Just Start · 25 min") { appState.startFocus(source: .manual) }
-                .buttonStyle(QuietPrimaryButtonStyle())
-            HStack(spacing: StillTheme.Spacing.s) {
-                Button("I don't know what to do") { appState.router.go(to: .nextStep) }
-                    .buttonStyle(QuietSecondaryButtonStyle())
-                Button("Customize") { appState.router.go(to: .focusConfiguration) }
-                    .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
-            }
+    private var nextActionChoices: some View {
+        HStack(spacing: StillTheme.Spacing.s) {
+            Button("I don't know what to do") { appState.router.go(to: .nextStep) }
+                .buttonStyle(QuietSecondaryButtonStyle())
+            Button("Customize") { appState.router.go(to: .focusConfiguration) }
+                .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var afterSection: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Afterward", detail: "A finite reset for when the timer ends.")
-            HStack(spacing: StillTheme.Spacing.s) {
-                ForEach(afterIDs, id: \.self) { id in
-                    if let activity = ActivityCatalog.activity(id) {
-                        Button {
-                            appState.router.go(to: .breakActivity(id, .shelf))
-                        } label: {
-                            VStack(alignment: .leading, spacing: 5) {
-                                Image(systemName: activity.symbolName)
-                                    .foregroundStyle(StillTheme.accent)
-                                Text(activity.name)
-                                    .font(StillTypography.caption.weight(.semibold))
-                                    .foregroundStyle(StillTheme.textPrimary)
-                                    .lineLimit(1)
-                                Text("\(activity.estimatedMinutes) min")
-                                    .font(StillTypography.caption)
-                                    .foregroundStyle(StillTheme.textSecondary)
+            SectionHeader(title: "Afterward")
+            MatteActivityCanvas(tint: StillTheme.warmSoft) {
+                VStack(spacing: 0) {
+                    ForEach(Array(afterIDs.enumerated()), id: \.element) { index, id in
+                        if let activity = ActivityCatalog.activity(id) {
+                            Button {
+                                appState.router.go(to: .breakActivity(id, .shelf))
+                            } label: {
+                                ActivityTile(activity: activity, style: .suggestion)
                             }
-                            .frame(maxWidth: .infinity, minHeight: 92, alignment: .leading)
-                            .padding(StillTheme.Spacing.s)
-                            .stillGlass(radius: StillTheme.Radius.medium)
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("\(activity.name), about \(activity.estimatedMinutes) minutes")
+                            if index < afterIDs.count - 1 {
+                                InsetRowDivider(leading: 58)
+                            }
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("\(activity.name), about \(activity.estimatedMinutes) minutes")
                     }
                 }
+                .padding(.horizontal, StillTheme.Spacing.s)
+                .padding(.vertical, StillTheme.Spacing.xs)
             }
         }
     }
 
     private var dayContext: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Your day", detail: "A little context, not a score.")
+            SectionHeader(title: "Your day")
             HStack(spacing: StillTheme.Spacing.s) {
                 contextMetric("Focus today", DurationFormatter.short(appState.stats.todayFocus))
                 contextMetric("Usual", usualFocusLabel)
@@ -169,8 +160,8 @@ struct TodayView: View {
                 .font(StillTypography.callout)
                 .foregroundStyle(StillTheme.textPrimary)
                 .lineLimit(2...4)
-                .padding(StillTheme.Spacing.s)
-                .background(.white.opacity(0.22), in: RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
+                .frame(minHeight: 72, alignment: .topLeading)
+            InsetRowDivider()
             HStack {
                 ForEach(JournalMood.allCases, id: \.self) { option in
                     Button {
@@ -189,8 +180,7 @@ struct TodayView: View {
                     .buttonStyle(QuietSecondaryButtonStyle())
             }
         }
-        .padding(StillTheme.Spacing.m)
-        .stillGlass()
+        .modifier(NextActionSurface())
     }
 
     private var roomMoment: some View {
@@ -232,9 +222,15 @@ struct TodayView: View {
             Text(value).font(StillTypography.title3).foregroundStyle(StillTheme.textPrimary)
             Text(label).font(StillTypography.caption).foregroundStyle(StillTheme.textSecondary)
         }
-        .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
-        .padding(StillTheme.Spacing.s)
-        .stillGlass(radius: StillTheme.Radius.medium)
+        .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
+    }
+}
+
+private struct NextActionSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        GlassControlGroup {
+            content
+        }
     }
 }
 

@@ -6,17 +6,109 @@ import SwiftUI
 
 /// The warm paper background every screen sits on.
 struct StillScreen<Content: View>: View {
+    var phase: StillDayPhase?
     private let content: Content
+    @Environment(\.colorScheme) private var colorScheme
 
-    init(@ViewBuilder content: () -> Content) {
+    init(phase: StillDayPhase? = nil, @ViewBuilder content: () -> Content) {
+        self.phase = phase
         self.content = content()
     }
 
     var body: some View {
+        let resolvedPhase = phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         ZStack {
-            StillTheme.background.ignoresSafeArea()
+            resolvedPhase.gradient.ignoresSafeArea()
             content
         }
+        // The status fade belongs to the full screen, not an individual
+        // ScrollView. Scrolled labels therefore disappear before they meet
+        // the system clock on roots and pushed routes alike.
+        .overlay(alignment: .top) {
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(resolvedPhase.gradient)
+                    .overlay(Rectangle().fill(.ultraThinMaterial).opacity(0.42))
+                    .frame(height: StillTheme.Viewport.statusBarChromeHeight)
+                Rectangle()
+                    .fill(resolvedPhase.gradient)
+                    .overlay(Rectangle().fill(.ultraThinMaterial).opacity(0.42))
+                    .mask(
+                        LinearGradient(
+                            colors: [.black, .black.opacity(0.72), .clear],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(height: StillTheme.Viewport.topFadeHeight - StillTheme.Viewport.statusBarChromeHeight)
+            }
+            .frame(height: StillTheme.Viewport.topFadeHeight)
+            .ignoresSafeArea(edges: .top)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
+        .environment(\.stillDayPhase, resolvedPhase)
+        .tint(resolvedPhase.accent)
+        .preferredColorScheme(resolvedPhase == .night || resolvedPhase == .focus ? .dark : .light)
+    }
+}
+
+/// The app's single quiet surface treatment. Night and focus stay translucent
+/// so the environment remains visible behind content.
+struct StillGlassSurface: ViewModifier {
+    var radius: CGFloat = StillTheme.Radius.large
+    var phase: StillDayPhase? = nil
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.stillDayPhase) private var environmentPhase
+
+    func body(content: Content) -> some View {
+        let resolvedPhase = phase ?? environmentPhase ?? StillDayPhase.automatic(colorScheme: colorScheme)
+        let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        content
+            .background(
+                shape
+                    .fill(.ultraThinMaterial)
+                    .overlay(shape.fill(resolvedPhase.glassFill))
+            )
+            // Keep material, fill, and decorative content inside one contour.
+            .clipShape(shape)
+            .overlay(shape.strokeBorder(resolvedPhase.glassBorder, lineWidth: StillTheme.Stroke.hairline))
+            .shadow(color: StillTheme.Shadow.color, radius: StillTheme.Shadow.radius, x: 0, y: StillTheme.Shadow.y)
+    }
+}
+
+extension View {
+    func stillGlass(radius: CGFloat = StillTheme.Radius.large, phase: StillDayPhase? = nil) -> some View {
+        modifier(StillGlassSurface(radius: radius, phase: phase))
+    }
+}
+
+/// Applies the common viewport contract for every vertically scrollable Still
+/// screen. The system status-bar safe area remains intact, with a tiny visual
+/// breathing gap below it; the lower inset reserves room for the floating
+/// navigation capsule without relying on a view-specific, magic padding value.
+///
+/// This belongs on the `ScrollView`, rather than its inner stack, so Dynamic
+/// Type, sheets, and safe-area changes all retain the correct scroll range.
+struct StillScrollViewport: ViewModifier {
+    var reservesFloatingTabBar: Bool = true
+    @Environment(\.stillDayPhase) private var phase
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        let resolvedPhase = phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
+        content
+            .safeAreaPadding(.top, StillTheme.Viewport.statusBarBreathingRoom)
+            .safeAreaPadding(
+                .bottom,
+                reservesFloatingTabBar ? StillTheme.Viewport.floatingTabBarClearance : StillTheme.Viewport.standardBottomClearance
+            )
+    }
+}
+
+extension View {
+    func stillScrollableViewport(reservingFloatingTabBar: Bool = true) -> some View {
+        modifier(StillScrollViewport(reservesFloatingTabBar: reservingFloatingTabBar))
     }
 }
 
@@ -24,11 +116,13 @@ struct StillScreen<Content: View>: View {
 struct StillCard<Content: View>: View {
     var padding: CGFloat = StillTheme.Spacing.m
     var tint: Color = StillTheme.surface
+    var phase: StillDayPhase? = nil
     private let content: Content
 
-    init(padding: CGFloat = StillTheme.Spacing.m, tint: Color = StillTheme.surface, @ViewBuilder content: () -> Content) {
+    init(padding: CGFloat = StillTheme.Spacing.m, tint: Color = StillTheme.surface, phase: StillDayPhase? = nil, @ViewBuilder content: () -> Content) {
         self.padding = padding
         self.tint = tint
+        self.phase = phase
         self.content = content()
     }
 
@@ -38,13 +132,47 @@ struct StillCard<Content: View>: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous)
-                    .fill(tint)
+                    .fill(tint.opacity(0.24))
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous)
-                    .strokeBorder(StillTheme.border, lineWidth: StillTheme.Stroke.hairline)
-            )
-            .shadow(color: StillTheme.Shadow.color, radius: StillTheme.Shadow.radius, x: 0, y: StillTheme.Shadow.y)
+            .stillGlass(phase: phase)
+    }
+}
+
+extension ActivityVisualStyle {
+    func accentColor(for phase: StillDayPhase) -> Color {
+        Color(hex: phase == .night || phase == .focus ? darkAccentHex : accentHex)
+    }
+
+    var glowColor: Color { Color(hex: glowHex) }
+}
+
+/// The shared surface for activity instructions, editors, boards, and reading
+/// choices. The glow is intentionally decorative and never conveys state alone.
+struct ActivityGlassCard<Content: View>: View {
+    let activityID: BreakActivityID
+    var padding: CGFloat = StillTheme.Spacing.m
+    private let content: Content
+
+    init(activityID: BreakActivityID, padding: CGFloat = StillTheme.Spacing.m, @ViewBuilder content: () -> Content) {
+        self.activityID = activityID
+        self.padding = padding
+        self.content = content()
+    }
+
+    var body: some View {
+        let style = ActivityPresentation.visualStyle(for: activityID)
+        content
+            .padding(padding)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(alignment: .topTrailing) {
+                Circle()
+                    .fill(style.glowColor.opacity(0.42))
+                    .frame(width: 124, height: 124)
+                    .blur(radius: 36)
+                    .offset(x: 30, y: -34)
+                    .accessibilityHidden(true)
+            }
+            .stillGlass()
     }
 }
 
@@ -52,20 +180,27 @@ struct StillCard<Content: View>: View {
 
 /// The one prominent action on a screen.
 struct QuietPrimaryButtonStyle: ButtonStyle {
-    var fill: Color = StillTheme.accent
+    var fill: Color? = nil
     var foreground: Color = StillTheme.onAccent
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
+        let opacity = isEnabled ? 1.0 : 0.45
         configuration.label
             .font(StillTypography.headline)
             .foregroundStyle(foreground)
-            .frame(maxWidth: .infinity, minHeight: 54)
+            .frame(maxWidth: .infinity, minHeight: 58)
             .padding(.horizontal, StillTheme.Spacing.m)
             .background(
                 Capsule(style: .continuous)
-                    .fill(fill.opacity(isEnabled ? 1 : 0.45))
+                    .fill(fill?.opacity(opacity) ?? StillTheme.litButtonBottom.opacity(opacity))
+                    .overlay(
+                        Capsule(style: .continuous)
+                            .fill(fill == nil ? LinearGradient(colors: [StillTheme.litButtonTop.opacity(opacity), StillTheme.litButtonBottom.opacity(opacity)], startPoint: .top, endPoint: .bottom) : LinearGradient(colors: [.clear], startPoint: .top, endPoint: .bottom))
+                    )
             )
+            .overlay(Capsule(style: .continuous).strokeBorder(Color.white.opacity(0.72), lineWidth: StillTheme.Stroke.hairline))
+            .shadow(color: fill == nil ? Color(hex: 0xFFBA78, opacity: 0.45) : .clear, radius: 34, x: 0, y: 10)
             .opacity(configuration.isPressed ? 0.82 : 1)
             .contentShape(Capsule())
     }
@@ -73,19 +208,23 @@ struct QuietPrimaryButtonStyle: ButtonStyle {
 
 /// A supporting action: outlined, never louder than the primary.
 struct QuietSecondaryButtonStyle: ButtonStyle {
-    var foreground: Color = StillTheme.textPrimary
-    var border: Color = StillTheme.border
+    var foreground: Color? = nil
+    var border: Color? = nil
+    @Environment(\.stillDayPhase) private var phase
+    @Environment(\.colorScheme) private var colorScheme
 
     func makeBody(configuration: Configuration) -> some View {
+        let resolved = phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         configuration.label
             .font(StillTypography.callout.weight(.medium))
-            .foregroundStyle(foreground)
+            .foregroundStyle(foreground ?? StillTheme.primaryText(for: resolved))
             .frame(minHeight: StillTheme.minimumTapSize)
             .padding(.horizontal, StillTheme.Spacing.m)
             .background(
-                Capsule(style: .continuous)
-                    .strokeBorder(border, lineWidth: StillTheme.Stroke.hairline)
+                Capsule(style: .continuous).fill(.ultraThinMaterial)
+                    .overlay(Capsule(style: .continuous).fill(resolved.glassFill))
             )
+            .overlay(Capsule(style: .continuous).strokeBorder(border ?? resolved.glassBorder, lineWidth: StillTheme.Stroke.hairline))
             .opacity(configuration.isPressed ? 0.7 : 1)
             .contentShape(Capsule())
     }
@@ -93,12 +232,15 @@ struct QuietSecondaryButtonStyle: ButtonStyle {
 
 /// Plain text action, e.g. "End session".
 struct QuietTextButtonStyle: ButtonStyle {
-    var foreground: Color = StillTheme.textSecondary
+    var foreground: Color? = nil
+    @Environment(\.stillDayPhase) private var phase
+    @Environment(\.colorScheme) private var colorScheme
 
     func makeBody(configuration: Configuration) -> some View {
+        let resolved = phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         configuration.label
             .font(StillTypography.callout)
-            .foregroundStyle(foreground)
+            .foregroundStyle(foreground ?? StillTheme.secondaryText(for: resolved))
             .frame(minHeight: StillTheme.minimumTapSize)
             .padding(.horizontal, StillTheme.Spacing.xs)
             .opacity(configuration.isPressed ? 0.6 : 1)
@@ -111,17 +253,20 @@ struct QuietTextButtonStyle: ButtonStyle {
 struct SectionHeader: View {
     let title: String
     var detail: String?
+    @Environment(\.stillDayPhase) private var phase
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
+        let resolved = phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
             Text(title)
-                .font(StillTypography.headline)
-                .foregroundStyle(StillTheme.textPrimary)
+                .font(StillTypography.title)
+                .foregroundStyle(StillTheme.primaryText(for: resolved))
                 .accessibilityAddTraits(.isHeader)
             if let detail {
                 Text(detail)
                     .font(StillTypography.footnote)
-                    .foregroundStyle(StillTheme.textSecondary)
+                    .foregroundStyle(StillTheme.secondaryText(for: resolved))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -222,11 +367,13 @@ struct SessionTimerFace: View {
 
     var body: some View {
         VStack(spacing: StillTheme.Spacing.s) {
-            Text(caption)
-                .font(StillTypography.subheadline.weight(.medium))
-                .foregroundStyle(secondary)
-                .textCase(.uppercase)
-                .tracking(1.2)
+            if surface == .paper {
+                Text(caption)
+                    .font(StillTypography.subheadline.weight(.medium))
+                    .foregroundStyle(secondary)
+                    .textCase(.uppercase)
+                    .tracking(1.2)
+            }
             Text(time)
                 .font(StillTypography.timer(size: timerSize))
                 .foregroundStyle(primary)
@@ -235,9 +382,9 @@ struct SessionTimerFace: View {
                 .minimumScaleFactor(0.5)
                 .contentTransition(.numericText())
             if let progress {
-                PixelProgressRow(
+                GlowProgressLine(
                     progress: progress,
-                    filled: surface == .scene ? StillTheme.Palette.sceneText : StillTheme.accent,
+                    filled: surface == .scene ? StillDayPhase.focus.accent : StillTheme.accent,
                     empty: surface == .scene ? StillTheme.Palette.sceneText.opacity(0.22) : StillTheme.border
                 )
             }
@@ -249,6 +396,29 @@ struct SessionTimerFace: View {
     }
 }
 
+/// A single, quiet line for a running session. It reads as time passing rather
+/// than a row of separate status markers.
+private struct GlowProgressLine: View {
+    let progress: Double
+    let filled: Color
+    let empty: Color
+
+    var body: some View {
+        GeometryReader { proxy in
+            let width = max(0, min(proxy.size.width, proxy.size.width * progress))
+            ZStack(alignment: .leading) {
+                Capsule().fill(empty)
+                Capsule()
+                    .fill(filled)
+                    .frame(width: width)
+                    .shadow(color: filled.opacity(0.62), radius: 7)
+            }
+        }
+        .frame(height: 4)
+        .accessibilityHidden(true)
+    }
+}
+
 // MARK: - Selection
 
 /// An accessible segmented selector with pill styling.
@@ -256,8 +426,11 @@ struct SelectionPill<Value: Hashable>: View {
     let options: [Value]
     @Binding var selection: Value
     let title: (Value) -> String
+    @Environment(\.stillDayPhase) private var phase
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
+        let resolved = phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         HStack(spacing: StillTheme.Spacing.xxs) {
             ForEach(options, id: \.self) { option in
                 let isSelected = option == selection
@@ -266,17 +439,17 @@ struct SelectionPill<Value: Hashable>: View {
                 } label: {
                     Text(title(option))
                         .font(StillTypography.callout.weight(isSelected ? .semibold : .regular))
-                        .foregroundStyle(isSelected ? StillTheme.textPrimary : StillTheme.textSecondary)
+                        .foregroundStyle(isSelected ? StillTheme.primaryText(for: resolved) : StillTheme.secondaryText(for: resolved))
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                         .frame(maxWidth: .infinity, minHeight: 38)
                         .background(
                             Capsule(style: .continuous)
-                                .fill(isSelected ? StillTheme.surface : Color.clear)
+                                .fill(isSelected ? resolved.glassFill : Color.clear)
                         )
                         .overlay(
                             Capsule(style: .continuous)
-                                .strokeBorder(isSelected ? StillTheme.border : Color.clear, lineWidth: StillTheme.Stroke.hairline)
+                                .strokeBorder(isSelected ? resolved.glassBorder : Color.clear, lineWidth: StillTheme.Stroke.hairline)
                         )
                         .contentShape(Capsule())
                 }
@@ -285,7 +458,8 @@ struct SelectionPill<Value: Hashable>: View {
             }
         }
         .padding(StillTheme.Spacing.xxs)
-        .background(Capsule(style: .continuous).fill(StillTheme.surfaceSunken))
+        .background(Capsule(style: .continuous).fill(.ultraThinMaterial))
+        .overlay(Capsule(style: .continuous).strokeBorder(resolved.glassBorder.opacity(0.72), lineWidth: StillTheme.Stroke.hairline))
     }
 }
 
@@ -389,28 +563,37 @@ struct SettingRow: View {
     let title: String
     var value: String?
     var showsChevron: Bool = true
+    var iconTint: Color = StillTheme.accent
+    var iconBackground: Color = StillTheme.accentSoft
+    @Environment(\.stillDayPhase) private var phase
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
+        let resolved = phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         HStack(spacing: StillTheme.Spacing.s) {
-            Image(systemName: symbol)
-                .font(StillTypography.body)
-                .foregroundStyle(StillTheme.textSecondary)
-                .frame(width: 26)
+            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                .fill(iconBackground)
+                .frame(width: 40, height: 40)
+                .overlay {
+                    Image(systemName: symbol)
+                        .font(StillTypography.callout.weight(.semibold))
+                        .foregroundStyle(iconTint)
+                }
                 .accessibilityHidden(true)
             Text(title)
                 .font(StillTypography.body)
-                .foregroundStyle(StillTheme.textPrimary)
+                .foregroundStyle(StillTheme.primaryText(for: resolved))
             Spacer(minLength: StillTheme.Spacing.xs)
             if let value {
                 Text(value)
                     .font(StillTypography.callout)
-                    .foregroundStyle(StillTheme.textSecondary)
+                    .foregroundStyle(StillTheme.secondaryText(for: resolved))
                     .lineLimit(1)
             }
             if showsChevron {
                 Image(systemName: "chevron.right")
                     .font(StillTypography.footnote.weight(.semibold))
-                    .foregroundStyle(StillTheme.textTertiary)
+                    .foregroundStyle(StillTheme.tertiaryText(for: resolved))
                     .accessibilityHidden(true)
             }
         }
@@ -424,17 +607,22 @@ struct SettingRow: View {
 struct QuietNote: View {
     let text: String
     var symbol: String = "info.circle"
+    @Environment(\.stillDayPhase) private var phase
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
+        let resolved = phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         HStack(alignment: .firstTextBaseline, spacing: StillTheme.Spacing.xs) {
             Image(systemName: symbol)
-                .foregroundStyle(StillTheme.textTertiary)
+                .foregroundStyle(resolved.accent)
                 .accessibilityHidden(true)
             Text(text)
-                .foregroundStyle(StillTheme.textSecondary)
+                .foregroundStyle(StillTheme.secondaryText(for: resolved))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .font(StillTypography.footnote)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(StillTheme.Spacing.s)
+        .stillGlass(radius: StillTheme.Radius.medium, phase: resolved)
     }
 }

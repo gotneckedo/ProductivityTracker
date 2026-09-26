@@ -21,31 +21,50 @@ struct ActivityContainerView: View {
 
     var body: some View {
         let startedAt = usage?.startedAt ?? Date()
-        VStack(spacing: 0) {
-            ActivityHeader(
-                title: activity?.name ?? "Activity",
-                startedAt: startedAt,
-                duration: activity?.estimatedDuration ?? 60,
-                isFinished: outcome != nil,
-                onBack: backToBreak,
-                onDone: done
-            )
-            ScrollView {
-                activityBody(startedAt: startedAt)
-                    .padding(.horizontal, StillTheme.Spacing.screen)
-                    .padding(.vertical, StillTheme.Spacing.m)
-            }
-            if let outcome {
-                ActivityFinishedPanel(
-                    title: finishedTitle(outcome),
-                    message: finishedMessage(outcome),
-                    onFocus: { appState.returnToFocusFromActivity() },
-                    onShelf: { appState.returnToShelf() }
-                )
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+        StillScreen {
+            GeometryReader { screenViewport in
+                VStack(spacing: 0) {
+                    ActivityHeader(
+                        title: activity?.name ?? "Activity",
+                        startedAt: startedAt,
+                        duration: activity?.estimatedDuration ?? 60,
+                        showsRemainingTime: activity?.category != .puzzle && activityID != .boxBreathing,
+                        isFinished: outcome != nil,
+                        onBack: backToBreak,
+                        onDone: done
+                    )
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(spacing: 0) {
+                                activityBody(startedAt: startedAt, availableSize: activityViewport(in: screenViewport.size))
+                                Color.clear.frame(height: 1).id("activity-bottom")
+                            }
+                            .padding(.horizontal, StillTheme.Spacing.screen)
+                            .padding(.vertical, StillTheme.Spacing.m)
+                        }
+                        .stillScrollableViewport()
+                        .onAppear {
+                            #if DEBUG
+                            let shouldScroll = (activityID == .shortRead && DemoLaunch.shouldScrollToBottom("read"))
+                                || (activityID == .sudoku && DemoLaunch.shouldScrollToBottom("sudoku"))
+                            guard shouldScroll else { return }
+                            DispatchQueue.main.async { proxy.scrollTo("activity-bottom", anchor: .bottom) }
+                            #endif
+                        }
+                    }
+                    if let outcome {
+                        ActivityFinishedPanel(
+                            title: finishedTitle(outcome),
+                            message: finishedMessage(outcome),
+                            onFocus: { appState.returnToFocusFromActivity() },
+                            onShelf: { appState.returnToShelf() },
+                            onToday: { appState.router.go(to: .today) }
+                        )
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+                }
             }
         }
-        .background(StillTheme.background.ignoresSafeArea())
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {
@@ -56,12 +75,12 @@ struct ActivityContainerView: View {
     }
 
     @ViewBuilder
-    private func activityBody(startedAt: Date) -> some View {
+    private func activityBody(startedAt: Date, availableSize: CGSize) -> some View {
         switch activityID {
         case .sudoku:
             SudokuActivityView(onSolved: { finish(.completed) })
         case .picross:
-            PicrossActivityView(onSolved: { finish(.completed) })
+            PicrossActivityView(onSolved: { finish(.completed) }, availableSize: availableSize)
         case .wordSearch:
             WordSearchActivityView(onSolved: { finish(.completed) })
         case .shortRead:
@@ -82,6 +101,16 @@ struct ActivityContainerView: View {
         default:
             EmptyState(symbol: "questionmark.circle", title: "Not available", message: "This activity isn't part of this version.")
         }
+    }
+
+    /// This region sits below the fixed header and above the floating tab bar.
+    /// Passing a finite size prevents a puzzle from receiving the effectively
+    /// unbounded vertical proposal of a ScrollView.
+    private func activityViewport(in screenSize: CGSize) -> CGSize {
+        CGSize(
+            width: max(0, screenSize.width - (StillTheme.Spacing.screen * 2)),
+            height: max(0, screenSize.height - 132 - StillTheme.Viewport.floatingTabBarClearance)
+        )
     }
 
     // MARK: Actions
@@ -125,11 +154,15 @@ struct ActivityHeader: View {
     let title: String
     let startedAt: Date
     let duration: TimeInterval
+    var showsRemainingTime: Bool = true
     let isFinished: Bool
     let onBack: () -> Void
     let onDone: () -> Void
+    @Environment(\.stillDayPhase) private var phase
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
+        let resolved = phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
             HStack {
                 Button(action: onBack) {
@@ -149,7 +182,7 @@ struct ActivityHeader: View {
                     .foregroundStyle(StillTheme.textPrimary)
                     .accessibilityAddTraits(.isHeader)
                 Spacer()
-                if !isFinished {
+                if !isFinished && showsRemainingTime {
                     TimelineView(.periodic(from: startedAt, by: 1)) { timeline in
                         let remaining = max(0, duration - timeline.date.timeIntervalSince(startedAt))
                         Text(remaining > 0 ? "\(DurationFormatter.clock(remaining)) left" : "Take your time")
@@ -163,9 +196,10 @@ struct ActivityHeader: View {
         .padding(.horizontal, StillTheme.Spacing.screen)
         .padding(.top, StillTheme.Spacing.xs)
         .padding(.bottom, StillTheme.Spacing.s)
-        .background(StillTheme.background)
+        .background(.ultraThinMaterial)
+        .background(resolved.glassFill)
         .overlay(alignment: .bottom) {
-            Rectangle().fill(StillTheme.border).frame(height: StillTheme.Stroke.hairline)
+            Rectangle().fill(resolved.glassBorder).frame(height: StillTheme.Stroke.hairline)
         }
     }
 }
@@ -176,6 +210,7 @@ struct ActivityFinishedPanel: View {
     let message: String
     let onFocus: () -> Void
     let onShelf: () -> Void
+    let onToday: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
@@ -187,18 +222,21 @@ struct ActivityFinishedPanel: View {
                 .font(StillTypography.callout)
                 .foregroundStyle(StillTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            Button("Return to Focus", action: onFocus)
+            Text("What feels right next?")
+                .font(StillTypography.bodyEmphasis)
+                .foregroundStyle(StillTheme.textPrimary)
+            Button("Focus again", action: onFocus)
                 .buttonStyle(QuietPrimaryButtonStyle())
-            Button("Back to Break", action: onShelf)
+            Button("One more small break", action: onShelf)
                 .buttonStyle(QuietSecondaryButtonStyle())
+                .frame(maxWidth: .infinity)
+            Button("I'm done for now", action: onToday)
+                .buttonStyle(QuietTextButtonStyle())
                 .frame(maxWidth: .infinity)
         }
         .padding(StillTheme.Spacing.l)
-        .background(
-            UnevenRoundedRectangle(topLeadingRadius: StillTheme.Radius.large, topTrailingRadius: StillTheme.Radius.large, style: .continuous)
-                .fill(StillTheme.surface)
-                .shadow(color: StillTheme.Shadow.color, radius: StillTheme.Shadow.radius, y: -2)
-                .ignoresSafeArea(edges: .bottom)
-        )
+        .background(.ultraThinMaterial)
+        .stillGlass(radius: StillTheme.Radius.large)
+        .ignoresSafeArea(edges: .bottom)
     }
 }

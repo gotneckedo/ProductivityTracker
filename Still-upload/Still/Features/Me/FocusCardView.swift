@@ -12,19 +12,50 @@ struct FocusCardView: View {
 
     var body: some View {
         StillScreen {
-            ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
-                        Text("Focus Card")
-                            .font(StillTypography.title)
-                            .foregroundStyle(StillTheme.textPrimary)
-                            .accessibilityAddTraits(.isHeader)
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("Focus Card")
+                                .font(StillTypography.title)
+                                .foregroundStyle(StillTheme.textPrimary)
+                                .accessibilityAddTraits(.isHeader)
+                            Spacer()
+                            if appState.container.flags.brandedFocusCardPreview { PreviewTag() }
+                        }
                         Text(FocusCardGuide.summary)
                             .font(StillTypography.callout)
                             .foregroundStyle(StillTheme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
+                    if appState.container.flags.brandedFocusCardPreview {
+                        BrandedFocusCardArtwork(presetName: appState.currentPreset.name)
+                            .aspectRatio(1.6, contentMode: .fit)
+                        Button("Get a card") {
+                            appState.router.go(to: .getFocusCard)
+                        }
+                        .buttonStyle(QuietSecondaryButtonStyle())
+                        Text("Design preview only. There is no ordering or payment in Still.")
+                            .font(StillTypography.footnote)
+                            .foregroundStyle(StillTheme.textSecondary)
+                    }
+
+                    if !appState.hasStillPlus {
+                        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+                            Label("Focus Card is a Still+ perk", systemImage: "lock.fill")
+                                .font(StillTypography.bodyEmphasis)
+                                .foregroundStyle(StillTheme.textPrimary)
+                            Text("Still+ supports optional physical card access and seasonal rooms. Your regular focus timer and every session-earned room stay free.")
+                                .font(StillTypography.callout)
+                                .foregroundStyle(StillTheme.textSecondary)
+                            Button("Explore Still+") { appState.router.go(to: .stillPlus) }
+                                .buttonStyle(QuietSecondaryButtonStyle())
+                        }
+                        .padding(StillTheme.Spacing.m)
+                        .stillGlass()
+                    } else {
                     StillCard {
                         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
                             ForEach(Array(FocusCardGuide.steps.enumerated()), id: \.offset) { entry in
@@ -64,13 +95,25 @@ struct FocusCardView: View {
                         }
                     }
                     .accessibilityElement(children: .combine)
+                    }
+                    Color.clear.frame(height: 1).id("focus-card-bottom")
+                    }
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.vertical, StillTheme.Spacing.m)
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.vertical, StillTheme.Spacing.m)
+                .stillScrollableViewport()
+                .onAppear {
+                    #if DEBUG
+                    guard DemoLaunch.shouldScrollToBottom("card") else { return }
+                    DispatchQueue.main.async { proxy.scrollTo("focus-card-bottom", anchor: .bottom) }
+                    #endif
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
+        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
     }
 
     private func presetCard(_ preset: FocusPreset) -> some View {
@@ -101,6 +144,17 @@ struct FocusCardView: View {
                     }
                     .buttonStyle(QuietSecondaryButtonStyle())
                     .accessibilityHint("Starts \(preset.name) exactly as a tag with this link would.")
+                }
+                if appState.container.flags.brandedFocusCardPreview {
+                    Text(StillLinks.startFocusURL(presetID: preset.id).absoluteString)
+                        .font(StillTypography.caption.monospaced())
+                        .foregroundStyle(StillTheme.textTertiary)
+                        .textSelection(.enabled)
+                    Button("Simulate future universal link") {
+                        appState.simulateBrandedFocusCard(presetID: preset.id)
+                    }
+                    .buttonStyle(QuietSecondaryButtonStyle())
+                    .accessibilityHint("Tests the placeholder HTTPS link through the same deep-link parser.")
                 }
                 #if canImport(CoreNFC) && os(iOS) && STILL_CORENFC
                 if CoreNFCTagWriter.isAvailable {

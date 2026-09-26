@@ -1,20 +1,32 @@
 import SwiftUI
 
-/// Scenes and how they open. Unlock conditions are stated quietly; there is
-/// no reward burst, nothing to buy, and nothing to lose.
+/// Scenes and how they open. Session-earned rooms are always free; optional
+/// seasonal rooms use the clearly labelled Still+ StoreKit entitlement.
 struct SceneCollectionView: View {
     @Environment(AppState.self) private var appState
+    @State private var purchaseMessage: String?
+    @State private var stillPlusProducts: [SupporterProduct] = []
+    @State private var purchasedProductIDs: Set<String> = []
 
-    private let columns = [GridItem(.flexible(), spacing: StillTheme.Spacing.m), GridItem(.flexible(), spacing: StillTheme.Spacing.m)]
+    /// The collection stays inside the screen's horizontal padding. Flexible
+    /// columns, rather than card widths, leave equal space on both edges on
+    /// every iPhone width and Dynamic Type size.
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
 
     var body: some View {
         let preset = appState.currentPreset
         StillScreen {
-            ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+            GeometryReader { viewport in
+                let contentWidth = max(0, viewport.size.width - (StillTheme.Spacing.screen * 2))
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
                         Text("Scenes")
-                            .font(StillTypography.title)
+                            .font(StillTypography.display)
                             .foregroundStyle(StillTheme.textPrimary)
                             .accessibilityAddTraits(.isHeader)
                         Text("New scenes open as you complete sessions. Choose one for \(preset.name).")
@@ -23,7 +35,7 @@ struct SceneCollectionView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    LazyVGrid(columns: columns, alignment: .leading, spacing: StillTheme.Spacing.l) {
+                    LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(SceneCatalog.all) { scene in
                             SceneCard(
                                 scene: scene,
@@ -38,14 +50,135 @@ struct SceneCollectionView: View {
                             }
                         }
                     }
+                    Color.clear.frame(height: 1).id("scenes-midpoint")
+
+                    seasonalSection(preset: preset)
+                    stillPlusSection
+                    Color.clear.frame(height: 1).id("scenes-bottom")
+                        }
+                        // SwiftUI's vertical ScrollView otherwise measures the
+                        // grid at its children's ideal width. This is the live
+                        // viewport width—not a device/card constant—so each
+                        // flexible track resolves from the padded phone screen.
+                        .frame(width: contentWidth, alignment: .leading)
+                        .padding(.horizontal, StillTheme.Spacing.screen)
+                        .padding(.vertical, StillTheme.Spacing.m)
+                    }
+                    .stillScrollableViewport()
+                    .onAppear {
+                        #if DEBUG
+                        if DemoLaunch.shouldScrollToBottom("scenes-all") {
+                            DispatchQueue.main.async { proxy.scrollTo("scenes-bottom", anchor: .bottom) }
+                        } else if DemoLaunch.requestedScreen == "scenes-seasonal" {
+                            DispatchQueue.main.async { proxy.scrollTo("seasonal-rooms", anchor: .top) }
+                        } else if DemoLaunch.shouldScrollToMidpoint("scenes") {
+                            DispatchQueue.main.async { proxy.scrollTo("scenes-midpoint", anchor: .top) }
+                        }
+                        #endif
+                    }
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.vertical, StillTheme.Spacing.m)
             }
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
+        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .onAppear { appState.acknowledgeUnlockedScenes() }
+        .task {
+            await appState.container.purchases.loadProducts()
+            refreshPurchaseState()
+        }
+    }
+
+    private func seasonalSection(preset: FocusPreset) -> some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            HStack {
+                SectionHeader(
+                    title: "Seasonal rooms",
+                    detail: "Optional cosmetics only. Every scene earned from focus sessions stays free."
+                )
+            }
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(SceneCatalog.seasonal) { scene in
+                    let entitled = scene.entitlementKey == nil || appState.hasStillPlus
+                    SceneCard(
+                        scene: scene,
+                        isUnlocked: entitled,
+                        isSelected: preset.sceneID == scene.id && preset.renderMode == .scene,
+                        remaining: 0,
+                        lockedText: "Still+ seasonal room"
+                    ) {
+                        guard entitled else { return }
+                        var edited = preset
+                        edited.sceneID = scene.id
+                        edited.renderMode = .scene
+                        appState.savePreset(edited)
+                    }
+                }
+            }
+        }
+        .id("seasonal-rooms")
+    }
+
+    private var stillPlusSection: some View {
+        StillCard {
+            VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+                HStack {
+                    SectionHeader(title: "Still+")
+                }
+                Text("An optional monthly subscription for Focus Card access, seasonal rooms, extra palettes, and future subscriber tools. Focus tools and earned rooms stay free.")
+                    .font(StillTypography.callout)
+                    .foregroundStyle(StillTheme.textSecondary)
+                if purchasedProductIDs.contains(PurchaseProductCatalog.stillPlusMonthly) {
+                    Text("Still+ is active on this device.")
+                        .font(StillTypography.footnote)
+                        .foregroundStyle(StillTheme.textSecondary)
+                } else if let product = stillPlusProducts.first {
+                    Button("Start Still+ · \(product.displayPrice)") {
+                        runPurchase { await appState.container.purchases.purchase(productID: product.id) }
+                    }
+                    .buttonStyle(QuietPrimaryButtonStyle())
+                } else {
+                    Text("Still+ products appear after a StoreKit configuration or App Store Connect product is available.")
+                        .font(StillTypography.footnote)
+                        .foregroundStyle(StillTheme.textSecondary)
+                }
+                Button("Restore purchases") {
+                    runPurchase { await appState.container.purchases.restorePurchases() }
+                }
+                .buttonStyle(QuietSecondaryButtonStyle())
+                if let purchaseMessage {
+                    Text(purchaseMessage)
+                        .font(StillTypography.footnote)
+                        .foregroundStyle(StillTheme.textSecondary)
+                }
+            }
+        }
+    }
+
+    private func runPurchase(_ action: @escaping () async -> PurchaseOutcome) {
+        Task { @MainActor in
+            let outcome = await action()
+            refreshPurchaseState()
+            switch outcome {
+            case .purchased:
+                purchaseMessage = appState.container.purchases.isStandIn
+                    ? "Local StoreKit test entitlement updated. No production charge was made."
+                    : "Still+ is active."
+            case .pending:
+                purchaseMessage = "StoreKit says the test transaction is pending."
+            case .cancelled:
+                purchaseMessage = nil
+            case .unavailable(let message), .failed(let message):
+                purchaseMessage = message
+            }
+        }
+    }
+
+    @MainActor
+    private func refreshPurchaseState() {
+        stillPlusProducts = appState.container.purchases.products
+        purchasedProductIDs = appState.container.purchases.purchasedProductIDs
     }
 }
 
@@ -54,13 +187,20 @@ private struct SceneCard: View {
     let isUnlocked: Bool
     let isSelected: Bool
     let remaining: Int
+    var lockedText: String? = nil
     let onSelect: () -> Void
 
     var body: some View {
         Button(action: onSelect) {
             VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
                 ZStack {
-                    PixelSceneView(scene: scene, mode: .scene, intensity: .still)
+                    RoomHeroView(
+                        sceneName: scene.name,
+                        sceneID: scene.id,
+                        phase: .afternoon,
+                        plantStage: .full,
+                        showsControls: false
+                    )
                         .saturation(isUnlocked ? 1 : 0.2)
                         .opacity(isUnlocked ? 1 : 0.55)
                     if !isUnlocked {
@@ -71,7 +211,7 @@ private struct SceneCard: View {
                             .background(Circle().fill(StillTheme.Palette.navyShadow.opacity(0.6)))
                     }
                 }
-                .aspectRatio(PixelSceneView.preferredAspectRatio, contentMode: .fit)
+                .aspectRatio(160.0 / 132.0, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
@@ -82,6 +222,8 @@ private struct SceneCard: View {
                     Text(scene.name)
                         .font(StillTypography.bodyEmphasis)
                         .foregroundStyle(StillTheme.textPrimary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.82)
                     if isSelected {
                         Image(systemName: "checkmark")
                             .font(StillTypography.caption.weight(.semibold))
@@ -91,10 +233,19 @@ private struct SceneCard: View {
                 Text(isUnlocked ? scene.summary : unlockText)
                     .font(StillTypography.footnote)
                     .foregroundStyle(StillTheme.textSecondary)
+                    .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(StillTheme.Spacing.s)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .stillGlass(radius: StillTheme.Radius.medium)
+            .overlay(
+                RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
+                    .strokeBorder(isSelected ? StillTheme.accent : Color.clear, lineWidth: isSelected ? 2 : 0)
+            )
         }
         .buttonStyle(.plain)
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         .disabled(!isUnlocked)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(scene.name)
@@ -103,8 +254,9 @@ private struct SceneCard: View {
     }
 
     private var unlockText: String {
+        if let lockedText { return lockedText }
         let needed = scene.unlockRule.requiredSessions
-        return "Opens at \(needed) completed sessions · \(remaining) to go"
+        return "Opens at \(Copy.Count.session(needed)) · \(Copy.Count.session(remaining)) to go"
     }
 }
 

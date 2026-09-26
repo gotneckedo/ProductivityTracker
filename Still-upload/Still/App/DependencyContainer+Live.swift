@@ -57,7 +57,40 @@ extension DependencyContainer {
         #endif
 
         let notifications = UserNotificationScheduler()
-        let bundledBooks = Bundle.main.paths(forResourcesOfType: "epub", inDirectory: nil).map { URL(fileURLWithPath: $0) }
+        let wakeUp: WakeUpScheduling
+        #if DEBUG
+        wakeUp = flags.wakeUpPreview
+            ? PreviewWakeUpScheduler(fallback: notifications)
+            : WakeUpSchedulerFactory.live(fallback: notifications)
+        #else
+        wakeUp = WakeUpSchedulerFactory.live(fallback: notifications)
+        #endif
+
+        let purchases: PurchaseService
+        #if canImport(StoreKit) && os(iOS) && DEBUG
+        purchases = flags.seasonalPurchasesPreview ? StoreKitPurchaseService() : NoPurchaseService()
+        #else
+        purchases = NoPurchaseService()
+        #endif
+
+        let googleCalendar: GoogleCalendarAdapter
+        let focusCardOffering: FocusCardOffering
+        #if DEBUG
+        googleCalendar = flags.googleCalendarPreview
+            ? SampleGoogleCalendarAdapter(now: clock.now, calendar: .autoupdatingCurrent)
+            : NoGoogleCalendarAdapter()
+        focusCardOffering = flags.brandedFocusCardPreview
+            ? PlaceholderFocusCardOffering()
+            : NoFocusCardOffering()
+        #else
+        googleCalendar = NoGoogleCalendarAdapter()
+        focusCardOffering = NoFocusCardOffering()
+        #endif
+
+        // Folder references can land either at the bundle root or inside the
+        // synchronized Resources group. Resolve the known four files
+        // recursively so Short Read never depends on an Xcode copy layout.
+        let bundledBooks = BundledBookLocator.urls(in: Bundle.main)
         let bookLibrary = FileBookLibrary(directory: FileBookLibrary.defaultDirectory(), bundledURLs: bundledBooks, clock: clock)
 
         return DependencyContainer(
@@ -72,8 +105,13 @@ extension DependencyContainer {
             liveActivity: liveActivity,
             bookLibrary: bookLibrary,
             calendarAdapter: calendarAdapter,
+            googleCalendar: googleCalendar,
             morningStart: notifications,
+            wakeUp: wakeUp,
+            purchases: purchases,
+            focusCardOffering: focusCardOffering,
             widgetSnapshots: widgetSnapshots,
+            alternateAppIcons: UIKitAlternateAppIconChanger(),
             speech: speech,
             storageNotice: storageNotice
         )

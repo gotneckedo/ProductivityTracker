@@ -1,113 +1,209 @@
 import SwiftUI
 
-/// Tap → Start. The environment, the task, the duration, one Start control,
-/// an understated sound line, and a compact "Session options" entry.
+/// Focus begins with an inhabited room and one immediate action. The lower card
+/// overlaps the room edge so the environment remains the visual lead instead of
+/// becoming a small decorative header.
 struct FocusHomeView: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
         let preset = appState.currentPreset
         let scene = displayScene(for: preset)
+        let catState = CatCompanion.state(hour: Calendar.autoupdatingCurrent.component(.hour, from: appState.container.clock.now))
         StillScreen {
-            ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
-                    header(preset: preset)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
+                        ZStack(alignment: .bottom) {
+                            RoomHeroView(
+                                sceneName: scene.name,
+                                sceneID: scene.id,
+                                catCoat: appState.preferences.catCoat,
+                                catName: appState.catName,
+                                catState: catState,
+                                initialCatReaction: initialCatReaction,
+                                plantStage: appState.plantStage,
+                                bookCount: 2 + appState.books.count,
+                                doodle: appState.doodles.max { $0.updatedAt < $1.updatedAt }?.doodle,
+                                placedObjects: appState.placedRoomObjects(in: scene.id),
+                                onPrevious: { cycleScene(from: preset, direction: -1) },
+                                onNext: { cycleScene(from: preset, direction: 1) },
+                                onRoomTarget: open,
+                                showsRoomLabels: focusDayCount < 3
+                            )
+                            .aspectRatio(160.0 / 132.0, contentMode: .fit)
 
-                    PixelSceneView(scene: scene, mode: preset.renderMode, intensity: appState.animationIntensity,
-                                   plantStage: appState.plantStage)
-                        .aspectRatio(Self.sceneAspectRatio, contentMode: .fit)
-                        .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.scene, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: StillTheme.Radius.scene, style: .continuous)
-                                .strokeBorder(StillTheme.border, lineWidth: StillTheme.Stroke.hairline)
-                        )
+                            focusActionCard(preset: preset)
+                                .padding(.horizontal, StillTheme.Spacing.xs)
+                                // Keep the room's cat and first-days object labels
+                                // visible above the overlap; the action card still
+                                // belongs to the room rather than becoming a slab.
+                                .offset(y: 170)
+                        }
+                        .padding(.bottom, 166)
                         .stillEntrance()
 
-                    if let unlocked = appState.newlyUnlockedScenes.first {
-                        QuietNote(text: "\(unlocked.name) is open now. You'll find it in Me.", symbol: "leaf")
-                    } else if preset.renderMode == .calm, let remaining = appState.sessionsToNextPlantStage, remaining > 0 {
-                        QuietNote(text: "Your plant grows a little after \(remaining) more \(remaining == 1 ? "session" : "sessions").", symbol: "leaf")
-                    }
+                        header(scene: scene)
 
-                    TaskRow(task: appState.selectedTask, emphasized: appState.personalization.emphasizesTasks) {
-                        appState.router.go(to: .tasks)
-                    }
+                        Button {
+                            appState.router.go(to: .roomCollection)
+                        } label: {
+                            HStack(spacing: StillTheme.Spacing.s) {
+                                Image(systemName: "shippingbox")
+                                    .foregroundStyle(StillTheme.accent)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(Copy.Home.yourThings)
+                                        .font(StillTypography.bodyEmphasis)
+                                        .foregroundStyle(StillTheme.textPrimary)
+                                    Text(Copy.Home.yourThingsHint)
+                                        .font(StillTypography.footnote)
+                                        .foregroundStyle(StillTheme.textSecondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundStyle(StillTheme.textTertiary)
+                            }
+                            .padding(StillTheme.Spacing.s)
+                            .stillGlass(radius: StillTheme.Radius.medium)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Opens your earned room objects and placement slots.")
 
-                    // Duration and Start share a row so Start stays on screen,
-                    // even on small iPhones with the floating tab bar.
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .center, spacing: StillTheme.Spacing.m) {
-                            DurationSummary(timer: preset.timer)
-                            Spacer(minLength: 0)
-                            startButton(preset: preset)
-                                .frame(maxWidth: 190)
+                        if let unlocked = appState.newlyUnlockedScenes.first {
+                            QuietNote(text: "\(unlocked.name) is open now. Visit it whenever you like.", symbol: "sparkles")
                         }
-                        VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
-                            DurationSummary(timer: preset.timer)
-                            startButton(preset: preset)
+                        if appState.audioStatus == .assetsMissing && !preset.ambientMix.isSilent {
+                            QuietNote(text: AmbientAudioCopy.assetsMissing)
                         }
+                        Color.clear.frame(height: 1).id("focus-home-bottom")
                     }
-
-                    HStack(alignment: .center, spacing: StillTheme.Spacing.s) {
-                        Label(preset.ambientMix.summaryLine, systemImage: preset.ambientMix.isSilent ? "speaker.slash" : "speaker.wave.1")
-                            .font(StillTypography.footnote)
-                            .foregroundStyle(StillTheme.textSecondary)
-                            .lineLimit(1)
-                            .accessibilityLabel("Sound: \(preset.ambientMix.summaryLine)")
-                        Spacer(minLength: StillTheme.Spacing.xs)
-                        Button("Session options") {
-                            appState.router.go(to: .focusConfiguration)
-                        }
-                        .buttonStyle(QuietSecondaryButtonStyle())
-                    }
-                    if appState.audioStatus == .assetsMissing && !preset.ambientMix.isSilent {
-                        QuietNote(text: AmbientAudioCopy.assetsMissing)
-                    }
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.top, StillTheme.Spacing.s)
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.top, StillTheme.Spacing.s)
-                .padding(.bottom, StillTheme.Spacing.xxl)
+                .stillScrollableViewport()
+                .onAppear {
+                    #if DEBUG
+                    guard DemoLaunch.shouldScrollToBottom("home") else { return }
+                    DispatchQueue.main.async { proxy.scrollTo("focus-home-bottom", anchor: .bottom) }
+                    #endif
+                }
             }
         }
         .toolbar(.hidden, for: .navigationBar)
     }
 
-    /// Wider than the shared ratio so the Focus screen leaves room for Start.
-    static let sceneAspectRatio: CGFloat = 1.45
-
-    private func startButton(preset: FocusPreset) -> some View {
-        Button {
-            appState.startFocus()
-        } label: {
-            Text("Start Focus")
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-        }
-        .buttonStyle(QuietPrimaryButtonStyle())
-        .accessibilityHint("Starts \(DurationFormatter.short(preset.timer.focusDuration)) of focus.")
-    }
-
-    private func header(preset: FocusPreset) -> some View {
+    private func header(scene: SceneDefinition) -> some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
-            Text(appState.personalization.homeGreeting)
-                .font(StillTypography.title)
+            Text(Calendar.autoupdatingCurrent.component(.hour, from: .now) < 12 ? Copy.Home.morningGreeting : Copy.Home.readyGreeting)
+                .font(StillTypography.display)
                 .foregroundStyle(StillTheme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-            Text("\(preset.name) · \(preset.renderMode.displayName) mode")
-                .font(StillTypography.footnote)
+            Text(Copy.Home.roomDetail(scene.name))
+                .font(StillTypography.callout)
                 .foregroundStyle(StillTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    /// Shows the preset's scene, or the first scene if it's still locked.
+    private func focusActionCard(preset: FocusPreset) -> some View {
+        StillCard(padding: StillTheme.Spacing.m) {
+            VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
+                HomeTaskLine(task: appState.selectedTask, emphasized: appState.personalization.emphasizesTasks) {
+                    appState.router.go(to: .tasks)
+                }
+
+                Button {
+                    appState.startFocus()
+                } label: {
+                    Text(Copy.Home.startFocus(DurationFormatter.short(preset.timer.focusDuration)))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                .buttonStyle(QuietPrimaryButtonStyle())
+                .accessibilityHint("Starts \(DurationFormatter.short(preset.timer.focusDuration)) of focus.")
+
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: StillTheme.Spacing.xs) {
+                        optionPill(title: preset.name, symbol: "timer")
+                        optionPill(title: preset.ambientMix.isSilent ? "Sound off" : preset.ambientMix.summaryLine, symbol: preset.ambientMix.isSilent ? "speaker.slash" : "speaker.wave.1")
+                        optionPill(title: preset.blockerIntent == .none ? "No blocking" : "Blocking", symbol: "shield")
+                    }
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
+                        optionPill(title: preset.name, symbol: "timer")
+                        optionPill(title: preset.ambientMix.isSilent ? "Sound off" : preset.ambientMix.summaryLine, symbol: preset.ambientMix.isSilent ? "speaker.slash" : "speaker.wave.1")
+                        optionPill(title: preset.blockerIntent == .none ? "No blocking" : "Blocking", symbol: "shield")
+                    }
+                }
+            }
+        }
+    }
+
+    private func optionPill(title: String, symbol: String) -> some View {
+        Button {
+            appState.router.go(to: .focusConfiguration)
+        } label: {
+            Label(title, systemImage: symbol)
+                .font(StillTypography.caption)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+                .foregroundStyle(StillTheme.textSecondary)
+                .padding(.horizontal, StillTheme.Spacing.s)
+                .frame(minHeight: StillTheme.minimumTapSize)
+                .background(.white.opacity(0.18), in: Capsule())
+                .overlay(Capsule().strokeBorder(Color.white.opacity(0.45), lineWidth: StillTheme.Stroke.hairline))
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens session options.")
+    }
+
     private func displayScene(for preset: FocusPreset) -> SceneDefinition {
         let scene = appState.scene(preset.sceneID)
         return appState.isUnlocked(scene) ? scene : SceneCatalog.rainyBedroom
     }
+
+    private func cycleScene(from preset: FocusPreset, direction: Int) {
+        let available = SceneCatalog.all.filter { appState.isUnlocked($0) }
+        guard !available.isEmpty else { return }
+        let currentIndex = available.firstIndex { $0.id == preset.sceneID } ?? 0
+        let nextIndex = (currentIndex + direction + available.count) % available.count
+        var edited = preset
+        edited.sceneID = available[nextIndex].id
+        edited.renderMode = .scene
+        appState.savePreset(edited)
+    }
+
+    private var focusDayCount: Int {
+        Set(appState.sessions.filter { $0.state == .completed }.map {
+            Calendar.autoupdatingCurrent.startOfDay(for: $0.endedAt ?? $0.startedAt)
+        }).count
+    }
+
+    private var initialCatReaction: CatReaction {
+        #if DEBUG
+        return DemoLaunch.requestedScreen == "cat-reaction" ? .rare : .none
+        #else
+        return .none
+        #endif
+    }
+
+    private func open(_ hotspot: RoomHotspot) {
+        switch hotspot {
+        case .desk:
+            appState.router.go(to: .tasks)
+        case .shelf:
+            appState.router.go(to: .breakShelf)
+        case .calendar:
+            appState.router.go(to: .today)
+        case .plant:
+            appState.router.go(to: .me)
+        case .window:
+            appState.router.go(to: .sceneCollection)
+        }
+    }
 }
 
-private struct TaskRow: View {
+private struct HomeTaskLine: View {
     let task: TaskItem?
     let emphasized: Bool
     let action: () -> Void
@@ -115,16 +211,18 @@ private struct TaskRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: StillTheme.Spacing.s) {
-                Image(systemName: task == nil ? "plus.circle" : "circle")
-                    .foregroundStyle(task == nil ? StillTheme.textTertiary : StillTheme.accent)
+                Circle()
+                    .fill(subjectColor)
+                    .frame(width: 10, height: 10)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(task == nil ? "Task" : "Focusing on")
-                        .font(StillTypography.caption)
-                        .foregroundStyle(StillTheme.textTertiary)
-                    Text(task?.title ?? (emphasized ? "Add one thing to work on" : "Optional"))
-                        .font(StillTypography.body)
-                        .foregroundStyle(task == nil ? StillTheme.textSecondary : StillTheme.textPrimary)
+                    Text(task?.title ?? (emphasized ? Copy.Home.addHomework : Copy.Home.chooseTask))
+                        .font(StillTypography.bodyEmphasis)
+                        .foregroundStyle(StillTheme.textPrimary)
+                        .lineLimit(2)
+                    Text(task?.subject.map { "\($0.name) · \(Copy.Home.taskReady)" } ?? Copy.Home.optionalTask)
+                        .font(StillTypography.footnote)
+                        .foregroundStyle(StillTheme.textSecondary)
                         .lineLimit(2)
                 }
                 Spacer(minLength: StillTheme.Spacing.xs)
@@ -133,20 +231,16 @@ private struct TaskRow: View {
                     .foregroundStyle(StillTheme.textTertiary)
                     .accessibilityHidden(true)
             }
-            .padding(StillTheme.Spacing.m)
-            .background(
-                RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
-                    .fill(StillTheme.surface)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
-                    .strokeBorder(StillTheme.border, lineWidth: StillTheme.Stroke.hairline)
-            )
-            .contentShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
         .accessibilityHint("Opens today's tasks.")
+    }
+
+    private var subjectColor: Color {
+        guard let task else { return StillTheme.textTertiary.opacity(0.45) }
+        return task.subject.map { Color(hex: $0.color.hex) } ?? StillTheme.accent
     }
 }
 
@@ -173,25 +267,16 @@ struct DurationSummary: View {
 
     private var detail: String {
         switch timer.mode {
-        case .countdown:
-            return "Countdown"
-        case .countUp:
-            return "Count up. Finish whenever you're ready."
-        case .pomodoro:
-            let blocks = timer.focusBlockCount
-            return "Pomodoro · \(blocks) \(blocks == 1 ? "block" : "blocks"), \(DurationFormatter.short(timer.breakDuration)) breaks"
+        case .countdown: return "Countdown"
+        case .countUp: return "Count up. Finish whenever you're ready."
+        case .pomodoro: return "Pomodoro · \(timer.focusBlockCount) blocks"
         }
     }
 }
 
-#Preview("Focus home · Scene") {
+#Preview("Focus home") {
     FocusHomeView()
-        .environment(PreviewSupport.appState(renderMode: .scene))
-}
-
-#Preview("Focus home · Calm") {
-    FocusHomeView()
-        .environment(PreviewSupport.appState(goal: .calmerPhone, renderMode: .calm))
+        .environment(PreviewSupport.appState(populated: true))
 }
 
 #Preview("Focus home · Large text") {

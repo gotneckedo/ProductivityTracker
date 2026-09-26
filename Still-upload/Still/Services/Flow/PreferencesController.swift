@@ -8,7 +8,10 @@ final class PreferencesController {
     private let events: EventTracking
     private let notifications: LocalNotificationScheduling
     private let audio: AmbientAudioPlaying
+    private let alternateAppIcons: AlternateAppIconChanging
     var onPersistenceError: ((Error) -> Void)?
+    var onIconChangeUnavailable: (() -> Void)?
+    var onIconChangeError: ((Error) -> Void)?
 
     init(
         preferences: PreferencesStore,
@@ -16,7 +19,8 @@ final class PreferencesController {
         recordStore: RecordStore,
         events: EventTracking,
         notifications: LocalNotificationScheduling,
-        audio: AmbientAudioPlaying
+        audio: AmbientAudioPlaying,
+        alternateAppIcons: AlternateAppIconChanging = UnavailableAlternateAppIconChanger()
     ) {
         self.preferences = preferences
         self.presets = presets
@@ -24,6 +28,7 @@ final class PreferencesController {
         self.events = events
         self.notifications = notifications
         self.audio = audio
+        self.alternateAppIcons = alternateAppIcons
     }
 
     var current: UserPreferences { preferences.load() }
@@ -36,23 +41,90 @@ final class PreferencesController {
 
     // MARK: Onboarding
 
-    /// Stores the answer and personalizes built-in presets. The user lands on
-    /// Focus with the 25-minute default session.
+    /// Backward-compatible entry point for existing flows and fixtures.
     func completeOnboarding(goal: OnboardingGoal) {
-        let personalization = Personalization(goal: goal)
+        completeOnboarding(OnboardingAnswers(goal: goal))
+    }
+
+    /// Stores whichever answers the person chose (every question is skippable)
+    /// and personalizes built-in presets. The user lands on a 25-minute session.
+    func completeOnboarding(_ answers: OnboardingAnswers) {
+        let personalization = Personalization(goal: answers.goal, breakAppeal: answers.breakAppeal)
         presets.resetToBuiltIns(personalization: personalization)
         update { prefs in
-            prefs.onboardingGoal = goal
+            prefs.onboardingGoal = answers.goal
+            prefs.breakAppeal = answers.breakAppeal
+            prefs.appAccentPalette = answers.appAccentPalette
             prefs.hasCompletedOnboarding = true
             prefs.defaultPresetID = .defaultPreset
         }
-        events.track(.onboardingCompleted, EventProperties().goal(goal))
+        if let goal = answers.goal {
+            events.track(.onboardingCompleted, EventProperties().goal(goal))
+        } else {
+            events.track(.onboardingCompleted)
+        }
+        applyIcon(for: answers.appAccentPalette)
     }
 
     /// Replays onboarding without touching sessions or tasks.
     func resetOnboarding() {
         update { prefs in
             prefs.hasCompletedOnboarding = false
+        }
+    }
+
+    /// Targeted preference edits used from Me. They never reset onboarding,
+    /// sessions, tasks, presets, or another answer.
+    func setOnboardingGoal(_ goal: OnboardingGoal?) {
+        update { $0.onboardingGoal = goal }
+    }
+
+    func setBreakAppeal(_ appeal: BreakAppeal?) {
+        update { $0.breakAppeal = appeal }
+    }
+
+    func setAppAccentPalette(_ palette: AppAccentPalette) {
+        update { $0.appAccentPalette = palette }
+        applyIcon(for: palette)
+    }
+
+    func setCatCoat(_ coat: CatCoat) {
+        update { $0.catCoat = coat }
+    }
+
+    func setCatName(_ raw: String?) {
+        update { $0.catName = CatName.normalized(raw) }
+    }
+
+    func saveSoundscape(_ soundscape: SavedSoundscape) {
+        update { prefs in
+            let normalized = SavedSoundscape(id: soundscape.id, name: soundscape.name, mix: soundscape.mix.normalized())
+            if let index = prefs.savedSoundscapes.firstIndex(where: { $0.id == normalized.id }) {
+                prefs.savedSoundscapes[index] = normalized
+            } else {
+                prefs.savedSoundscapes.append(normalized)
+            }
+        }
+    }
+
+    func deleteSoundscape(_ id: UUID) {
+        update { $0.savedSoundscapes.removeAll { $0.id == id } }
+    }
+
+    var supportsAlternateAppIcons: Bool {
+        alternateAppIcons.supportsAlternateIcons
+    }
+
+    private func applyIcon(for palette: AppAccentPalette) {
+        alternateAppIcons.setAlternateIconName(palette.alternateIconName) { [weak self] result in
+            switch result {
+            case .success(.changed):
+                break
+            case .success(.unavailable):
+                self?.onIconChangeUnavailable?()
+            case .failure(let error):
+                self?.onIconChangeError?(error)
+            }
         }
     }
 
@@ -120,6 +192,7 @@ final class PreferencesController {
         }
         preferences.reset()
         presets.resetToBuiltIns(personalization: Personalization(goal: nil))
+        applyIcon(for: .mint)
         events.clear()
     }
 }

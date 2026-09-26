@@ -29,6 +29,8 @@ final class AppState {
     private(set) var habitDays: [HabitDay] = []
     private(set) var doodles: [ActivityArtifact] = []
     private(set) var books: [BookSummary] = []
+    private(set) var blockingSchedule: BlockingSchedule
+    private(set) var roomCollection = RoomCollectionState()
     /// Read-only calendar events for today's timeline (empty unless allowed).
     private(set) var calendarAccess: CalendarAccess = .unavailable
     /// Mute toggled on the active screen. Transient: the preset mix is unchanged.
@@ -44,16 +46,24 @@ final class AppState {
         self.container = container
         self.router = AppRouter(flags: container.flags)
         self.preferences = container.preferencesStore.load()
+        self.blockingSchedule = container.blockingSchedule.schedule
         let reportError: (Error) -> Void = { [weak self] _ in
-            self?.notice = StillNotice(text: "Couldn't save that change. Your session is still running.")
+            self?.notice = StillNotice(text: Copy.Notices.persistenceFailure)
         }
         container.focus.onPersistenceError = reportError
         container.breaks.onPersistenceError = reportError
         container.taskController.onPersistenceError = reportError
         container.preferences.onPersistenceError = reportError
+        container.preferences.onIconChangeUnavailable = { [weak self] in
+            self?.notice = StillNotice(text: "Alternate app icons aren't available on this device. Your palette preference was saved.")
+        }
+        container.preferences.onIconChangeError = { [weak self] _ in
+            self?.notice = StillNotice(text: "The Home Screen icon couldn't be changed. Your palette preference was saved.")
+        }
         container.journalController.onPersistenceError = reportError
         container.habitController.onPersistenceError = reportError
         container.books.onPersistenceError = reportError
+        container.room.onPersistenceError = reportError
         if let storageNotice = container.storageNotice {
             notice = StillNotice(text: storageNotice)
         }
@@ -69,6 +79,9 @@ final class AppState {
         hasBootstrapped = true
         container.breaks.closeStaleUsages()
         let events = container.focus.restore()
+        if container.flags.appBlocking {
+            _ = container.blockingSchedule.refresh()
+        }
         reload()
         handle(events)
         if let pending = preferences.pendingCompletionSessionID, router.completion == nil {
@@ -83,6 +96,9 @@ final class AppState {
 
     /// Call when the app returns to the foreground.
     func handleBecameActive() {
+        if container.flags.appBlocking {
+            _ = container.blockingSchedule.refresh()
+        }
         tick()
         reload()
     }
@@ -106,12 +122,22 @@ final class AppState {
         sessions = container.sessions.allSessions()
         usages = container.usages.allUsages()
         stats = StatsCalculator(calendar: container.calendar)
-            .stats(sessions: sessions, usages: usages, now: container.clock.now)
+            .stats(sessions: sessions, usages: usages, tasks: container.tasks.allTasks(), now: container.clock.now)
         journalToday = container.journalController.todaysEntry()
         journalPast = container.journalController.pastEntries()
         habitDays = container.habitController.today()
         doodles = container.artifacts.artifacts(kind: .doodle)
         books = container.books.books()
+        blockingSchedule = container.blockingSchedule.schedule
+        let roomHistory = RoomActivityHistory.make(
+            sessions: sessions,
+            usages: usages,
+            readingProgress: container.readingProgress.allProgress(),
+            doodles: doodles,
+            calendar: container.calendar
+        )
+        _ = container.room.evaluate(roomHistory)
+        roomCollection = container.room.state()
         calendarAccess = container.calendarAdapter.access
         publishWidgetSnapshot()
     }
@@ -130,7 +156,9 @@ final class AppState {
 
     // MARK: - Derived
 
-    var personalization: Personalization { Personalization(goal: preferences.onboardingGoal) }
+    var personalization: Personalization {
+        Personalization(goal: preferences.onboardingGoal, breakAppeal: preferences.breakAppeal)
+    }
 
     var currentPreset: FocusPreset {
         presets.first { $0.id == preferences.defaultPresetID }
@@ -146,6 +174,38 @@ final class AppState {
     var completedSessionCount: Int { stats.completedSessions }
 
     var animationIntensity: AnimationIntensity { preferences.animationIntensity }
+
+    var newlyUnlockedRoomObjects: [RoomObject] {
+        RoomObjectCatalog.all.filter {
+            roomCollection.unlockedObjectIDs.contains($0.id) && !roomCollection.acknowledgedObjectIDs.contains($0.id)
+        }
+    }
+
+    func placedRoomObjects(in sceneID: SceneID) -> [RoomPlacement] {
+        roomCollection.placements.filter { $0.sceneID == sceneID }
+    }
+
+    func placeRoomObject(_ objectID: RoomObjectID, in sceneID: SceneID, slot: RoomSlot) {
+        do {
+            try container.room.place(objectID, in: sceneID, slot: slot)
+            let name = RoomObjectCatalog.object(objectID)?.name ?? "Room object"
+            notice = StillNotice(text: Copy.Collection.placedNotice(name, slot.displayName))
+        } catch {
+            notice = StillNotice(text: Copy.Notices.persistenceFailure)
+        }
+        reload()
+    }
+
+    func removeRoomObject(from sceneID: SceneID, slot: RoomSlot) {
+        container.room.remove(from: sceneID, slot: slot)
+        notice = StillNotice(text: Copy.Collection.removedNotice(slot.displayName))
+        reload()
+    }
+
+    func acknowledgeRoomUnlocks() {
+        container.room.acknowledgeUnlocks()
+        reload()
+    }
 
     func scene(_ id: SceneID) -> SceneDefinition { SceneCatalog.scene(id) }
 
@@ -197,7 +257,7 @@ final class AppState {
         switch outcome {
         case .started, .startedWithFallback:
             if case .startedWithFallback = outcome {
-                notice = StillNotice(text: "That preset isn't on this phone, so your default session started.")
+                notice = StillNotice(text: Copy.Notices.fallbackPreset)
             }
             router.go(to: .focusHome)
             // Ask for notification permission in context, the first time only.
@@ -207,7 +267,7 @@ final class AppState {
                 self.reload()
             }
         case .alreadyRunning:
-            notice = StillNotice(text: "A session is already running. It's still going.")
+            notice = StillNotice(text: Copy.Notices.alreadyRunning)
             router.go(to: .focusHome)
         }
         reload()
@@ -221,6 +281,11 @@ final class AppState {
     func resume() {
         container.focus.resume()
         if isAudioMuted { container.focus.applyMixToRunningSession(.silent) }
+        reload()
+    }
+
+    func addFiveMinutes() {
+        container.focus.addFiveMinutes()
         reload()
     }
 
@@ -239,7 +304,7 @@ final class AppState {
         reload()
         if let event { handle([event]) }
         if case .some(.sessionAbandoned) = event {
-            notice = StillNotice(text: "Sessions under 5 minutes aren't counted. That's fine.")
+            notice = StillNotice(text: Copy.Notices.shortSession)
         }
     }
 
@@ -331,7 +396,8 @@ final class AppState {
 
     func setTaskCompleted(_ id: UUID, _ completed: Bool) {
         container.taskController.setCompleted(id: id, completed)
-        if completed, preferences.selectedTaskID == id {
+        if completed, preferences.selectedTaskID == id,
+           container.tasks.task(id: id)?.repeatRule.isRepeating != true {
             container.preferences.update { $0.selectedTaskID = nil }
         }
         reload()
@@ -368,9 +434,28 @@ final class AppState {
     }
 
     func completeOnboarding(goal: OnboardingGoal) {
-        container.preferences.completeOnboarding(goal: goal)
+        completeOnboarding(OnboardingAnswers(goal: goal))
+    }
+
+    func completeOnboarding(_ answers: OnboardingAnswers) {
+        container.preferences.completeOnboarding(answers)
         reload()
         router.go(to: .focusHome)
+    }
+
+    func setOnboardingGoal(_ goal: OnboardingGoal?) {
+        container.preferences.setOnboardingGoal(goal)
+        reload()
+    }
+
+    func setBreakAppeal(_ appeal: BreakAppeal?) {
+        container.preferences.setBreakAppeal(appeal)
+        reload()
+    }
+
+    func setAppAccentPalette(_ palette: AppAccentPalette) {
+        container.preferences.setAppAccentPalette(palette)
+        reload()
     }
 
     func replayOnboarding() {
@@ -386,16 +471,17 @@ final class AppState {
             container.books.removeBook(id: book.id)
         }
         container.preferences.resetAllData()
+        container.blockingSchedule.reset()
         container.morningStart.cancelMorningStart()
         suggestionCache.removeAll()
         isAudioMuted = false
         router.completion = nil
         router.sheet = nil
+        router.todayPath = []
         router.focusPath = []
         router.breakPath = []
         router.mePath = []
-        router.journalPath = []
-        router.selectedTab = .focus
+        router.selectedTab = .today
         reload()
     }
 
@@ -403,13 +489,31 @@ final class AppState {
 
     /// Handles still:// links from NFC tags, Shortcuts, or other apps.
     func handle(url: URL) {
+        if endScheduledBlockingFromCardIfNeeded() { return }
         routeFocusLink(url, source: .deepLink)
     }
 
     /// The in-app NFC simulator runs the exact same route as a real tag.
     func simulateFocusCard(presetID: FocusPresetID) {
+        if endScheduledBlockingFromCardIfNeeded() { return }
         guard let preset = presets.first(where: { $0.id == presetID }) else { return }
         routeFocusLink(preset.startURL, source: .nfcSimulator)
+    }
+
+    /// The branded-card preview uses the future HTTPS shape and therefore tests
+    /// the same `DeepLinkParser` universal-host path that real cards will use.
+    func simulateBrandedFocusCard(presetID: FocusPresetID) {
+        guard container.flags.brandedFocusCardPreview,
+              presets.contains(where: { $0.id == presetID }) else { return }
+        routeFocusLink(StillLinks.startFocusURL(presetID: presetID), source: .nfcSimulator)
+    }
+
+    private func endScheduledBlockingFromCardIfNeeded() -> Bool {
+        guard container.flags.appBlocking,
+              container.blockingSchedule.cardTapped() == .endedByCardTap else { return false }
+        notice = StillNotice(text: "Blocking ended. Your card worked.")
+        reload()
+        return true
     }
 
     private func routeFocusLink(_ url: URL, source: SessionSource) {

@@ -1,5 +1,21 @@
 import Foundation
 
+/// One swap point for the future associated domain. `.example` is reserved for
+/// documentation and cannot accidentally become a production storefront.
+enum StillLinks {
+    static let universalHost = "links.still.example"
+    static let focusCardSetupURL = URL(string: "https://\(universalHost)/focus-card")!
+
+    static func startFocusURL(presetID: FocusPresetID) -> URL {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = universalHost
+        components.path = "/\(DeepLink.startFocusHost)"
+        components.queryItems = [URLQueryItem(name: "preset", value: presetID.rawValue)]
+        return components.url!
+    }
+}
+
 /// External entry points: URL scheme today, Universal Links and NFC tags later.
 ///
 /// Supported in V1:
@@ -26,7 +42,7 @@ enum DeepLink: Equatable {
 struct DeepLinkParser {
     /// Hosts accepted for future Universal Links (https://<host>/start-focus?preset=…).
     /// Empty in V1 because no associated domain is configured.
-    var universalLinkHosts: Set<String> = []
+    var universalLinkHosts: Set<String> = [StillLinks.universalHost]
 
     func parse(_ url: URL) -> DeepLink? {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),

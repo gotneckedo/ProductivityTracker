@@ -6,6 +6,8 @@ struct SessionOptionsView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
     @State private var draft: FocusPreset?
+    @State private var savedSoundscapeName = ""
+    @State private var isNamingSoundscape = false
 
     var body: some View {
         NavigationStack {
@@ -13,6 +15,15 @@ struct SessionOptionsView: View {
                 ScrollView {
                     if let preset = draft {
                         VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+                            VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
+                                Text("Set the room")
+                                    .font(StillTypography.display)
+                                    .foregroundStyle(StillTheme.textPrimary)
+                                    .accessibilityAddTraits(.isHeader)
+                                Text("A timer, task, sound, and room — kept together in your preset.")
+                                    .font(StillTypography.callout)
+                                    .foregroundStyle(StillTheme.textSecondary)
+                            }
                             presetSection(preset)
                             taskSection
                             timerSection
@@ -26,8 +37,9 @@ struct SessionOptionsView: View {
                         .padding(.vertical, StillTheme.Spacing.m)
                     }
                 }
+                .stillScrollableViewport(reservingFloatingTabBar: false)
             }
-            .navigationTitle("Session options")
+            .navigationTitle("Session setup")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -79,6 +91,8 @@ struct SessionOptionsView: View {
                 draft = appState.presets.first { $0.id == id }
             }
         }
+        .padding(StillTheme.Spacing.m)
+        .stillGlass()
     }
 
     private var taskSection: some View {
@@ -91,6 +105,8 @@ struct SessionOptionsView: View {
             }
             .buttonStyle(.plain)
         }
+        .padding(StillTheme.Spacing.m)
+        .stillGlass()
     }
 
     private var timerSection: some View {
@@ -126,11 +142,13 @@ struct SessionOptionsView: View {
                 }
             }
         }
+        .padding(StillTheme.Spacing.m)
+        .stillGlass()
     }
 
     private func environmentSection(_ preset: FocusPreset) -> some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Environment", detail: "Calm keeps a still plant and puts the timer first.")
+            SectionHeader(title: "Room", detail: "Pick the room that feels best for this session.")
             SelectionPill(options: RenderMode.allCases, selection: binding(\.renderMode, fallback: .scene), title: { $0.displayName })
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: StillTheme.Spacing.s) {
@@ -148,14 +166,40 @@ struct SessionOptionsView: View {
                     .foregroundStyle(StillTheme.textTertiary)
             }
         }
+        .padding(StillTheme.Spacing.m)
+        .stillGlass()
     }
 
     private var soundSection: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Sound")
+            SectionHeader(title: "Soundscape", detail: "Mix your room's layers locally. Nothing is streamed or shared.")
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: StillTheme.Spacing.xs) {
+                    ForEach(SoundscapeCatalog.builtIns) { soundscape in
+                        SoundscapeChip(name: soundscape.name) { draft?.ambientMix = soundscape.mix }
+                    }
+                    ForEach(appState.savedSoundscapes) { soundscape in
+                        SoundscapeChip(name: soundscape.name, isCustom: true) { draft?.ambientMix = soundscape.mix }
+                    }
+                }
+            }
             AmbientMixEditor(mix: binding(\.ambientMix, fallback: .silent), status: appState.audioStatus) { source in
                 appState.container.audio.isAssetAvailable(source)
             }
+            Button("Save this soundscape") {
+                savedSoundscapeName = ""
+                isNamingSoundscape = true
+            }
+            .buttonStyle(QuietSecondaryButtonStyle())
+        }
+        .padding(StillTheme.Spacing.m)
+        .stillGlass()
+        .alert("Save soundscape", isPresented: $isNamingSoundscape) {
+            TextField("Name", text: $savedSoundscapeName)
+            Button("Save") { appState.saveSoundscape(name: savedSoundscapeName, mix: draft?.ambientMix ?? .silent) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Saved only on this device. You can change every layer later.")
         }
     }
 
@@ -170,6 +214,8 @@ struct SessionOptionsView: View {
             }
             .buttonStyle(.plain)
         }
+        .padding(StillTheme.Spacing.m)
+        .stillGlass()
     }
 
     // MARK: Small pieces
@@ -202,7 +248,7 @@ private struct SceneChoice: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
-                PixelSceneView(scene: scene, mode: .scene, intensity: .still)
+                RoomHeroView(sceneName: scene.name, plantStage: .full)
                     .frame(width: 112, height: 100)
                     .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
                     .overlay(
@@ -274,6 +320,29 @@ struct AmbientMixEditor: View {
                     .foregroundStyle(StillTheme.textTertiary)
             }
         }
+    }
+}
+
+private struct SoundscapeChip: View {
+    let name: String
+    var isCustom = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: isCustom ? "person.crop.circle" : "cloud")
+                Text(name)
+            }
+            .font(StillTypography.caption)
+            .foregroundStyle(StillTheme.textPrimary)
+            .padding(.horizontal, StillTheme.Spacing.s)
+            .frame(minHeight: 34)
+            .background(.white.opacity(0.24), in: Capsule())
+            .overlay(Capsule().strokeBorder(StillTheme.border, lineWidth: StillTheme.Stroke.hairline))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Apply \(name) soundscape")
     }
 }
 

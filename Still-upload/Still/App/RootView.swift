@@ -17,7 +17,7 @@ struct RootView: View {
         .overlay(alignment: .top) {
             NoticeBanner()
         }
-        .tint(StillTheme.accent)
+        .tint(Color(hex: appState.preferences.appAccentPalette.accentHex))
     }
 }
 
@@ -26,11 +26,18 @@ struct MainTabView: View {
 
     var body: some View {
         let router = appState.router
-        TabView(selection: Binding(get: { router.selectedTab }, set: { router.selectedTab = $0 })) {
-            ForEach(router.visibleTabs, id: \.self) { tab in
-                tabContent(tab)
-                    .tabItem { Label(tab.title, systemImage: tab.systemImage) }
-                    .tag(tab)
+        ZStack {
+            tabContent(router.selectedTab)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if appState.activeSession == nil {
+                FloatingTabBar(tabs: router.visibleTabs, selection: Binding(
+                    get: { router.selectedTab },
+                    set: { router.selectedTab = $0 }
+                ))
+                .padding(.horizontal, StillTheme.Spacing.screen)
+                .padding(.top, StillTheme.Spacing.xs)
+                .padding(.bottom, StillTheme.Spacing.xs)
             }
         }
         .sheet(item: Binding(get: { router.sheet }, set: { router.sheet = $0 })) { sheet in
@@ -46,6 +53,8 @@ struct MainTabView: View {
                     }
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
+                case .nextStep:
+                    NextStepGuideView()
                 }
             }
             .environment(appState)
@@ -59,15 +68,47 @@ struct MainTabView: View {
     @ViewBuilder
     private func tabContent(_ tab: AppTab) -> some View {
         switch tab {
+        case .today:
+            TodayTab()
         case .focus:
             FocusTab()
         case .breakShelf:
             BreakTab()
         case .me:
             MeTab()
-        case .journal:
-            JournalTab()
         }
+    }
+}
+
+private struct FloatingTabBar: View {
+    let tabs: [AppTab]
+    @Binding var selection: AppTab
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(tabs, id: \.self) { tab in
+                let isSelected = selection == tab
+                Button {
+                    selection = tab
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: tab.systemImage)
+                            .font(StillTypography.callout.weight(.semibold))
+                        Text(tab.title)
+                            .font(StillTypography.caption)
+                    }
+                    .foregroundStyle(isSelected ? StillTheme.textPrimary : StillTheme.textSecondary)
+                    .frame(maxWidth: .infinity, minHeight: 54)
+                    .background(isSelected ? Color.white.opacity(0.54) : .clear, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
+            }
+        }
+        .padding(5)
+        .stillGlass(radius: 26)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Main navigation")
     }
 }
 
@@ -105,13 +146,13 @@ struct BreakTab: View {
     }
 }
 
-struct JournalTab: View {
+struct TodayTab: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
         let router = appState.router
-        NavigationStack(path: Binding(get: { router.journalPath }, set: { router.journalPath = $0 })) {
-            JournalView()
+        NavigationStack(path: Binding(get: { router.todayPath }, set: { router.todayPath = $0 })) {
+            TodayView()
                 .navigationDestination(for: AppRoute.self) { route in
                     RouteView(route: route)
                 }
@@ -139,12 +180,18 @@ struct RouteView: View {
 
     var body: some View {
         switch route {
+        case .today, .nextStep:
+            EmptyView()
         case .breakActivity(let id, let context):
             ActivityContainerView(activityID: id, context: context)
         case .nfcSetup:
             FocusCardView()
         case .sceneCollection:
             SceneCollectionView()
+        case .roomCollection:
+            RoomCollectionView()
+        case .spriteContactSheet:
+            SpriteContactSheetView()
         case .presets:
             PresetsView()
         case .doodleGallery:
@@ -153,8 +200,20 @@ struct RouteView: View {
             MorningStartView()
         case .blockingSetup:
             BlockingSetupView()
+        case .calendarSettings:
+            CalendarSettingsView()
+        case .getFocusCard:
+            GetFocusCardView()
+        case .stillPlus:
+            StillPlusView()
         case .habits:
             HabitsScreen()
+        case .onboardingGoalPreference:
+            OnboardingPreferenceEditorView(kind: .goal)
+        case .onboardingBreakPreference:
+            OnboardingPreferenceEditorView(kind: .breakAppeal)
+        case .onboardingLookPreference:
+            OnboardingPreferenceEditorView(kind: .look)
         case .focusHome, .focusConfiguration, .activeSession, .sessionComplete, .breakShelf, .tasks, .me, .journal, .dayTimeline:
             // These are tab roots or modals, never pushed.
             EmptyView()
@@ -171,6 +230,7 @@ struct HabitsScreen: View {
                     .padding(.horizontal, StillTheme.Spacing.screen)
                     .padding(.vertical, StillTheme.Spacing.m)
             }
+            .stillScrollableViewport()
         }
         .navigationTitle("Habits")
         .navigationBarTitleDisplayMode(.inline)

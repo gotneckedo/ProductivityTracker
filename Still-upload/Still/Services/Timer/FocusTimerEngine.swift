@@ -37,6 +37,15 @@ struct TimerSnapshot: Equatable {
     var displayedSeconds: TimeInterval {
         remainingInPhase ?? elapsedInPhase
     }
+
+    /// Calculates the displayed end time from the instant the UI is rendered
+    /// and the current remaining duration. This keeps the status line in step
+    /// with a live countdown even if a previously stored phase timestamp was
+    /// created before a pause, resume, or focus extension.
+    func endDate(from now: Date) -> Date? {
+        guard isRunning, let remainingInPhase else { return nil }
+        return now.addingTimeInterval(max(0, remainingInPhase))
+    }
 }
 
 enum TimerTransition: Equatable {

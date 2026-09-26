@@ -5,6 +5,8 @@ extension Identifier where Tag == FocusPresetTag {
     static let study: FocusPresetID = "study"
     static let deepWork: FocusPresetID = "deepWork"
     static let quickFocus: FocusPresetID = "quickFocus"
+    static let lowEnergy: FocusPresetID = "lowEnergy"
+    static let tinyStart: FocusPresetID = "tinyStart"
 }
 
 enum TaskBehavior: String, Codable, Hashable {

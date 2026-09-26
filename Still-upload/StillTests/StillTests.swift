@@ -124,6 +124,23 @@ final class PuzzleTests: XCTestCase {
         XCTAssertFalse(game.erase(), "finished puzzles are read-only")
     }
 
+    func testSudokuDigitCompletesOnlyAfterSixPlacements() {
+        var game = SudokuGame(puzzle: BundledPuzzleLibrary.sudoku6)
+        let digit = 1
+        XCTAssertLessThan(game.placedCount(of: digit), game.puzzle.size)
+        XCTAssertFalse(game.isDigitComplete(digit), "Fresh keypad digits stay at full contrast")
+
+        for index in game.puzzle.givens.indices where game.placedCount(of: digit) < game.puzzle.size {
+            guard !game.puzzle.isGiven(index) else { continue }
+            game.select(index)
+            XCTAssertTrue(game.enter(digit))
+        }
+
+        XCTAssertEqual(game.placedCount(of: digit), game.puzzle.size)
+        XCTAssertTrue(game.isDigitComplete(digit), "Only the sixth placed instance retires the digit")
+        XCTAssertFalse(game.isDigitComplete(2), "Other keypad digits remain available")
+    }
+
     func testBundledPicrossIsUnique() {
         let puzzle = BundledPuzzleLibrary.sprout
         XCTAssertEqual(puzzle.size, 5)
@@ -189,6 +206,41 @@ final class PuzzleTests: XCTestCase {
         try container.puzzleProgress.save(game, puzzleID: game.puzzle.id, at: referenceDate)
         let loaded = container.puzzleProgress.load(SudokuGame.self, puzzleID: game.puzzle.id)
         XCTAssertEqual(loaded?.value(at: empty), game.puzzle.solution[empty])
+    }
+}
+
+final class TimerSnapshotTests: XCTestCase {
+    func testLiveEndDateUsesCurrentRenderTimeAndRemainingDuration() {
+        let engine = FocusTimerEngine()
+        let session = makeSession(.countdown(25), at: referenceDate)
+        let renderTime = referenceDate.addingTimeInterval(90)
+        let snapshot = engine.snapshot(of: session, at: renderTime)
+
+        XCTAssertEqual(
+            snapshot.endDate(from: renderTime),
+            referenceDate.addingTimeInterval(25 * 60),
+            "The status line is derived from now plus the live remaining duration."
+        )
+    }
+
+    func testPausedSnapshotHasNoFutureEndDate() {
+        let engine = FocusTimerEngine()
+        let session = makeSession(.countdown(25), at: referenceDate)
+        let paused = engine.pause(session, at: referenceDate.addingTimeInterval(60)).0
+        let snapshot = engine.snapshot(of: paused, at: referenceDate.addingTimeInterval(90))
+
+        XCTAssertNil(snapshot.endDate(from: referenceDate.addingTimeInterval(90)))
+    }
+
+    func testPreviewFixtureEndTimeMatchesItsInjectedClock() {
+        let start = referenceDate.addingTimeInterval(-7 * 60)
+        let state = PreviewSupport.appState(populated: true, activeSession: true, clockStart: start)
+        let now = state.container.clock.now
+
+        XCTAssertEqual(now, referenceDate)
+        let snapshot = try! XCTUnwrap(state.snapshot)
+        XCTAssertEqual(try! XCTUnwrap(snapshot.remainingInPhase), 18 * 60, accuracy: 0.1)
+        XCTAssertEqual(snapshot.endDate(from: now), referenceDate.addingTimeInterval(18 * 60))
     }
 }
 
@@ -500,7 +552,7 @@ final class AppFlowTests: XCTestCase {
 
         state.simulateFocusCard(presetID: .defaultPreset)
         XCTAssertEqual(state.activeSession?.presetID, .study, "a running session is left alone")
-        XCTAssertEqual(state.notice?.text, "A session is already running. It's still going.")
+        XCTAssertEqual(state.notice?.text, "A focus session is already running.")
 
         state.endSessionEarly()
         state.simulateFocusCard(presetID: .defaultPreset)
@@ -524,7 +576,7 @@ final class AppFlowTests: XCTestCase {
 
     func testSceneUnlockIsNoticedOnceThenAcknowledged() {
         state.completeOnboarding(goal: .focusBetter)
-        for _ in 0..<7 {
+        for _ in 0..<2 {
             state.startFocus()
             clock.advance(by: minutes(25))
             state.tick()
@@ -735,6 +787,17 @@ final class FocusFlowControllerTests: XCTestCase {
         XCTAssertEqual(container.focus.snapshot()?.remainingInPhase, minutes(20))
     }
 
+    func testAddingFiveMinutesExtendsOnlyTheRunningSession() {
+        container.focus.start(presetID: .defaultPreset, taskID: nil, source: .manual)
+        clock.advance(by: minutes(5))
+        container.focus.addFiveMinutes()
+
+        XCTAssertEqual(container.focus.snapshot()?.remainingInPhase, minutes(25))
+        XCTAssertEqual(container.focus.activeSession?.configuration.focusDuration, minutes(30))
+        XCTAssertEqual(container.presets.preset(id: .defaultPreset)?.timer.focusDuration, minutes(25))
+        XCTAssertEqual(notifications.scheduled.first?.date, clock.now.addingTimeInterval(minutes(25)))
+    }
+
     // MARK: Relaunch
 
     func testRestoreAfterRelaunchCompletesOverdueSession() {
@@ -811,6 +874,19 @@ final class FocusFlowControllerTests: XCTestCase {
     func testBlankTaskTitleIsRejected() {
         XCTAssertNil(container.taskController.create(title: "   \n "))
         XCTAssertTrue(container.tasks.allTasks().isEmpty)
+    }
+
+    func testTaskChecklistPersistsAndTogglesIndependently() {
+        let task = container.taskController.create(title: "Biology review")!
+        XCTAssertTrue(container.taskController.addStep(taskID: task.id, title: "Read chapter 4"))
+        let step = try! XCTUnwrap(container.tasks.task(id: task.id)?.steps.first)
+
+        container.taskController.toggleStep(taskID: task.id, stepID: step.id)
+        XCTAssertTrue(container.tasks.task(id: task.id)?.steps.first?.isCompleted == true)
+        XCTAssertFalse(container.tasks.task(id: task.id)?.isCompleted == true)
+
+        container.taskController.deleteStep(taskID: task.id, stepID: step.id)
+        XCTAssertTrue(container.tasks.task(id: task.id)?.steps.isEmpty == true)
     }
 
     func testTodaysTasksShowsOpenThenDoneToday() {
@@ -1202,6 +1278,13 @@ final class DeepLinkTests: XCTestCase {
         XCTAssertEqual(withHost.parse(URL(string: "https://focus.example.com/start-focus?preset=study")!), .startFocus(presetID: .study))
     }
 
+    func testPlaceholderUniversalHostUsesTheProductionParserBoundary() {
+        let url = StillLinks.startFocusURL(presetID: .study)
+        XCTAssertEqual(url.host, StillLinks.universalHost)
+        XCTAssertEqual(parser.parse(url), .startFocus(presetID: .study))
+        XCTAssertEqual(StillLinks.focusCardSetupURL.host, StillLinks.universalHost)
+    }
+
     func testPresetURLRoundTrips() {
         for preset in [PresetCatalog.defaultPreset(), PresetCatalog.study] {
             XCTAssertEqual(parser.parse(preset.startURL), .startFocus(presetID: preset.id))
@@ -1236,14 +1319,10 @@ final class RouteResolverTests: XCTestCase {
         XCTAssertEqual(resolver.destination(for: .nfcSetup, currentTab: .focus).stack, [.nfcSetup])
     }
 
-    func testJournalIsHiddenInV1AndReadyBehindFlag() {
-        XCTAssertEqual(AppTab.visibleTabs(flags: .v1), [.focus, .breakShelf, .me])
-        XCTAssertEqual(RouteResolver(flags: .v1).destination(for: .journal, currentTab: .focus).tab, .me)
-
-        var flags = FeatureFlags.v1
-        flags.journalTab = true
-        XCTAssertEqual(AppTab.visibleTabs(flags: flags), [.focus, .breakShelf, .journal, .me])
-        XCTAssertEqual(RouteResolver(flags: flags).destination(for: .journal, currentTab: .focus).tab, .journal)
+    func testTodayOwnsReflectionAndIsAlwaysTheHomeTab() {
+        XCTAssertEqual(AppTab.visibleTabs(flags: .v1), [.today, .focus, .breakShelf, .me])
+        XCTAssertEqual(RouteResolver(flags: .v1).destination(for: .journal, currentTab: .focus).tab, .today)
+        XCTAssertEqual(RouteResolver(flags: .current).destination(for: .today, currentTab: .focus).tab, .today)
     }
 }
 
@@ -1324,7 +1403,7 @@ final class LiveActivityAndNotificationTests: XCTestCase {
         XCTAssertEqual(copy.first?.title, "Focus block done")
         XCTAssertEqual(copy.last?.title, "Break's over")
         let session = FocusTimerEngine().upcomingBoundaries(makeSession(.countdown(25)), from: referenceDate)
-        XCTAssertEqual(NotificationCopy.content(for: session[0]).title, "Session complete")
+        XCTAssertEqual(NotificationCopy.content(for: session[0]).title, "Study session complete")
         for (title, body) in copy {
             XCTAssertFalse(title.contains("!") || body.contains("!"))
         }
@@ -1394,6 +1473,9 @@ final class StreakTests: XCTestCase {
         let days = streaks.focusDays(from: sessions)
         XCTAssertEqual(streaks.currentStreak(days: days, today: day(0)), 0)
         XCTAssertEqual(StatsCalculator.streakLine(current: 0), "A streak starts with any one session.")
+        XCTAssertNil(StatsCalculator.streakValue(0), "a numeric zero streak is never presented")
+        XCTAssertEqual(StatsCalculator.streakValue(1), "1 day")
+        XCTAssertEqual(StatsCalculator.streakValue(3), "3 days")
     }
 
     func testAbandonedSessionsDoNotCreateFocusDays() {
@@ -1449,6 +1531,210 @@ final class StatsCalculatorTests: XCTestCase {
         XCTAssertEqual(stats.averageSessionDuration, 0)
         XCTAssertEqual(stats.lastSevenDays.map(\.focusDuration), Array(repeating: 0, count: 7))
     }
+
+    func testDayWeekMonthAndYearRangesUseCalendarBoundaries() {
+        let calculator = StatsCalculator(calendar: testCalendar)
+        let today = referenceDate
+        let sessions = [
+            completedSession(endingAt: today, focusMinutes: 10),
+            completedSession(endingAt: testCalendar.date(byAdding: .day, value: -6, to: today)!, focusMinutes: 20),
+            completedSession(endingAt: testCalendar.date(byAdding: .day, value: -7, to: today)!, focusMinutes: 30),
+            completedSession(endingAt: testCalendar.date(from: DateComponents(year: 2026, month: 1, day: 15, hour: 10))!, focusMinutes: 40),
+            completedSession(endingAt: testCalendar.date(from: DateComponents(year: 2025, month: 12, day: 31, hour: 10))!, focusMinutes: 50)
+        ]
+        let stats = calculator.stats(sessions: sessions, usages: [], now: today)
+
+        XCTAssertEqual(stats.data(for: .day)?.focusDuration, minutes(10))
+        XCTAssertEqual(stats.data(for: .day)?.points.count, 1)
+        XCTAssertEqual(stats.data(for: .week)?.focusDuration, minutes(30))
+        XCTAssertEqual(stats.data(for: .week)?.points.count, 7)
+        XCTAssertEqual(stats.data(for: .month)?.focusDuration, minutes(60))
+        XCTAssertEqual(stats.data(for: .month)?.points.count, 31)
+        XCTAssertEqual(stats.data(for: .year)?.focusDuration, minutes(100))
+        XCTAssertEqual(stats.data(for: .year)?.points.count, 12)
+    }
+
+    func testOwnUsualUsesPriorFocusDaysAndExcludesToday() {
+        let calculator = StatsCalculator(calendar: testCalendar)
+        let sessions = [
+            completedSession(endingAt: testCalendar.date(byAdding: .day, value: -3, to: referenceDate)!, focusMinutes: 20),
+            completedSession(endingAt: testCalendar.date(byAdding: .day, value: -2, to: referenceDate)!, focusMinutes: 40),
+            completedSession(endingAt: referenceDate, focusMinutes: 90)
+        ]
+        let stats = calculator.stats(sessions: sessions, usages: [], now: referenceDate)
+
+        XCTAssertEqual(stats.usualDailyFocus, minutes(30))
+        XCTAssertEqual(stats.data(for: .week)?.usualReferenceFocus, minutes(30))
+        XCTAssertEqual(stats.data(for: .day)?.comparisonToUsual, .more)
+        XCTAssertEqual(StatsCalculator.comparison(focus: minutes(30), usual: minutes(30)), .aboutUsual)
+        XCTAssertEqual(StatsCalculator.comparison(focus: minutes(10), usual: minutes(30)), .lighter)
+    }
+
+    func testRangePointsKeepSubjectFocusSegments() {
+        let biology = TaskItem(title: "Lab notes", createdAt: referenceDate, subject: .biology)
+        let literature = TaskItem(title: "Essay", createdAt: referenceDate, subject: .literature)
+        var first = completedSession(endingAt: referenceDate.addingTimeInterval(-30 * 60), focusMinutes: 20)
+        var second = completedSession(endingAt: referenceDate, focusMinutes: 25)
+        first.taskID = biology.id
+        second.taskID = literature.id
+
+        let stats = StatsCalculator(calendar: testCalendar).stats(
+            sessions: [first, second], usages: [], tasks: [biology, literature], now: referenceDate
+        )
+        let segments = stats.data(for: .day)?.points.first?.subjectSegments ?? []
+        XCTAssertEqual(segments.count, 2)
+        XCTAssertEqual(segments.first { $0.subject == .biology }?.focusDuration, minutes(20))
+        XCTAssertEqual(segments.first { $0.subject == .literature }?.focusDuration, minutes(25))
+    }
+
+    func testCalendarDaysUseNeutralQuietAndUpcomingStates() {
+        let now = testCalendar.date(from: DateComponents(year: 2026, month: 3, day: 10, hour: 9))!
+        let focused = testCalendar.date(from: DateComponents(year: 2026, month: 3, day: 4, hour: 10))!
+        let month = StatsCalculator(calendar: testCalendar).calendarMonth(
+            sessions: [completedSession(endingAt: focused)],
+            now: now
+        )
+
+        XCTAssertEqual(month.days.count, 31)
+        XCTAssertEqual(month.days.first { testCalendar.component(.day, from: $0.date) == 4 }?.kind, .focused)
+        XCTAssertEqual(month.days.first { testCalendar.component(.day, from: $0.date) == 5 }?.kind, .quiet)
+        XCTAssertEqual(month.days.first { testCalendar.component(.day, from: $0.date) == 11 }?.kind, .upcoming)
+        XCTAssertFalse(FocusCalendarDayKind.allRawValuesForTesting.contains("missed"))
+    }
+}
+
+private extension FocusCalendarDayKind {
+    static var allRawValuesForTesting: [String] {
+        [FocusCalendarDayKind.focused, .quiet, .upcoming].map(\.rawValue)
+    }
+}
+
+final class BlockingScheduleTests: XCTestCase {
+    func testScheduleStartsAtTimeAndEndsOnlyOnCardTapOrOverride() {
+        let clock = ManualClock(referenceDate)
+        let keyValues = InMemoryKeyValueStore()
+        let mock = MockFocusBlockingService()
+        let controller = BlockingScheduleController(
+            clock: clock,
+            calendar: testCalendar,
+            store: KeyValueBlockingScheduleStore(store: keyValues),
+            blocking: mock
+        )
+
+        controller.update(isEnabled: true, startMinute: 10 * 60, presetID: .study)
+        XCTAssertEqual(controller.schedule.phase, .waiting)
+        XCTAssertEqual(controller.refresh(at: referenceDate.addingTimeInterval(59 * 60)), .none)
+        XCTAssertEqual(controller.refresh(at: referenceDate.addingTimeInterval(60 * 60)), .started)
+        XCTAssertEqual(controller.schedule.phase, .blockingUntilCardTap)
+        XCTAssertEqual(mock.scheduledPresetID, .study)
+        XCTAssertEqual(controller.refresh(at: referenceDate.addingTimeInterval(4 * 60 * 60)), .none)
+        XCTAssertEqual(controller.schedule.phase, .blockingUntilCardTap)
+        XCTAssertEqual(controller.cardTapped(), .endedByCardTap)
+        XCTAssertEqual(controller.schedule.phase, .waiting)
+        XCTAssertNil(mock.scheduledPresetID)
+    }
+
+    func testSchedulePersistsAndManualEndPersistsWaitingState() {
+        let keyValues = InMemoryKeyValueStore()
+        let mock = MockFocusBlockingService()
+        let store = KeyValueBlockingScheduleStore(store: keyValues)
+        let first = BlockingScheduleController(
+            clock: ManualClock(referenceDate),
+            calendar: testCalendar,
+            store: store,
+            blocking: mock
+        )
+        first.update(isEnabled: true, startMinute: 8 * 60 + 15, presetID: .deepWork)
+        XCTAssertEqual(first.schedule.phase, .blockingUntilCardTap)
+        XCTAssertEqual(mock.scheduledPresetID, .deepWork)
+
+        let restored = BlockingScheduleController(
+            clock: ManualClock(referenceDate),
+            calendar: testCalendar,
+            store: store,
+            blocking: mock
+        )
+        XCTAssertEqual(restored.schedule.phase, .blockingUntilCardTap)
+        XCTAssertEqual(restored.schedule.startMinute, 8 * 60 + 15)
+        XCTAssertEqual(restored.schedule.presetID, .deepWork)
+        XCTAssertEqual(restored.endNow(), .endedManually)
+
+        let afterEnd = BlockingScheduleController(
+            clock: ManualClock(referenceDate),
+            calendar: testCalendar,
+            store: store,
+            blocking: mock
+        )
+        XCTAssertEqual(afterEnd.schedule.phase, .waiting)
+        XCTAssertTrue(afterEnd.schedule.isEnabled)
+    }
+
+    func testMockRecordsIntentButNeverClaimsShielding() {
+        let mock = MockFocusBlockingService()
+        mock.scheduleDidStart(presetID: .defaultPreset)
+        XCTAssertEqual(mock.scheduledPresetID, .defaultPreset)
+        XCTAssertFalse(mock.isShielding)
+        XCTAssertEqual(mock.capability, .simulationOnly)
+    }
+}
+
+final class CopyCountTests: XCTestCase {
+    func testSingularSessionAndFocusDayCopy() {
+        XCTAssertEqual(Copy.Count.session(1), "1 session")
+        XCTAssertEqual(Copy.Count.session(2), "2 sessions")
+        XCTAssertEqual(Copy.Count.focusDay(1), "1 focus day")
+        XCTAssertEqual(Copy.Count.focusDay(3), "3 focus days")
+        XCTAssertEqual(Copy.Count.sessionLabel(1), "session")
+        XCTAssertEqual(Copy.Count.focusDayLabel(1), "focus day")
+        XCTAssertEqual(RoomUnlockRule.focusDays(1).plainLanguage, "Focus on 1 focus day total")
+    }
+
+    func testCatCoatsHaveDistinctSpriteAssetsAndLegacyDefault() throws {
+        XCTAssertEqual(Set(CatCoat.allCases.map(\.spriteAssetName)).count, CatCoat.allCases.count)
+        let legacy = try RecordCoding.decoder().decode(UserPreferences.self, from: Data(#"{"schemaVersion":3}"#.utf8))
+        XCTAssertEqual(legacy.catCoat, .ginger)
+        XCTAssertNil(legacy.catName)
+        XCTAssertEqual(legacy.schemaVersion, UserPreferences.currentSchemaVersion)
+    }
+}
+
+final class CatCompanionTests: XCTestCase {
+    func testStatePrioritizesCompletionThenBreakThenFocusSleep() {
+        XCTAssertEqual(CatCompanion.state(isCompletion: true, isFocusRunning: true, isBreakPhase: true, focusedSeconds: 900, hour: 9), .complete)
+        XCTAssertEqual(CatCompanion.state(isBreakPhase: true, hour: 14), .breakTime)
+        XCTAssertEqual(CatCompanion.state(isFocusRunning: true, focusedSeconds: 9 * 60 + 59, hour: 14), .focus)
+        XCTAssertEqual(CatCompanion.state(isFocusRunning: true, focusedSeconds: 10 * 60, hour: 14), .sleeping)
+        XCTAssertEqual(CatCompanion.state(hour: 9), .morning)
+        XCTAssertEqual(CatCompanion.state(hour: 14), .idle)
+    }
+
+    func testStateAnimationUsesOnlyOriginalSixSheetPoses() {
+        for state in CatRoomState.allCases {
+            let plan = CatCompanion.animation(for: state)
+            XCTAssertFalse(plan.poses.isEmpty)
+            XCTAssertTrue(plan.poses.allSatisfy { (0...5).contains($0.rawValue) })
+        }
+        XCTAssertEqual(CatCompanion.animation(for: .sleeping).poses, [.sleep])
+        XCTAssertEqual(CatCompanion.animation(for: .complete).poses.first, .lookUp)
+    }
+
+    func testTapTrackerReservesRareReactionForThirdTapWithinWindow() {
+        var tracker = CatTapTracker()
+        let now = referenceDate
+        XCTAssertEqual(tracker.registerTap(at: now), .ordinary)
+        XCTAssertEqual(tracker.registerTap(at: now.addingTimeInterval(1)), .ordinary)
+        XCTAssertEqual(tracker.registerTap(at: now.addingTimeInterval(2)), .rare)
+        XCTAssertEqual(tracker.registerTap(at: now.addingTimeInterval(6)), .ordinary)
+    }
+
+    func testNameNormalizationAndCoatEntitlementKeepStarterFree() {
+        XCTAssertNil(CatName.normalized("  \n  "))
+        XCTAssertEqual(CatName.normalized("  Mochi  "), "Mochi")
+        XCTAssertEqual(CatName.normalized(String(repeating: "x", count: 30))?.count, CatName.maximumLength)
+        XCTAssertTrue(CatAppearanceAccess.canUse(.ginger, hasStillPlus: false))
+        XCTAssertFalse(CatAppearanceAccess.canUse(.tabby, hasStillPlus: false))
+        XCTAssertTrue(CatAppearanceAccess.canUse(.midnight, hasStillPlus: true))
+    }
 }
 
 final class ProgressionTests: XCTestCase {
@@ -1457,29 +1743,45 @@ final class ProgressionTests: XCTestCase {
 
     func testMilestonesMatchSpecification() {
         XCTAssertEqual(SceneCatalog.rainyBedroom.unlockRule, .initiallyUnlocked)
-        XCTAssertEqual(SceneCatalog.libraryLight.unlockRule, .completedSessions(7))
-        XCTAssertEqual(SceneCatalog.trainWindow.unlockRule, .completedSessions(15))
-        XCTAssertEqual(SceneCatalog.nightCity.unlockRule, .completedSessions(25))
+        XCTAssertEqual(SceneCatalog.libraryLight.unlockRule, .completedSessions(2))
+        XCTAssertEqual(SceneCatalog.trainWindow.unlockRule, .completedSessions(6))
+        XCTAssertEqual(SceneCatalog.nightCity.unlockRule, .completedSessions(12))
+    }
+
+    func testCoreScenesUseFourDistinctRendererLayouts() {
+        XCTAssertEqual(
+            Set(SceneCatalog.all.map(\.rendererKind)),
+            Set([.rainyBedroom, .libraryLight, .trainWindow, .nightCity])
+        )
     }
 
     func testUnlocksAtExactThresholds() {
         XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 0).map(\.id), [.rainyBedroom])
-        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 6).map(\.id), [.rainyBedroom])
-        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 7).map(\.id), [.rainyBedroom, .libraryLight])
-        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 15).count, 3)
-        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 25).count, 4)
+        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 2).map(\.id), [.rainyBedroom, .libraryLight])
+        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 6).map(\.id), [.rainyBedroom, .libraryLight, .trainWindow])
+        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: 12).count, 4)
+    }
+
+    func testAllUnlockedPreviewFixtureSeedsRequestedSessionCount() {
+        let clock = ManualClock(referenceDate)
+        let container = DependencyContainer.inMemory(clock: clock, calendar: testCalendar)
+        PreviewFixtures.populate(container, completedSessions: 30)
+
+        let count = container.sessions.allSessions().filter { $0.state == .completed }.count
+        XCTAssertEqual(count, 30)
+        XCTAssertEqual(evaluator.unlockedScenes(in: catalog, completedSessions: count).count, 4)
     }
 
     func testNextLockedSceneAndRemaining() {
         let next = evaluator.nextLockedScene(in: catalog, completedSessions: 4)
-        XCTAssertEqual(next?.scene.id, .libraryLight)
-        XCTAssertEqual(next?.remaining, 3)
+        XCTAssertEqual(next?.scene.id, .trainWindow)
+        XCTAssertEqual(next?.remaining, 2)
         XCTAssertNil(evaluator.nextLockedScene(in: catalog, completedSessions: 30))
     }
 
     func testNewlyUnlockedBetweenCounts() {
-        XCTAssertEqual(evaluator.newlyUnlocked(in: catalog, before: 6, after: 7).map(\.id), [.libraryLight])
-        XCTAssertTrue(evaluator.newlyUnlocked(in: catalog, before: 7, after: 8).isEmpty)
+        XCTAssertEqual(evaluator.newlyUnlocked(in: catalog, before: 1, after: 2).map(\.id), [.libraryLight])
+        XCTAssertTrue(evaluator.newlyUnlocked(in: catalog, before: 2, after: 3).isEmpty)
         XCTAssertEqual(evaluator.newlyUnlocked(in: catalog, before: 0, after: 30).count, 3)
     }
 
@@ -1506,13 +1808,43 @@ final class ProgressionTests: XCTestCase {
 // MARK: - V1.1+ features
 
 final class FeatureFlagTests: XCTestCase {
-    func testCurrentFlagsShipJournalPlantAndWidgetsButNotBlocking() {
+    func testCurrentFlagsShipTodayPlantAndWidgetsButNotBlocking() {
         let flags = FeatureFlags.current
         XCTAssertTrue(flags.journalTab)
         XCTAssertTrue(flags.plantGrowthStages)
         XCTAssertTrue(flags.liveActivities)
         XCTAssertFalse(flags.appBlocking, "Blocking stays off until Apple approves the entitlement.")
-        XCTAssertEqual(AppTab.visibleTabs(flags: flags), [.focus, .breakShelf, .journal, .me])
+        XCTAssertEqual(AppTab.visibleTabs(flags: flags), [.today, .focus, .breakShelf, .me])
+    }
+
+    func testEveryP9StandInIsOffInV1CurrentAndRelease() {
+        for (name, flags) in [("v1", FeatureFlags.v1), ("current", .current), ("release", .release)] {
+            XCTAssertFalse(flags.wakeUpPreview, "Wake up stand-in must be off in \(name).")
+            XCTAssertFalse(flags.seasonalPurchasesPreview, "Purchase stand-in must be off in \(name).")
+            XCTAssertFalse(flags.googleCalendarPreview, "Google sample events must be off in \(name).")
+            XCTAssertFalse(flags.brandedFocusCardPreview, "Card placeholder must be off in \(name).")
+        }
+    }
+
+    func testDisabledFlagsReplaceInjectedStandInsWithNoopBoundaries() {
+        let container = DependencyContainer.inMemory(
+            clock: ManualClock(referenceDate),
+            calendar: testCalendar,
+            flags: .v1,
+            googleCalendar: SampleGoogleCalendarAdapter(now: referenceDate, calendar: testCalendar),
+            purchases: LocalPurchaseService(),
+            focusCardOffering: PlaceholderFocusCardOffering()
+        )
+        XCTAssertFalse(container.googleCalendar.isStandIn)
+        XCTAssertFalse(container.purchases.isStandIn)
+        XCTAssertNil(container.focusCardOffering.offer)
+        XCTAssertEqual(container.wakeUp.delivery, .notificationFallback)
+    }
+
+    func testV1AndCurrentBothKeepBlockingOffWithoutEntitlement() {
+        XCTAssertFalse(FeatureFlags.v1.appBlocking)
+        XCTAssertFalse(FeatureFlags.current.appBlocking)
+        XCTAssertTrue(DependencyContainer.inMemory(flags: .current).blocking is MockFocusBlockingService)
     }
 
     func testNewRoutesResolve() {
@@ -1520,16 +1852,18 @@ final class FeatureFlagTests: XCTestCase {
         XCTAssertEqual(resolver.destination(for: .presets, currentTab: .focus), RouteDestination(tab: .me, stack: [.presets], sheet: nil, completionSessionID: nil))
         XCTAssertEqual(resolver.destination(for: .dayTimeline, currentTab: .breakShelf).sheet, .dayTimeline)
         XCTAssertEqual(resolver.destination(for: .dayTimeline, currentTab: .breakShelf).tab, .breakShelf)
-        XCTAssertEqual(resolver.destination(for: .habits, currentTab: .focus).tab, .journal)
-        XCTAssertEqual(RouteResolver(flags: .v1).destination(for: .habits, currentTab: .focus).stack, [.habits])
+        XCTAssertEqual(resolver.destination(for: .habits, currentTab: .focus).tab, .today)
+        XCTAssertEqual(RouteResolver(flags: .v1).destination(for: .habits, currentTab: .focus).stack, [])
         XCTAssertEqual(resolver.destination(for: .doodleGallery, currentTab: .focus).stack, [.doodleGallery])
+        XCTAssertEqual(resolver.destination(for: .calendarSettings, currentTab: .focus).stack, [.calendarSettings])
+        XCTAssertEqual(resolver.destination(for: .getFocusCard, currentTab: .focus).stack, [.getFocusCard])
     }
 
-    func testRouterKeepsAJournalStack() {
+    func testRouterKeepsATodayStack() {
         let router = AppRouter(flags: .current)
         router.go(to: .journal)
-        XCTAssertEqual(router.selectedTab, .journal)
-        XCTAssertEqual(router.journalPath, [])
+        XCTAssertEqual(router.selectedTab, .today)
+        XCTAssertEqual(router.todayPath, [])
     }
 }
 
@@ -1632,12 +1966,14 @@ final class HabitControllerTests: XCTestCase {
 }
 
 final class PresetManagementTests: XCTestCase {
-    func testBuiltInsIncludeDeepWorkAndQuickFocus() {
+    func testBuiltInsIncludeDeepWorkQuickFocusAndLowEnergyStarts() {
         let container = makeContainer()
         let ids = container.presets.allPresets().map(\.id)
-        XCTAssertEqual(ids, [.defaultPreset, .study, .deepWork, .quickFocus])
+        XCTAssertEqual(ids, [.defaultPreset, .study, .deepWork, .quickFocus, .lowEnergy, .tinyStart])
         XCTAssertEqual(PresetCatalog.deepWork.timer.focusDuration, 90 * 60)
         XCTAssertEqual(PresetCatalog.quickFocus.timer.focusDuration, 15 * 60)
+        XCTAssertEqual(PresetCatalog.lowEnergy.timer.focusDuration, 10 * 60)
+        XCTAssertEqual(PresetCatalog.tinyStart.timer.focusDuration, 5 * 60)
     }
 
     func testCreateRenameDeleteCustomPreset() {
@@ -1701,9 +2037,10 @@ final class TaskScheduleTests: XCTestCase {
         XCTAssertEqual(describer.describe(day(1), now: referenceDate), "Due tomorrow")
         XCTAssertEqual(describer.describe(day(3), now: referenceDate), "Due Friday")
         XCTAssertEqual(describer.describe(day(9), now: referenceDate), "Due Mar 19")
-        XCTAssertEqual(describer.describe(day(-1), now: referenceDate), "Was due yesterday")
-        XCTAssertEqual(describer.describe(day(-3), now: referenceDate), "Was due Saturday")
-        XCTAssertEqual(describer.describe(day(-20), now: referenceDate), "Was due Feb 18")
+        XCTAssertEqual(describer.describe(day(-1), now: referenceDate), "Past due · yesterday")
+        XCTAssertEqual(describer.describe(day(-3), now: referenceDate), "Past due · Saturday")
+        XCTAssertEqual(describer.describe(day(-20), now: referenceDate), "Past due · Feb 18")
+        XCTAssertFalse(describer.describe(day(-1), now: referenceDate).contains("Missed"))
         XCTAssertTrue(describer.isOverdue(day(-1), now: referenceDate))
         XCTAssertFalse(describer.isOverdue(day(0, hour: 1), now: referenceDate))
         XCTAssertEqual(describer.shortTime(day(0, hour: 16)), "4 PM")
@@ -1718,10 +2055,11 @@ final class TaskScheduleTests: XCTestCase {
         _ = tasks.create(title: "No dates")
         tasks.updateDetails(id: lab.id, dueAt: day(2), scheduledAt: nil, course: "  Chemistry ")
         tasks.updateDetails(id: read.id, dueAt: nil, scheduledAt: day(0, hour: 15), course: nil)
-        XCTAssertEqual(tasks.task(id: lab.id)?.homework?.course, "Chemistry")
+        XCTAssertEqual(tasks.task(id: lab.id)?.subject?.name, "Chemistry")
+        XCTAssertNil(tasks.task(id: lab.id)?.homework?.course)
         XCTAssertEqual(tasks.upcomingTasks().map(\.title), ["Read chapter", "Lab report"])
         tasks.updateDetails(id: lab.id, dueAt: nil, scheduledAt: nil, course: " ")
-        XCTAssertNil(tasks.task(id: lab.id)?.homework)
+        XCTAssertNil(tasks.task(id: lab.id)?.subject)
         XCTAssertEqual(tasks.upcomingTasks().map(\.title), ["Read chapter"])
     }
 
@@ -1738,6 +2076,87 @@ final class TaskScheduleTests: XCTestCase {
                                                                        sessions: [session], events: [event])
         XCTAssertEqual(result.dueToday.map(\.title), ["Due today"])
         XCTAssertEqual(result.timed.map(\.title), ["Dentist", "Focus", "At three"])
+        XCTAssertEqual(result.timed.last?.duration, 30 * 60)
+    }
+
+    func testSubjectPaletteMigrationAndControllerUpdates() throws {
+        XCTAssertEqual(SubjectColor.allCases.count, 8)
+        XCTAssertEqual(Set(SubjectColor.allCases.map(\.hex)).count, 8)
+
+        let legacy = """
+        {"id":"00000000-0000-0000-0000-000000000001","title":"Lab","createdAt":0,
+         "homework":{"course":" Biology ","assignmentKind":null}}
+        """
+        let decoded = try RecordCoding.decoder().decode(TaskItem.self, from: Data(legacy.utf8))
+        XCTAssertEqual(decoded.subject, Subject.migrated(fromCourse: "Biology"))
+        XCTAssertTrue(decoded.steps.isEmpty, "old records remain tolerant of missing steps")
+        XCTAssertEqual(decoded.repeatRule, .once)
+
+        let container = makeContainer()
+        let task = container.taskController.create(title: "Lab")!
+        let subject = Subject(name: "Chemistry", color: .lavender)
+        container.taskController.updateDetails(
+            id: task.id, dueAt: nil, scheduledAt: day(0, hour: 14), subject: subject,
+            plannedDuration: 55 * 60, dayPeriod: .afternoon,
+            repeatRule: TaskRepeatRule(frequency: .weekly, weekdays: [3])
+        )
+        let stored = try XCTUnwrap(container.tasks.task(id: task.id))
+        XCTAssertEqual(stored.subject, subject)
+        XCTAssertEqual(stored.plannedDuration, 55 * 60)
+        XCTAssertEqual(stored.dayPeriod, .afternoon)
+        XCTAssertEqual(stored.repeatRule.frequency, .weekly)
+    }
+
+    func testRecurrenceAndPerOccurrenceCompletion() {
+        let weekly = TaskRepeatRule(frequency: .weekly, interval: 2, weekdays: [3, 5])
+        XCTAssertTrue(weekly.occurs(on: day(0), anchoredAt: day(0), calendar: testCalendar))
+        XCTAssertTrue(weekly.occurs(on: day(2), anchoredAt: day(0), calendar: testCalendar))
+        XCTAssertFalse(weekly.occurs(on: day(7), anchoredAt: day(0), calendar: testCalendar))
+        XCTAssertTrue(weekly.occurs(on: day(14), anchoredAt: day(0), calendar: testCalendar))
+
+        let monthly = TaskRepeatRule(frequency: .monthly)
+        let january31 = testCalendar.date(from: DateComponents(year: 2026, month: 1, day: 31))!
+        let february28 = testCalendar.date(from: DateComponents(year: 2026, month: 2, day: 28))!
+        XCTAssertTrue(monthly.occurs(on: february28, anchoredAt: january31, calendar: testCalendar))
+
+        let container = makeContainer()
+        let task = container.taskController.create(title: "Review notes")!
+        container.taskController.updateDetails(
+            id: task.id, dueAt: day(0), scheduledAt: nil, subject: .biology,
+            dayPeriod: .evening, repeatRule: TaskRepeatRule(frequency: .daily)
+        )
+        container.taskController.setCompleted(id: task.id, on: day(0), true)
+        let stored = container.tasks.task(id: task.id)!
+        XCTAssertTrue(stored.isCompleted(on: day(0), calendar: testCalendar))
+        XCTAssertFalse(stored.isCompleted(on: day(1), calendar: testCalendar), "future occurrence stays open")
+        XCTAssertNil(stored.completedAt, "series itself is not globally completed")
+    }
+
+    func testTimelineGroupsPeriodsAndCarriesSubjectPresentation() {
+        let tasks = [
+            TaskItem(title: "Loose", createdAt: day(0), dueAt: day(0), dayPeriod: .anytime),
+            TaskItem(title: "Read", createdAt: day(0), subject: .literature, dueAt: day(0), dayPeriod: .morning),
+            TaskItem(title: "Lab", createdAt: day(0), subject: .biology, scheduledAt: day(0, hour: 13), plannedDuration: 75 * 60)
+        ]
+        let timeline = DayTimelineBuilder(calendar: testCalendar).items(for: day(0), tasks: tasks, sessions: [], events: [])
+        XCTAssertEqual(timeline.untimedGroups.map(\.period), [.anytime, .morning])
+        XCTAssertEqual(timeline.untimedGroups[1].items.first?.subject, .literature)
+        XCTAssertEqual(timeline.timed.first?.subject, .biology)
+        XCTAssertEqual(timeline.timed.first?.duration, 75 * 60)
+    }
+
+    func testPreviewFixtureSessionsNeverOverlap() {
+        let container = makeContainer()
+        PreviewFixtures.populate(container)
+        let completed = container.sessions.allSessions().filter { $0.state == .completed }
+        for (index, lhs) in completed.enumerated() {
+            guard let lhsEnd = lhs.endedAt else { continue }
+            for rhs in completed.dropFirst(index + 1) {
+                guard let rhsEnd = rhs.endedAt else { continue }
+                XCTAssertFalse(lhs.startedAt < rhsEnd && rhs.startedAt < lhsEnd,
+                               "fixture sessions \(lhs.id) and \(rhs.id) overlap")
+            }
+        }
     }
 
     func testSpokenTaskParsing() {
@@ -1775,6 +2194,27 @@ final class TaskScheduleTests: XCTestCase {
         XCTAssertTrue(state.timeline(for: referenceDate).timed.isEmpty, "Off until the person turns it on.")
         state.setShowsCalendarEvents(true)
         XCTAssertEqual(state.timeline(for: referenceDate).timed.map(\.title), ["Class"])
+    }
+}
+
+final class ActivityPresentationTests: XCTestCase {
+    func testShelfStatusesExplainSavedProgressAndCompletions() {
+        XCTAssertEqual(
+            ActivityPresentation.status(for: .sudoku, data: ActivityStatusData(hasSavedProgress: true)),
+            ActivityStatus(text: "Saved progress", kind: .inProgress)
+        )
+        XCTAssertEqual(
+            ActivityPresentation.status(for: .picross, data: ActivityStatusData(completedCount: 2)),
+            ActivityStatus(text: "Solved 2 times", kind: .completed)
+        )
+        XCTAssertEqual(
+            ActivityPresentation.status(for: .pixelDoodle, data: ActivityStatusData(artifactCount: 1)),
+            ActivityStatus(text: "1 doodle on your wall", kind: .collection)
+        )
+        XCTAssertEqual(
+            ActivityPresentation.status(for: .shortRead),
+            ActivityStatus(text: "A short public-domain read", kind: .fresh)
+        )
     }
 }
 
@@ -1824,6 +2264,164 @@ final class PixelDoodleTests: XCTestCase {
     }
 }
 
+final class RoomCollectionTests: XCTestCase {
+    private let evaluator = RoomUnlockEvaluator()
+
+    func testCatalogHasTwentyOriginalSpriteBackedObjectsAndEveryFixedSlot() {
+        XCTAssertEqual(RoomObjectCatalog.all.count, 20)
+        XCTAssertEqual(Set(RoomObjectCatalog.all.map(\.id)).count, 20)
+        XCTAssertEqual(Set(RoomObjectCatalog.all.map(\.sortOrder)), Set(0..<20))
+        XCTAssertEqual(Set(RoomObjectCatalog.all.map(\.slot)), Set(RoomSlot.allCases))
+        XCTAssertTrue(RoomObjectCatalog.all.allSatisfy { !$0.name.isEmpty && !$0.unlockRule.plainLanguage.isEmpty })
+        XCTAssertTrue(RoomObjectCatalog.all.allSatisfy { $0.spriteAssetName?.hasPrefix("StillObject") == true },
+                      "Every collectible has an explicit original sprite asset key.")
+        XCTAssertEqual(Set(RoomObjectCatalog.all.compactMap(\.spriteAssetName)).count, 20,
+                       "Collectibles must not silently share a placeholder sprite.")
+        XCTAssertEqual(Set(RoomObjectCatalog.all.map(\.unlockRule).map(ruleKind)),
+                       ["sessions", "days", "reads", "doodles", "completedActivities", "triedActivities", "category", "allActivities", "minutes"])
+    }
+
+    func testEveryCatalogSceneHasAnOriginalSpriteAssetKey() {
+        XCTAssertEqual(SceneCatalog.completeCatalog.count, 7)
+        XCTAssertTrue(SceneCatalog.completeCatalog.allSatisfy { $0.spriteAssetName?.hasPrefix("StillRoom") == true })
+        XCTAssertEqual(Set(SceneCatalog.completeCatalog.compactMap(\.spriteAssetName)).count, SceneCatalog.completeCatalog.count)
+    }
+
+    func testEveryCatalogUnlockRuleAtItsBoundary() {
+        for object in RoomObjectCatalog.all {
+            let pair = histories(around: object.unlockRule)
+            XCTAssertFalse(evaluator.isSatisfied(object.unlockRule, by: pair.before), "Unlocked too early: \(object.name)")
+            XCTAssertTrue(evaluator.isSatisfied(object.unlockRule, by: pair.at), "Did not unlock: \(object.name)")
+        }
+    }
+
+    func testEarnedObjectsNeverRevokeWhenHistoryShrinks() {
+        let store = InMemoryRecordStore()
+        let repository = StoredRoomCollectionRepository(store: store)
+        let controller = RoomCollectionController(repository: repository, clock: ManualClock(referenceDate))
+        let allHistory = RoomActivityHistory(completedSessions: 100, focusDays: 30, completedReads: 20,
+                                             savedDoodles: 10, completedActivities: 30,
+                                             triedActivityIDs: Set(ActivityCatalog.available.map(\.id)), focusedMinutes: 2_000)
+        let earned = controller.evaluate(allHistory)
+        XCTAssertEqual(earned, Set(RoomObjectCatalog.all.map(\.id)))
+
+        XCTAssertTrue(controller.evaluate(.empty).isEmpty)
+        XCTAssertEqual(controller.state().unlockedObjectIDs, Set(RoomObjectCatalog.all.map(\.id)))
+    }
+
+    func testRoomCollectionMigrationDefaultsMissingKeysAndKeepsEarnedIDs() throws {
+        let legacy = Data(#"{"unlockedObjectIDs":["desk-lamp"]}"#.utf8)
+        let decoded = try RecordCoding.decoder().decode(RoomCollectionState.self, from: legacy)
+        XCTAssertEqual(decoded.unlockedObjectIDs, [.deskLamp])
+        XCTAssertTrue(decoded.acknowledgedObjectIDs.isEmpty)
+        XCTAssertTrue(decoded.placements.isEmpty)
+        XCTAssertEqual(decoded.schemaVersion, RoomCollectionState.currentSchemaVersion)
+
+        let store = InMemoryRecordStore()
+        try store.upsert(StoredRecord(id: "room-collection", kind: .roomCollection,
+                                      createdAt: referenceDate, updatedAt: referenceDate,
+                                      schemaVersion: 0, payload: legacy))
+        let controller = RoomCollectionController(repository: StoredRoomCollectionRepository(store: store),
+                                                  clock: ManualClock(referenceDate))
+        _ = controller.evaluate(.empty)
+        XCTAssertTrue(controller.state().unlockedObjectIDs.contains(.deskLamp))
+    }
+
+    func testPlaceReplaceMoveRemoveAndPersistInFixedSlots() throws {
+        let store = InMemoryRecordStore()
+        let repository = StoredRoomCollectionRepository(store: store)
+        let controller = RoomCollectionController(repository: repository, clock: ManualClock(referenceDate))
+        var state = RoomCollectionState(unlockedObjectIDs: Set(RoomObjectCatalog.all.map(\.id)))
+        try repository.save(state, at: referenceDate)
+
+        let perSlot = Dictionary(grouping: RoomObjectCatalog.all, by: \.slot)
+        for slot in RoomSlot.allCases {
+            let object = try XCTUnwrap(perSlot[slot]?.first)
+            try controller.place(object.id, in: .rainyBedroom, slot: slot)
+        }
+        XCTAssertEqual(controller.state().placements.count, RoomSlot.allCases.count)
+
+        let deskObjects = try XCTUnwrap(perSlot[.desk])
+        XCTAssertGreaterThanOrEqual(deskObjects.count, 2)
+        try controller.place(deskObjects[1].id, in: .rainyBedroom, slot: .desk)
+        state = controller.state()
+        XCTAssertEqual(state.placements.filter { $0.sceneID == .rainyBedroom && $0.slot == .desk }.map(\.objectID), [deskObjects[1].id])
+
+        try controller.place(deskObjects[1].id, in: .libraryLight, slot: .desk)
+        XCTAssertEqual(controller.state().placements.filter { $0.objectID == deskObjects[1].id }.count, 2,
+                       "The same earned object can decorate separate rooms.")
+        controller.remove(from: .rainyBedroom, slot: .desk)
+        XCTAssertNil(controller.state().placements.first { $0.sceneID == .rainyBedroom && $0.slot == .desk })
+        XCTAssertNotNil(controller.state().placements.first { $0.sceneID == .libraryLight && $0.slot == .desk })
+
+        XCTAssertEqual(StoredRoomCollectionRepository(store: store).load(), controller.state(), "Placements persist through a repository reopen.")
+    }
+
+    func testPlacementRejectsLockedUnknownAndWrongSlotObjects() throws {
+        let store = InMemoryRecordStore()
+        let repository = StoredRoomCollectionRepository(store: store)
+        let controller = RoomCollectionController(repository: repository, clock: ManualClock(referenceDate))
+        XCTAssertThrowsError(try controller.place(.deskLamp, in: .rainyBedroom, slot: .desk)) {
+            XCTAssertEqual($0 as? RoomPlacementFailure, .locked)
+        }
+        try repository.save(RoomCollectionState(unlockedObjectIDs: [.deskLamp]), at: referenceDate)
+        XCTAssertThrowsError(try controller.place(.deskLamp, in: .rainyBedroom, slot: .wall)) {
+            XCTAssertEqual($0 as? RoomPlacementFailure, .wrongSlot)
+        }
+        XCTAssertThrowsError(try controller.place("unknown", in: .rainyBedroom, slot: .desk)) {
+            XCTAssertEqual($0 as? RoomPlacementFailure, .unknownObject)
+        }
+    }
+
+    func testUnlockAcknowledgementDoesNotChangeOwnership() throws {
+        let store = InMemoryRecordStore()
+        let repository = StoredRoomCollectionRepository(store: store)
+        let controller = RoomCollectionController(repository: repository, clock: ManualClock(referenceDate))
+        try repository.save(RoomCollectionState(unlockedObjectIDs: [.deskLamp, .globe]), at: referenceDate)
+        controller.acknowledgeUnlocks()
+        let state = controller.state()
+        XCTAssertEqual(state.acknowledgedObjectIDs, [.deskLamp, .globe])
+        XCTAssertEqual(state.unlockedObjectIDs, [.deskLamp, .globe])
+    }
+
+    private func histories(around rule: RoomUnlockRule) -> (before: RoomActivityHistory, at: RoomActivityHistory) {
+        var before = RoomActivityHistory.empty
+        var at = RoomActivityHistory.empty
+        switch rule {
+        case .completedSessions(let value): before.completedSessions = value - 1; at.completedSessions = value
+        case .focusDays(let value): before.focusDays = value - 1; at.focusDays = value
+        case .completedReads(let value): before.completedReads = value - 1; at.completedReads = value
+        case .savedDoodles(let value): before.savedDoodles = value - 1; at.savedDoodles = value
+        case .completedActivities(let value): before.completedActivities = value - 1; at.completedActivities = value
+        case .triedActivities(let value):
+            let ids = ActivityCatalog.available.map(\.id)
+            before.triedActivityIDs = Set(ids.prefix(value - 1)); at.triedActivityIDs = Set(ids.prefix(value))
+        case .triedCategory(let category):
+            let ids = ActivityCatalog.available.filter { $0.category == category }.map(\.id)
+            before.triedActivityIDs = Set(ids.dropLast()); at.triedActivityIDs = Set(ids)
+        case .triedEveryActivity:
+            let ids = ActivityCatalog.available.map(\.id)
+            before.triedActivityIDs = Set(ids.dropLast()); at.triedActivityIDs = Set(ids)
+        case .focusedMinutes(let value): before.focusedMinutes = value - 1; at.focusedMinutes = value
+        }
+        return (before, at)
+    }
+
+    private func ruleKind(_ rule: RoomUnlockRule) -> String {
+        switch rule {
+        case .completedSessions: return "sessions"
+        case .focusDays: return "days"
+        case .completedReads: return "reads"
+        case .savedDoodles: return "doodles"
+        case .completedActivities: return "completedActivities"
+        case .triedActivities: return "triedActivities"
+        case .triedCategory: return "category"
+        case .triedEveryActivity: return "allActivities"
+        case .focusedMinutes: return "minutes"
+        }
+    }
+}
+
 let deflateDynamicFixture = "7czRCcAgDEXRVd4EncYFAgYiNSo2Rdy+pQt0gfd7uZxkiiml4dQREFyhkjem7TBHb4h3WKXlvrCsVP1CFR+w213zgUSCBAkSJEiQIEGCxB/xAA=="
 let deflateFixedFixture = "KyzNTC1RKEQi0/KTS4sB"
 let deflateStoredFixture = "ARwA4/9zdG9yZWQgYmxvY2ssIG5vIGNvbXByZXNzaW9u"
@@ -1831,6 +2429,68 @@ let epubFixture = "UEsDBBQAAAAAAAAAIQBvYassFAAAABQAAAAIAAAAbWltZXR5cGVhcHBsaWNhd
 
 final class EPUBReaderTests: XCTestCase {
     private func bytes(_ base64: String) -> [UInt8] { [UInt8](Data(base64Encoded: base64)!) }
+
+    func testAppBundleLocatorListsAllFourBundledBooks() {
+        #if SWIFT_PACKAGE
+        // SwiftPM mirrors the app bundle layout with the copied test resource
+        // bundle; the Xcode branch below validates the real app target.
+        let bundle = Bundle.module
+        #else
+        let bundle = Bundle(for: AppState.self)
+        #endif
+        let urls = BundledBookLocator.urls(in: bundle)
+        let names = Set(urls.map(\.lastPathComponent))
+        XCTAssertEqual(names, BundledBookLocator.expectedFileNames)
+        XCTAssertEqual(urls.count, BundledBookLocator.expectedFileNames.count)
+    }
+
+    func testBundledBookCatalogCoversEveryExpectedFile() {
+        XCTAssertEqual(Set(BundledBookLocator.catalog.keys), BundledBookLocator.expectedFileNames)
+        XCTAssertTrue(BundledBookLocator.catalog.values.allSatisfy { !$0.title.isEmpty && !$0.author.isEmpty && $0.sittingCount > 0 })
+    }
+
+    func testEveryBundledStandardEbookResourceParsesAndIsPublicDomain() throws {
+        let expected: [String: (title: String, author: String)] = [
+            "e-m-forster_short-fiction": ("Short Fiction", "E. M. Forster"),
+            "henry-david-thoreau_essays": ("Essays", "Henry David Thoreau"),
+            "robert-louis-stevenson_travel-essays": ("Travel Essays", "Robert Louis Stevenson"),
+            "saki_short-fiction": ("Short Fiction", "Saki")
+        ]
+        #if SWIFT_PACKAGE
+        let resourceBundle = Bundle.module
+        #else
+        let resourceBundle = Bundle(for: EPUBReaderTests.self)
+        #endif
+        // SwiftPM places fixtures in the test bundle, while an Xcode unit-test
+        // run may place the same folder in the host app bundle. Consult both
+        // locations by explicit expected stem so target resource layout never
+        // changes the provenance assertion.
+        let bundles = [resourceBundle, Bundle(for: AppState.self), Bundle.main]
+        let urls = expected.keys.compactMap { stem in
+            bundles.lazy.compactMap { bundle in
+                bundle.url(forResource: stem, withExtension: "epub", subdirectory: "PublicDomainBooks")
+                    ?? bundle.url(forResource: stem, withExtension: "epub")
+            }.first
+        }
+        XCTAssertEqual(urls.count, expected.count)
+        for url in urls {
+            let stem = url.deletingPathExtension().lastPathComponent
+            let metadata = try XCTUnwrap(expected[stem], "Unexpected bundled EPUB: \(stem)")
+            let book = try EPUBParser.parse(data: Data(contentsOf: url))
+            XCTAssertEqual(book.title, metadata.title, stem)
+            XCTAssertEqual(book.author, metadata.author, stem)
+            XCTAssertFalse(book.chapters.isEmpty, stem)
+            XCTAssertGreaterThan(SittingPlanner.sittings(for: book).count, 0, stem)
+        }
+
+        let library = FileBookLibrary(directory: FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString),
+                                      bundledURLs: urls, clock: ManualClock(referenceDate))
+        let summaries = library.books()
+        XCTAssertEqual(summaries.count, expected.count)
+        XCTAssertTrue(summaries.allSatisfy { summary in
+            summary.origin == .bundled && summary.license == .publicDomain && summary.sittingCount > 0
+        })
+    }
 
     func testInflateAllBlockTypes() throws {
         let expected = String(repeating: "The rain kept a steady rhythm on the window while the lamp hummed. ", count: 40)
@@ -1989,12 +2649,68 @@ final class MorningStartAndWidgetTests: XCTestCase {
         XCTAssertNil(scheduler.scheduledPlan)
     }
 
+    func testWakeUpPreviewWaitsForCardWithoutClaimingAlarmControl() {
+        let fallback = RecordingMorningStartScheduler()
+        let scheduler = PreviewWakeUpScheduler(fallback: fallback)
+        var schedule = MorningStartPlan.standard
+        schedule.isEnabled = true
+        let plan = WakeUpPlan(schedule: schedule, stopWith: .focusCard)
+        scheduler.schedule(plan)
+        XCTAssertEqual(fallback.scheduledPlan, schedule)
+        XCTAssertTrue(scheduler.simulateOpening())
+        XCTAssertTrue(scheduler.isWaitingForFocusCard)
+        XCTAssertTrue(scheduler.simulateFocusCardTap())
+        XCTAssertFalse(scheduler.isWaitingForFocusCard)
+        XCTAssertFalse(scheduler.simulateFocusCardTap())
+    }
+
     func testPreferencesWithoutNewKeysStillDecode() throws {
         let old = #"{"hasCompletedOnboarding":true,"defaultPresetID":"study"}"#
         let prefs = try RecordCoding.decoder().decode(UserPreferences.self, from: Data(old.utf8))
         XCTAssertEqual(prefs.morningStart, .standard)
+        XCTAssertEqual(prefs.wakeUpStopMethod, .button)
         XCTAssertFalse(prefs.showsCalendarEvents)
+        XCTAssertFalse(prefs.showsGoogleCalendarEvents)
         XCTAssertEqual(prefs.defaultPresetID, .study)
+    }
+
+    func testGoogleStandInOnlyReturnsGrantedOverlappingSampleEvents() async {
+        let adapter = SampleGoogleCalendarAdapter(now: referenceDate, calendar: testCalendar)
+        XCTAssertTrue(adapter.events(from: referenceDate, to: referenceDate.addingTimeInterval(86_400)).isEmpty)
+        let access = await adapter.requestAccess()
+        XCTAssertEqual(access, .granted)
+        let dayStart = testCalendar.startOfDay(for: referenceDate)
+        let events = adapter.events(from: dayStart, to: dayStart.addingTimeInterval(86_400))
+        XCTAssertEqual(events.count, 2)
+        XCTAssertTrue(events.allSatisfy { $0.sourceIdentifier == "google-preview" && $0.title.contains("Sample") })
+        adapter.disconnect()
+        XCTAssertEqual(adapter.access, .notDetermined)
+    }
+
+    func testSeasonalScenesAreCosmeticAndEarnedScenesRemainFree() async {
+        XCTAssertTrue(SceneCatalog.all.allSatisfy { $0.entitlementKey == nil })
+        XCTAssertEqual(SceneCatalog.seasonal.count, 3)
+        XCTAssertTrue(SceneCatalog.seasonal.allSatisfy { $0.entitlementKey == PurchaseProductCatalog.stillPlusMonthly })
+
+        let purchases = LocalPurchaseService()
+        XCTAssertTrue(purchases.purchasedProductIDs.isEmpty)
+        let purchase = await purchases.purchase(productID: PurchaseProductCatalog.stillPlusMonthly)
+        XCTAssertEqual(purchase, .purchased)
+        XCTAssertTrue(purchases.purchasedProductIDs.contains(PurchaseProductCatalog.stillPlusMonthly))
+        let restore = await purchases.restorePurchases()
+        XCTAssertEqual(restore, .purchased)
+    }
+
+    func testEitherStillPlusPlanGrantsTheSameLocalEntitlement() async {
+        let purchases = LocalPurchaseService()
+        XCTAssertFalse(purchases.hasStillPlus)
+        let outcome = await purchases.purchase(productID: PurchaseProductCatalog.stillPlusYearly)
+        XCTAssertEqual(outcome, .purchased)
+        XCTAssertTrue(purchases.hasStillPlus)
+        XCTAssertEqual(PurchaseProductCatalog.productIDs, [
+            PurchaseProductCatalog.stillPlusMonthly,
+            PurchaseProductCatalog.stillPlusYearly
+        ])
     }
 
     func testAppPublishesAWidgetSnapshot() throws {
@@ -2053,5 +2769,155 @@ final class BlockingBoundaryTests: XCTestCase {
         XCTAssertNil(store.selectionData(for: .defaultPreset))
         store.setSelectionData(nil, for: .study)
         XCTAssertNil(store.selectionData(for: .study))
+    }
+}
+
+// MARK: - Onboarding P2
+
+final class OnboardingPreferenceTests: XCTestCase {
+    func testVersionOnePreferencesMigrateWithSafeDefaults() throws {
+        let data = Data(#"{"hasCompletedOnboarding":true,"onboardingGoal":"scrollLess","schemaVersion":1}"#.utf8)
+        let preferences = try RecordCoding.decoder().decode(UserPreferences.self, from: data)
+
+        XCTAssertEqual(preferences.schemaVersion, UserPreferences.currentSchemaVersion)
+        XCTAssertEqual(preferences.onboardingGoal, .scrollLess)
+        XCTAssertNil(preferences.breakAppeal)
+        XCTAssertEqual(preferences.appAccentPalette, .mint)
+    }
+
+    func testNewPreferencesHaveLocalNonDestructiveDefaults() {
+        let preferences = UserPreferences()
+        XCTAssertFalse(preferences.hasCompletedOnboarding)
+        XCTAssertNil(preferences.onboardingGoal)
+        XCTAssertNil(preferences.breakAppeal)
+        XCTAssertEqual(preferences.appAccentPalette, .mint)
+        XCTAssertEqual(preferences.schemaVersion, UserPreferences.currentSchemaVersion)
+    }
+
+    func testBreakAppealOverridesGoalOnlyForCategorySeed() {
+        let personalized = Personalization(goal: .calmerPhone, breakAppeal: .puzzles)
+        XCTAssertEqual(personalized.categoryOrder, [.puzzle, .reset, .quiet])
+        XCTAssertEqual(personalized.preferredRenderMode, .calm)
+        XCTAssertFalse(personalized.startsWithSound)
+    }
+
+    func testOnboardingCanCompleteWithEveryQuestionSkipped() {
+        let container = makeContainer()
+        container.preferences.completeOnboarding(OnboardingAnswers())
+        let preferences = container.preferencesStore.load()
+
+        XCTAssertTrue(preferences.hasCompletedOnboarding)
+        XCTAssertNil(preferences.onboardingGoal)
+        XCTAssertNil(preferences.breakAppeal)
+        XCTAssertEqual(preferences.appAccentPalette, .mint)
+        XCTAssertEqual(container.preferences.preset(.defaultPreset).timer.focusDuration, minutes(25))
+    }
+
+    func testTargetedPreferenceChangesPreserveOtherAnswersAndData() {
+        let container = makeContainer()
+        container.preferences.completeOnboarding(OnboardingAnswers(
+            goal: .focusBetter,
+            breakAppeal: .quiet,
+            appAccentPalette: .peach
+        ))
+        let task = container.taskController.create(title: "Keep this task")
+
+        container.preferences.setBreakAppeal(.move)
+        var preferences = container.preferencesStore.load()
+        XCTAssertEqual(preferences.onboardingGoal, .focusBetter)
+        XCTAssertEqual(preferences.breakAppeal, .move)
+        XCTAssertEqual(preferences.appAccentPalette, .peach)
+        XCTAssertTrue(preferences.hasCompletedOnboarding)
+        XCTAssertNotNil(task.flatMap { container.tasks.task(id: $0.id) })
+
+        container.preferences.setOnboardingGoal(nil)
+        preferences = container.preferencesStore.load()
+        XCTAssertNil(preferences.onboardingGoal)
+        XCTAssertEqual(preferences.breakAppeal, .move)
+        XCTAssertEqual(preferences.appAccentPalette, .peach)
+        XCTAssertTrue(preferences.hasCompletedOnboarding)
+    }
+
+    func testShelfRankingUsesOnboardingSeedBeforeUsage() {
+        let ranked = BreakShelfRanking().ranked(
+            catalog: ActivityCatalog.available,
+            usages: [],
+            personalization: Personalization(goal: nil, breakAppeal: .quiet)
+        )
+        XCTAssertEqual(ranked.first?.category, .quiet)
+        XCTAssertEqual(Array(ranked.prefix(3).map(\.id)), [.shortRead, .creativePrompt, .pixelDoodle])
+    }
+
+    func testShelfRankingLetsRealUsageTakeOver() {
+        func usage(_ activity: BreakActivityID, at offset: TimeInterval) -> ActivityUsage {
+            ActivityUsage(
+                id: UUID(), activityID: activity,
+                startedAt: referenceDate.addingTimeInterval(offset), endedAt: nil,
+                outcome: .completed, context: .shelf
+            )
+        }
+        let usages = [
+            usage(.boxBreathing, at: 10),
+            usage(.boxBreathing, at: 20),
+            usage(.sudoku, at: 30)
+        ]
+        let ranked = BreakShelfRanking().ranked(
+            catalog: ActivityCatalog.available,
+            usages: usages,
+            personalization: Personalization(goal: nil, breakAppeal: .quiet)
+        )
+        XCTAssertEqual(ranked.first?.id, .boxBreathing)
+        XCTAssertEqual(ranked.dropFirst().first?.id, .sudoku)
+    }
+
+    func testCompletionSuggestionsRemainDiverseWithBreakPreference() {
+        let request = BreakSuggestionRequest(
+            availableBreak: minutes(6), catalog: ActivityCatalog.available,
+            usedToday: [], lastUsedAt: [:],
+            categoryOrder: Personalization(goal: .focusBetter, breakAppeal: .quiet).categoryOrder,
+            daySeed: 12
+        )
+        let suggestions = BreakSuggestionEngine().suggestions(for: request).activities
+        XCTAssertEqual(suggestions.count, 3)
+        XCTAssertEqual(Set(suggestions.map(\.category)), Set(ActivityCategory.allCases))
+    }
+}
+
+final class AlternateAppIconTests: XCTestCase {
+    func testPaletteIconNameContract() {
+        XCTAssertNil(AppAccentPalette.mint.alternateIconName)
+        XCTAssertEqual(AppAccentPalette.peach.alternateIconName, "AppIconPeach")
+        XCTAssertEqual(AppAccentPalette.sky.alternateIconName, "AppIconSky")
+    }
+
+    func testControllerRoutesPaletteChangesThroughIconAbstraction() {
+        let keyValues = InMemoryKeyValueStore()
+        let preferencesStore = CodablePreferencesStore(store: keyValues)
+        let icons = RecordingAlternateAppIconChanger()
+        let controller = PreferencesController(
+            preferences: preferencesStore,
+            presets: StoredPresetRepository(store: keyValues),
+            recordStore: InMemoryRecordStore(),
+            events: LocalEventTracker(clock: ManualClock(referenceDate)),
+            notifications: RecordingNotificationScheduler(),
+            audio: SilentAmbientAudioPlayer(),
+            alternateAppIcons: icons
+        )
+
+        controller.setAppAccentPalette(.sky)
+        controller.setAppAccentPalette(.mint)
+
+        XCTAssertEqual(icons.requestedNames.count, 2)
+        XCTAssertEqual(icons.requestedNames[0], "AppIconSky")
+        XCTAssertNil(icons.requestedNames[1])
+        XCTAssertEqual(preferencesStore.load().appAccentPalette, .mint)
+    }
+
+    func testUnavailableIconChangerReportsHonestStatus() {
+        let icons = UnavailableAlternateAppIconChanger()
+        var result: Result<AppIconChangeOutcome, Error>?
+        icons.setAlternateIconName("AppIconSky") { result = $0 }
+        XCTAssertFalse(icons.supportsAlternateIcons)
+        XCTAssertEqual(try? result?.get(), .unavailable)
     }
 }

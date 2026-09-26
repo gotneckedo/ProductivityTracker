@@ -4,30 +4,45 @@ import SwiftUI
 /// and missing a day is never mentioned.
 struct JournalView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
+        let phase = StillDayPhase.automatic(colorScheme: colorScheme)
         StillScreen {
-            ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.xl) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.xl) {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
                         Text("Journal")
-                            .font(StillTypography.title)
-                            .foregroundStyle(StillTheme.textPrimary)
+                            .font(StillTypography.display)
+                            .foregroundStyle(phase.ink)
                             .accessibilityAddTraits(.isHeader)
                         Text("One line a day is plenty.")
                             .font(StillTypography.callout)
-                            .foregroundStyle(StillTheme.textSecondary)
+                            .foregroundStyle(phase.secondaryInk)
                     }
 
                     TodayLineCard()
+                    Color.clear.frame(height: 1).id("journal-midpoint")
                     HabitsSection()
                     PastLinesSection()
+                    Color.clear.frame(height: 1).id("journal-bottom")
+                    }
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.top, StillTheme.Spacing.m)
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.top, StillTheme.Spacing.m)
-                .padding(.bottom, StillTheme.Spacing.xxl)
+                .stillScrollableViewport()
+                .onAppear {
+                    #if DEBUG
+                    if DemoLaunch.shouldScrollToBottom("journal") {
+                        DispatchQueue.main.async { proxy.scrollTo("journal-bottom", anchor: .bottom) }
+                    } else if DemoLaunch.shouldScrollToMidpoint("journal") {
+                        DispatchQueue.main.async { proxy.scrollTo("journal-midpoint", anchor: .top) }
+                    }
+                    #endif
+                }
+                .scrollDismissesKeyboard(.interactively)
             }
-            .scrollDismissesKeyboard(.interactively)
         }
         .toolbar(.hidden, for: .navigationBar)
     }
@@ -230,10 +245,19 @@ private struct HabitRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: StillTheme.Spacing.s) {
-                Image(systemName: day.isDoneToday ? "checkmark.circle.fill" : "circle")
-                    .font(StillTypography.title3)
-                    .foregroundStyle(day.isDoneToday ? StillTheme.accent : StillTheme.textTertiary)
-                    .accessibilityHidden(true)
+                ZStack {
+                    Circle()
+                        .fill(day.isDoneToday ? StillTheme.accent : Color.white.opacity(0.14))
+                    Circle()
+                        .strokeBorder(day.isDoneToday ? StillTheme.accent : StillTheme.border, lineWidth: StillTheme.Stroke.hairline)
+                    if day.isDoneToday {
+                        Image(systemName: "checkmark")
+                            .font(StillTypography.caption.weight(.semibold))
+                            .foregroundStyle(StillTheme.onAccent)
+                    }
+                }
+                .frame(width: 38, height: 38)
+                .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(day.habit.title)
                         .font(StillTypography.body)
@@ -254,6 +278,8 @@ private struct HabitRow: View {
                 }
                 .accessibilityHidden(true)
             }
+            .padding(.horizontal, StillTheme.Spacing.xs)
+            .padding(.vertical, StillTheme.Spacing.xxs)
             .frame(minHeight: StillTheme.minimumTapSize)
             .contentShape(Rectangle())
         }

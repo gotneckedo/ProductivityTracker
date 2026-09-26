@@ -22,6 +22,11 @@ extension AppState {
         case .full: return nil
         }
     }
+
+    func setFocusNote(_ text: String) {
+        container.focus.setNote(text)
+        reload()
+    }
 }
 
 // MARK: - Journal
@@ -44,6 +49,16 @@ extension AppState {
 
 extension AppState {
     var canAddHabit: Bool { container.habitController.canAddHabit }
+
+    func habits(on day: Date) -> [HabitDay] {
+        container.habitController.days(on: day)
+    }
+
+    func toggleHabit(_ id: UUID, on day: Date) {
+        let done = container.habitController.isDone(habitID: id, on: day)
+        container.habitController.setDone(habitID: id, on: day, !done)
+        reload()
+    }
 
     @discardableResult
     func addHabit(title: String) -> Bool {
@@ -73,6 +88,46 @@ extension AppState {
 extension AppState {
     var canCreatePreset: Bool { container.preferences.canCreatePreset }
 
+    var hasStillPlus: Bool {
+        container.purchases.hasStillPlus
+    }
+
+    var savedSoundscapes: [SavedSoundscape] { preferences.savedSoundscapes }
+
+    func saveSoundscape(name: String, mix: AmbientMix) {
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanName.isEmpty else { return }
+        container.preferences.saveSoundscape(SavedSoundscape(name: cleanName, mix: mix))
+        reload()
+    }
+
+    func deleteSoundscape(_ id: UUID) {
+        container.preferences.deleteSoundscape(id)
+        reload()
+    }
+
+    var catName: String? { preferences.catName }
+
+    func canUseCatCoat(_ coat: CatCoat) -> Bool {
+        CatAppearanceAccess.canUse(coat, hasStillPlus: hasStillPlus)
+    }
+
+    @discardableResult
+    func setCatCoat(_ coat: CatCoat) -> Bool {
+        guard canUseCatCoat(coat) else {
+            notice = StillNotice(text: "Still+ adds the additional cat coats. Ginger stays free.")
+            return false
+        }
+        container.preferences.setCatCoat(coat)
+        reload()
+        return true
+    }
+
+    func setCatName(_ raw: String) {
+        container.preferences.setCatName(raw)
+        reload()
+    }
+
     @discardableResult
     func createPreset(named name: String, basedOn base: FocusPreset) -> FocusPreset? {
         let preset = container.preferences.createPreset(named: name, basedOn: base)
@@ -96,6 +151,48 @@ extension AppState {
 extension AppState {
     func updateTaskDetails(_ id: UUID, dueAt: Date?, scheduledAt: Date?, course: String?) {
         container.taskController.updateDetails(id: id, dueAt: dueAt, scheduledAt: scheduledAt, course: course)
+        reload()
+    }
+
+    func updateTaskDetails(
+        _ id: UUID,
+        dueAt: Date?,
+        scheduledAt: Date?,
+        subject: Subject?,
+        plannedDuration: TimeInterval?,
+        dayPeriod: TaskDayPeriod,
+        repeatRule: TaskRepeatRule
+    ) {
+        container.taskController.updateDetails(
+            id: id, dueAt: dueAt, scheduledAt: scheduledAt, subject: subject,
+            plannedDuration: plannedDuration, dayPeriod: dayPeriod, repeatRule: repeatRule
+        )
+        reload()
+    }
+
+    func setTaskCompleted(_ id: UUID, on day: Date, _ completed: Bool) {
+        container.taskController.setCompleted(id: id, on: day, completed)
+        if completed, preferences.selectedTaskID == id,
+           container.tasks.task(id: id)?.repeatRule.isRepeating != true {
+            container.preferences.update { $0.selectedTaskID = nil }
+        }
+        reload()
+    }
+
+    @discardableResult
+    func addTaskStep(taskID: UUID, title: String) -> Bool {
+        let added = container.taskController.addStep(taskID: taskID, title: title)
+        reload()
+        return added
+    }
+
+    func toggleTaskStep(taskID: UUID, stepID: UUID) {
+        container.taskController.toggleStep(taskID: taskID, stepID: stepID)
+        reload()
+    }
+
+    func deleteTaskStep(taskID: UUID, stepID: UUID) {
+        container.taskController.deleteStep(taskID: taskID, stepID: stepID)
         reload()
     }
 
@@ -124,12 +221,21 @@ extension AppState {
         container.flags.calendarEvents && preferences.showsCalendarEvents && calendarAccess == .granted
     }
 
+    var showsGoogleCalendarEvents: Bool {
+        container.flags.googleCalendarPreview
+            && preferences.showsGoogleCalendarEvents
+            && container.googleCalendar.access == .granted
+    }
+
     /// Today's (or another day's) tasks, finished sessions, and calendar events.
-    func timeline(for day: Date) -> (dueToday: [TimelineItem], timed: [TimelineItem]) {
+    func timeline(for day: Date) -> DayTimeline {
         let calendar = container.calendar
         let start = calendar.startOfDay(for: day)
         let end = calendar.date(byAdding: .day, value: 1, to: start) ?? start
-        let events = showsCalendarEvents ? container.calendarAdapter.events(from: start, to: end) : []
+        var events = showsCalendarEvents ? container.calendarAdapter.events(from: start, to: end) : []
+        if showsGoogleCalendarEvents {
+            events.append(contentsOf: container.googleCalendar.events(from: start, to: end))
+        }
         return DayTimelineBuilder(calendar: calendar).items(
             for: day,
             tasks: container.tasks.allTasks(),
@@ -145,7 +251,7 @@ extension AppState {
             let access = await self.container.calendarAdapter.requestAccess()
             self.container.preferences.update { $0.showsCalendarEvents = access == .granted }
             if access == .denied {
-                self.notice = StillNotice(text: "Calendar access is off. You can turn it on in Settings.")
+                self.notice = StillNotice(text: Copy.Notices.calendarDenied)
             }
             self.reload()
         }
@@ -157,6 +263,31 @@ extension AppState {
             return
         }
         container.preferences.update { $0.showsCalendarEvents = shows }
+        reload()
+    }
+
+    /// DEBUG/CI-demo only: grants access to local sample events. No Google
+    /// account, token, or network request is involved.
+    func connectGoogleCalendar() {
+        guard container.flags.googleCalendarPreview, container.googleCalendar.isStandIn else { return }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let access = await self.container.googleCalendar.requestAccess()
+            self.container.preferences.update { $0.showsGoogleCalendarEvents = access == .granted }
+            self.notice = StillNotice(text: access == .granted
+                ? "Sample Google events are showing. No account was connected."
+                : "The Google Calendar preview is unavailable.")
+            self.reload()
+        }
+    }
+
+    func setShowsGoogleCalendarEvents(_ shows: Bool) {
+        guard container.flags.googleCalendarPreview else { return }
+        if shows && container.googleCalendar.access != .granted {
+            connectGoogleCalendar()
+            return
+        }
+        container.preferences.update { $0.showsGoogleCalendarEvents = shows }
         reload()
     }
 }
@@ -200,7 +331,7 @@ extension AppState {
                 container.events.track(.doodleSaved, EventProperties())
             }
         } catch {
-            notice = StillNotice(text: "Couldn't save the doodle.")
+            notice = StillNotice(text: Copy.Notices.doodleSaveFailed)
         }
         reload()
         return artifact.id
@@ -242,11 +373,11 @@ extension AppState {
         do {
             let summary = try container.books.importBook(from: url)
             container.events.track(.bookImported, EventProperties())
-            notice = StillNotice(text: "\(summary.title) is on your shelf.")
+            notice = StillNotice(text: Copy.Notices.importedBook(summary.title))
         } catch BookLibraryError.tooLarge {
-            notice = StillNotice(text: "That book is too large to import.")
+            notice = StillNotice(text: Copy.Notices.bookTooLarge)
         } catch {
-            notice = StillNotice(text: "Still couldn't read that file. Try a DRM-free EPUB.")
+            notice = StillNotice(text: Copy.Notices.bookUnreadable)
         }
         reload()
     }
@@ -275,13 +406,58 @@ extension AppState {
                     self.container.morningStart.scheduleMorningStart(validated)
                     self.container.events.track(.morningStartScheduled, EventProperties().count(validated.weekdays.count))
                 } else {
-                    self.notice = StillNotice(text: "Notifications are off, so Morning Start can't appear. You can turn them on in Settings.")
+                    self.notice = StillNotice(text: Copy.Notices.notificationDenied)
                 }
                 self.reload()
             }
         } else {
             container.morningStart.cancelMorningStart()
         }
+        reload()
+    }
+
+    func setWakeUp(_ plan: WakeUpPlan) {
+        guard container.flags.wakeUpPreview else {
+            setMorningStart(plan.schedule)
+            return
+        }
+        let validated = plan.validated()
+        container.preferences.update {
+            $0.morningStart = validated.schedule
+            $0.wakeUpStopMethod = validated.stopWith
+        }
+        if validated.schedule.isEnabled && !validated.schedule.weekdays.isEmpty {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                var allowed = await self.container.focus.requestNotificationPermissionIfNeeded()
+                if !allowed {
+                    allowed = await self.container.notifications.authorizationStatus() == .granted
+                }
+                if allowed {
+                    self.container.wakeUp.schedule(validated)
+                    self.container.events.track(.morningStartScheduled, EventProperties().count(validated.schedule.weekdays.count))
+                } else {
+                    self.notice = StillNotice(text: "Notifications are off, so the iOS 17 Wake up fallback can't appear. You can turn them on in Settings.")
+                }
+                self.reload()
+            }
+        } else {
+            container.wakeUp.cancel()
+        }
+        reload()
+    }
+
+    func simulateWakeUpOpening() {
+        guard container.flags.wakeUpPreview, container.wakeUp.simulateOpening() else { return }
+        notice = StillNotice(text: container.wakeUp.isWaitingForFocusCard
+            ? "Preview: Still opened. The queued session is waiting for a simulated card tap."
+            : "Preview: Still opened with the queued session ready.")
+        reload()
+    }
+
+    func simulateWakeUpCardTap() {
+        guard container.flags.wakeUpPreview, container.wakeUp.simulateFocusCardTap() else { return }
+        notice = StillNotice(text: "Preview card accepted. The queued session is ready; no system alarm was controlled.")
         reload()
     }
 }
@@ -301,17 +477,62 @@ extension AppState {
     }
 }
 
+// MARK: - Break shelf presentation
+
+extension AppState {
+    /// Presentation state is derived only from the on-device records used by the
+    /// break activities. It never makes an activity look finished unless its
+    /// usage record was completed.
+    func activityStatus(for activityID: BreakActivityID) -> ActivityStatus {
+        let completedCount = usages.filter {
+            $0.activityID == activityID && $0.outcome == .completed
+        }.count
+        let data = ActivityStatusData(
+            completedCount: completedCount,
+            hasSavedProgress: hasSavedPuzzleProgress(for: activityID),
+            latestTitle: activityID == .shortRead && completedCount > 0 ? books.first?.title : nil,
+            artifactCount: activityID == .pixelDoodle ? doodles.count : 0
+        )
+        return ActivityPresentation.status(for: activityID, data: data)
+    }
+
+    private func hasSavedPuzzleProgress(for activityID: BreakActivityID) -> Bool {
+        switch activityID {
+        case .sudoku:
+            return container.puzzleProgress.load(SudokuGame.self, puzzleID: BundledPuzzleLibrary.sudoku6.id)?.hasProgress ?? false
+        case .picross:
+            return container.puzzleProgress.load(PicrossGame.self, puzzleID: BundledPuzzleLibrary.sprout.id)?.hasProgress ?? false
+        case .wordSearch:
+            return container.puzzleProgress.load(WordSearchGame.self, puzzleID: BundledPuzzleLibrary.quietWords.id)?.hasProgress ?? false
+        default:
+            return false
+        }
+    }
+}
+
 // MARK: - Blocking
 
 extension AppState {
     var blockingCapability: BlockingCapability { container.blocking.capability }
     var isShieldingApps: Bool { container.blocking.isShielding }
 
+    func setBlockingSchedule(isEnabled: Bool, startMinute: Int, presetID: FocusPresetID) {
+        guard container.flags.appBlocking else { return }
+        container.blockingSchedule.update(
+            isEnabled: isEnabled,
+            startMinute: startMinute,
+            presetID: presetID
+        )
+        reload()
+    }
+
     /// The emergency override: lifts shields now; the session keeps running.
     func endBlockingNow() {
-        container.blocking.endShieldingNow()
+        if container.blockingSchedule.endNow() == .none {
+            container.blocking.endShieldingNow()
+        }
         container.events.track(.blockingOverride, EventProperties())
-        notice = StillNotice(text: "Blocking is off for this session. The timer is still running.")
+        notice = StillNotice(text: Copy.Notices.blockingEnded)
         reload()
     }
 }

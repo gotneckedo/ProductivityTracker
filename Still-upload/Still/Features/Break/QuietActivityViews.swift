@@ -78,17 +78,37 @@ struct ShortReadActivityView: View {
     }
 
     private var booksSection: some View {
-        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+        let bundledBooks = appState.books.filter { $0.origin == .bundled }
+        let importedBooks = appState.books.filter { $0.origin == .imported }
+        return VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
             SectionHeader(title: "Books", detail: "One sitting is a few minutes. Your place is kept for next time.")
                 .padding(.top, StillTheme.Spacing.m)
-            ForEach(appState.books) { book in
+            if bundledBooks.isEmpty {
+                QuietNote(text: "Bundled books are loading. If this stays empty, try reopening Still.", symbol: "book.closed")
+            }
+            ForEach(bundledBooks) { book in
                 BookCard(
                     book: book,
                     progress: appState.readingProgress(bookID: book.id),
                     onOpen: { open(book) },
                     onRestart: { appState.restartBook(book.id) },
-                    onRemove: book.origin == .imported ? { removingBook = book } : nil
+                    onRemove: nil
                 )
+            }
+            if !importedBooks.isEmpty {
+                Text("From your files")
+                    .font(StillTypography.caption.weight(.semibold))
+                    .foregroundStyle(StillTheme.textSecondary)
+                    .padding(.top, StillTheme.Spacing.xs)
+                ForEach(importedBooks) { book in
+                    BookCard(
+                        book: book,
+                        progress: appState.readingProgress(bookID: book.id),
+                        onOpen: { open(book) },
+                        onRestart: { appState.restartBook(book.id) },
+                        onRemove: { removingBook = book }
+                    )
+                }
             }
             Button {
                 isImporting = true
@@ -139,6 +159,12 @@ private struct BookCard: View {
                         Text(book.author)
                             .font(StillTypography.footnote)
                             .foregroundStyle(StillTheme.textSecondary)
+                        Text(book.license.displayName)
+                            .font(StillTypography.caption.weight(.semibold))
+                            .foregroundStyle(StillTheme.textSecondary)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(StillTheme.accentSoft.opacity(0.58), in: Capsule())
                         Text(status)
                             .font(StillTypography.caption)
                             .foregroundStyle(StillTheme.textTertiary)

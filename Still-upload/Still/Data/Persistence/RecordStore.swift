@@ -12,6 +12,7 @@ enum RecordKind: String, CaseIterable {
     case habitCheckIn
     case activityArtifact
     case readingProgress
+    case roomCollection
 }
 
 struct StoredRecord: Equatable {
@@ -113,10 +114,17 @@ final class UserDefaultsKeyValueStore: KeyValueStore {
 
 final class InMemoryKeyValueStore: KeyValueStore {
     private var storage: [String: Data] = [:]
+    private let lock = NSLock()
 
-    func data(forKey key: String) -> Data? { storage[key] }
+    func data(forKey key: String) -> Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage[key]
+    }
 
     func set(_ data: Data?, forKey key: String) {
+        lock.lock()
+        defer { lock.unlock() }
         storage[key] = data
     }
 }

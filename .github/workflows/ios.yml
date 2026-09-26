@@ -4,7 +4,8 @@ name: iOS build, tests & screenshots
 
 on:
   push:
-    branches: [main]
+    branches: [main, "redesign", "redesign/**"]
+  pull_request:
   workflow_dispatch:
 
 concurrency:
@@ -102,21 +103,98 @@ jobs:
 
           shoot() {
             xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" > /dev/null
-            sleep 6
+            # A demo state performs local fixture setup and SwiftUI layout on a
+            # cold process. Twelve seconds avoids capturing the system launch
+            # surface before the requested route has drawn.
+            sleep 12
+            xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
+            echo "Captured $2"
+          }
+
+          # The feature views recognize this DEBUG-only argument and scroll
+          # their own root tab to its final row. These captures prove that the
+          # floating tab bar leaves enough bottom clearance.
+          shoot_bottom() {
+            xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" -still-scroll-bottom "$1" > /dev/null
+            sleep 12
+            xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
+            echo "Captured $2"
+          }
+
+          # These midpoint captures show the status-bar material fade against
+          # real scrolled content; they are separate from the bottom-clearance
+          # captures so neither proof relies on an inferred scroll position.
+          shoot_midpoint() {
+            xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" -still-scroll-midpoint "$1" > /dev/null
+            sleep 12
             xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
             echo "Captured $2"
           }
 
           xcrun simctl ui "$UDID" appearance light
           n=1
-          for screen in onboarding home calm active complete break sudoku wordsearch picross breathing read doodle journal tasks timeline presets gallery morning me scenes card; do
+          # Phase 2 sprite checkpoint: Focus room has labeled object targets;
+          # the review sheet proves the authored package is bundled.
+          for screen in onboarding home focus-room sprite-contact-sheet calm active complete break sudoku wordsearch picross picross-320 breathing read doodle journal tasks timeline presets gallery morning me scenes card; do
             shoot "$screen" "$(printf '%02d' $n)-$screen"
             n=$((n + 1))
           done
 
+          # The long contact sheet is captured at both ends, so the artifact
+          # proves the cat frames and lower activity/empty-state sprites too.
+          for screen in home break journal me sprite-contact-sheet; do
+            shoot_bottom "$screen" "$(printf '%02d' $n)-$screen-bottom"
+            n=$((n + 1))
+          done
+
+          for screen in break journal me scenes; do
+            shoot_midpoint "$screen" "$(printf '%02d' $n)-$screen-midpoint"
+            n=$((n + 1))
+          done
+
+          # Section 1 visual proof: the top and bottom of the all-unlocked
+          # scene grid show all four unique core rooms, while the Short Read
+          # bottom proves the complete bundled-book shelf is present.
+          shoot "scenes-all" "$(printf '%02d' $n)-scenes-all"
+          n=$((n + 1))
+          # This view opens at the seasonal section, completing the two-screen
+          # proof of the full core + seasonal collection without a horizontal
+          # carousel or clipped right-hand column.
+          shoot "scenes-seasonal" "$(printf '%02d' $n)-scenes-seasonal"
+          n=$((n + 1))
+          shoot_bottom "scenes-all" "$(printf '%02d' $n)-scenes-all-bottom"
+          n=$((n + 1))
+          shoot_bottom "read" "$(printf '%02d' $n)-read-bottom"
+          n=$((n + 1))
+          shoot_bottom "sudoku" "$(printf '%02d' $n)-sudoku-bottom"
+          n=$((n + 1))
+          shoot_bottom "card" "$(printf '%02d' $n)-card-bottom"
+          n=$((n + 1))
+
           xcrun simctl ui "$UDID" appearance dark
-          for screen in home active complete journal me; do
+          # Section 1 dark captures exercise the remaining dark-specific
+          # defects: the task sheet must inherit the night phase and every
+          # puzzle must keep a light, legible cell treatment.
+          for screen in home active complete journal me tasks sudoku wordsearch picross; do
             shoot "$screen" "$(printf '%02d' $n)-$screen-dark"
+            n=$((n + 1))
+          done
+
+          # Phase 2 cat checkpoint: the same local companion must visibly vary
+          # by morning, focus, long-focus sleep, completion, and a direct-tap
+          # reaction without introducing a care or streak mechanic.
+          xcrun simctl ui "$UDID" appearance light
+          for screen in cat-morning cat-focus cat-asleep cat-complete cat-reaction; do
+            shoot "$screen" "$(printf '%02d' $n)-$screen"
+            n=$((n + 1))
+          done
+
+          # Full-size visual review for each of the current perspective rooms;
+          # collection thumbnails alone are too small to verify room depth,
+          # furniture planes, and distinct scene composition. The three
+          # permanent Still+ rooms use an in-memory DEBUG entitlement only.
+          for screen in room-library room-train room-city room-autumn room-snow room-spring; do
+            shoot "$screen" "$(printf '%02d' $n)-$screen"
             n=$((n + 1))
           done
 

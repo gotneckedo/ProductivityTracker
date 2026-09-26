@@ -197,6 +197,23 @@ final class FocusFlowController {
         events.track(.focusResumed, EventProperties().timerMode(resumed.configuration.mode).userInitiated(true))
     }
 
+    /// Adds a small, explicit amount of time to a fixed focus session. The
+    /// current session keeps the change; presets and past sessions are untouched.
+    func addFiveMinutes() {
+        guard var session = activeSession,
+              session.state.isLive,
+              session.currentPhase?.kind == .focus,
+              session.configuration.mode == .countdown else { return }
+        session.configuration.focusDuration = min(
+            session.configuration.focusDuration + 5 * 60,
+            TimerConfiguration.focusRange.upperBound
+        )
+        activeSession = session
+        persist(session)
+        scheduleNotifications()
+        updateLiveActivity()
+    }
+
     @discardableResult
     func startNextPhase() -> [FocusFlowEvent] {
         guard let session = activeSession else { return [] }
@@ -235,6 +252,16 @@ final class FocusFlowController {
         } else if mix.isSilent {
             audio.pause()
         }
+    }
+
+    /// A brief local capture during focus. It remains attached to this session
+    /// and never becomes an analytics event.
+    func setNote(_ raw: String) {
+        guard var session = activeSession else { return }
+        let cleaned = String(raw.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500))
+        session.note = cleaned.isEmpty ? nil : cleaned
+        activeSession = session
+        persist(session)
     }
 
     // MARK: - Completion moment

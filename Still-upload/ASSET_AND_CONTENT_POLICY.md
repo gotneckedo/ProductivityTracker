@@ -15,7 +15,7 @@ layouts, puzzles, or branding.
 
 | Asset | Where | Provenance | License |
 |---|---|---|---|
-| Pixel room package (8 rooms including seasonal/sleep room) | `Assets.xcassets/StillRoom*.imageset`, source PNGs in `Resources/Sprites/` | Generated from checked-in rectangle/polygon pixel geometry in `Tools/generate_still_sprites.py` using Still's authored 32-color palette | Original |
+| Pixel room package (8 rooms including seasonal/sleep room) | `Assets.xcassets/StillRoom*.imageset`, source PNGs in `Resources/Sprites/` | Generated from checked-in Still-specific pixel geometry in `Tools/generate_still_sprites.py` using Still's authored 32-color palette. Each scene uses a transparent one-point-perspective shell with an opaque back wall, side wall, floorboards, furniture planes, and scene-specific starter composition; no third-party room art, reference screenshot, or generative runtime imagery is used. | Original |
 | Collectible room objects (20) | `Assets.xcassets/StillObject*.imageset`, source PNGs in `Resources/Sprites/` | Generated from checked-in Still-specific pixel geometry in `Tools/generate_still_sprites.py`; one named asset per catalog object | Original |
 | Break, empty-state, Focus Card, and bird illustrations | `Assets.xcassets/StillBreak*.imageset`, `StillEmpty*.imageset`, `StillFocusCardSprite.imageset`, `StillPixelBird.imageset` | Generated from checked-in Still-specific pixel geometry in `Tools/generate_still_sprites.py` | Original |
 | Sprite contact sheet | `Assets.xcassets/StillSpriteContactSheet.imageset`, `Resources/Sprites/still-sprite-contact-sheet.png` | Deterministically composed by `Tools/generate_still_sprites.py`; includes rooms, objects, icons, UI illustrations, and the cat source sheet | Original |

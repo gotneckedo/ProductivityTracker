@@ -6,7 +6,7 @@ import Foundation
 ///
 ///   xcrun simctl launch booted com.cocomedia.still -still-demo home
 ///
-/// Screens: onboarding, home, focus-room, sprite-contact-sheet, cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, complete, break, sudoku, wordsearch,
+/// Screens: onboarding, home, focus-room, room-library, room-train, room-city, sprite-contact-sheet, cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, complete, break, sudoku, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-seasonal, card,
 /// journal, presets, tasks, timeline, doodle, gallery, morning,
 /// calendar-settings, get-card.
@@ -50,6 +50,12 @@ enum DemoLaunch {
             let state = PreviewSupport.appState(populated: true, completedSessions: 1)
             state.router.go(to: .focusHome)
             return state
+        case "room-library":
+            return focusRoomState(hour: 14, sceneID: .libraryLight)
+        case "room-train":
+            return focusRoomState(hour: 14, sceneID: .trainWindow)
+        case "room-city":
+            return focusRoomState(hour: 20, sceneID: .nightCity)
         case "cat-morning":
             return focusRoomState(hour: 9)
         case "cat-reaction":
@@ -70,11 +76,7 @@ enum DemoLaunch {
             // The fixture advances seven minutes, so initialize it at 9:34 to
             // match CI's fixed 9:41 status-bar clock. An 18-minute remaining
             // face must therefore truthfully show 9:59 AM.
-            return PreviewSupport.appState(
-                populated: true,
-                activeSession: true,
-                clockStart: screenshotActiveSessionStart
-            )
+            return activeState()
         case "complete":
             // bootstrap() reopens the pending completion screen.
             return PreviewSupport.completedSession().state
@@ -135,12 +137,15 @@ enum DemoLaunch {
         return state
     }
 
-    private static func focusRoomState(hour: Int) -> AppState {
+    private static func focusRoomState(hour: Int, sceneID: SceneID = .rainyBedroom) -> AppState {
         let state = PreviewSupport.appState(
             populated: true,
-            completedSessions: 1,
+            completedSessions: sceneID == .rainyBedroom ? 1 : 30,
             clockStart: screenshotDate(hour: hour, minute: 0)
         )
+        var preset = state.currentPreset
+        preset.sceneID = sceneID
+        state.savePreset(preset)
         state.setCatName("Mochi")
         state.router.go(to: .focusHome)
         return state
@@ -157,6 +162,18 @@ enum DemoLaunch {
         // Starting a preview session does not implicitly choose the Focus tab.
         // The explicit root route keeps the visual proof on ActiveFocusView
         // rather than leaving Today visible while the tab bar is suppressed.
+        if let id = state.activeSession?.id {
+            state.router.go(to: .activeSession(id))
+        }
+        return state
+    }
+
+    private static func activeState() -> AppState {
+        let state = PreviewSupport.appState(
+            populated: true,
+            activeSession: true,
+            clockStart: screenshotActiveSessionStart
+        )
         if let id = state.activeSession?.id {
             state.router.go(to: .activeSession(id))
         }

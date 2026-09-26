@@ -19,7 +19,7 @@ SOURCES = ROOT / "Still" / "Resources" / "Sprites"
 
 # Still's authored 32-color pixel palette. No sampled reference-app colors.
 P = {
-    "ink": "#3C2C3A", "ink2": "#624556", "night": "#25294A", "night2": "#3A4165",
+    "ink": "#4A2F33", "ink2": "#624556", "night": "#25294A", "night2": "#3A4165",
     "plum": "#6A5075", "lavender": "#A79ACF", "mist": "#D7D0EA", "paper": "#FFF5E8",
     "cream": "#F4E3CF", "peach": "#F4C8B4", "coral": "#D98272", "rust": "#AF5C54",
     "sun": "#FFD98A", "gold": "#DCA958", "wood": "#B87B59", "wooddark": "#85523F",
@@ -30,14 +30,14 @@ P = {
 }
 
 ROOMS = {
-    "RainyBedroom": {"wall": P["plum"], "side": P["lavender"], "sky": P["night2"], "floor": P["floor"], "leaf": P["leaf"], "accent": P["rose"], "weather": "rain"},
-    "LibraryLight": {"wall": P["wood"], "side": P["peach"], "sky": P["sun"], "floor": P["floor"], "leaf": P["sage"], "accent": P["blue"], "weather": "sun"},
-    "TrainWindow": {"wall": P["grey"], "side": P["mist"], "sky": P["sky"], "floor": P["floor"], "leaf": P["sage"], "accent": P["gold"], "weather": "hills"},
-    "NightCity": {"wall": P["plum"], "side": P["night2"], "sky": P["night"], "floor": P["floordark"], "leaf": P["leaf"], "accent": P["lavender"], "weather": "city"},
-    "AutumnWindow": {"wall": P["wooddark"], "side": P["wood"], "sky": P["coral"], "floor": P["floordark"], "leaf": P["gold"], "accent": P["sun"], "weather": "leaves"},
-    "SnowDay": {"wall": P["blue"], "side": P["sky"], "sky": P["mist"], "floor": P["floordark"], "leaf": P["sage"], "accent": P["snow"], "weather": "snow"},
-    "SpringRain": {"wall": P["sage"], "side": P["mint"], "sky": P["sky"], "floor": P["floor"], "leaf": P["leaf"], "accent": P["rose"], "weather": "sprout"},
-    "AlarmSleep": {"wall": P["night2"], "side": P["plum"], "sky": P["night"], "floor": P["floordark"], "leaf": P["leaf"], "accent": P["lavender"], "weather": "moon"},
+    "RainyBedroom": {"wall": P["plum"], "side": P["lavender"], "sky": P["night2"], "floor": P["floor"], "leaf": P["leaf"], "accent": P["rose"], "weather": "rain", "layout": "bedroom"},
+    "LibraryLight": {"wall": P["wood"], "side": P["peach"], "sky": P["sun"], "floor": P["floor"], "leaf": P["sage"], "accent": P["blue"], "weather": "sun", "layout": "library"},
+    "TrainWindow": {"wall": P["grey"], "side": P["mist"], "sky": P["sky"], "floor": P["floor"], "leaf": P["sage"], "accent": P["gold"], "weather": "hills", "layout": "train"},
+    "NightCity": {"wall": P["plum"], "side": P["night2"], "sky": P["night"], "floor": P["floordark"], "leaf": P["leaf"], "accent": P["lavender"], "weather": "city", "layout": "city"},
+    "AutumnWindow": {"wall": P["wooddark"], "side": P["wood"], "sky": P["coral"], "floor": P["floordark"], "leaf": P["gold"], "accent": P["sun"], "weather": "leaves", "layout": "bedroom"},
+    "SnowDay": {"wall": P["blue"], "side": P["sky"], "sky": P["mist"], "floor": P["floordark"], "leaf": P["sage"], "accent": P["snow"], "weather": "snow", "layout": "bedroom"},
+    "SpringRain": {"wall": P["sage"], "side": P["mint"], "sky": P["sky"], "floor": P["floor"], "leaf": P["leaf"], "accent": P["rose"], "weather": "sprout", "layout": "library"},
+    "AlarmSleep": {"wall": P["night2"], "side": P["plum"], "sky": P["night"], "floor": P["floordark"], "leaf": P["leaf"], "accent": P["lavender"], "weather": "moon", "layout": "bedroom"},
 }
 
 OBJECTS = [
@@ -75,63 +75,137 @@ def line(d: ImageDraw.ImageDraw, points: list[tuple[int, int]], color: str, widt
     d.line(points, fill=rgba(color), width=width)
 
 
+def poly(d: ImageDraw.ImageDraw, points: list[tuple[int, int]], color: str, outline: str | None = None) -> None:
+    d.polygon(points, fill=rgba(color))
+    if outline:
+        line(d, points + [points[0]], outline)
+
+
 def room_sprite(name: str, cfg: dict[str, str]) -> Image.Image:
-    # The outer canvas remains transparent: RoomHeroView supplies its warm page
-    # halo, so the room floats as architecture rather than a dark rectangle.
+    """Author a single-point-perspective room, not a symbolic box.
+
+    The old room base relied on one giant desktop and a broad translucent-looking
+    plane. This construction deliberately gives every room three readable planes
+    (back wall, side wall, floor), converging floorboards, furniture front/side
+    faces, contact shadows, and a scene-specific focal layout.
+    """
     im = image((160, 132))
     d = ImageDraw.Draw(im)
-    # Two fully opaque walls plus floor: no translucent pseudo-room plane.
-    rect(d, (3, 7, 108, 75), cfg["wall"], P["ink"])
-    d.polygon([(108, 7), (156, 30), (156, 99), (108, 75)], fill=rgba(cfg["side"]), outline=rgba(P["ink"]))
-    d.polygon([(3, 76), (108, 76), (156, 100), (50, 129)], fill=rgba(cfg["floor"]), outline=rgba(P["ink"]))
-    # Soft pixel radial glow, authored in concentric stepped blocks around lamp.
-    for inset, color in [(0, P["sun"]), (4, P["gold"]), (9, P["peach"]), (15, P["floor"])]:
-        d.polygon([(80-inset, 56-inset//2), (100+inset, 61-inset//3), (115+inset, 82+inset//3), (63-inset, 86+inset//3)], fill=rgba(color))
-    # Window frame + unique outdoor scene.
-    rect(d, (18, 18, 56, 58), P["ink"], P["ink"])
-    rect(d, (21, 21, 53, 55), cfg["sky"])
-    line(d, [(37, 21), (37, 55)], P["ink"], 2)
-    line(d, [(21, 38), (53, 38)], P["ink"], 2)
+    # Perspective shell: all three planes meet at an intentional room corner.
+    back = [(10, 10), (108, 10), (108, 76), (10, 76)]
+    side = [(108, 10), (153, 31), (153, 98), (108, 76)]
+    floor = [(10, 76), (108, 76), (153, 98), (52, 128)]
+    poly(d, back, cfg["wall"], P["ink"])
+    poly(d, side, cfg["side"], P["ink"])
+    poly(d, floor, cfg["floor"], P["ink"])
+    # Baseboards and converging floorboards make the floor read as depth, not a
+    # detached parallelogram.
+    line(d, [(11, 75), (108, 75), (152, 97)], P["wooddark"], 2)
+    for x in (18, 39, 62, 85, 102):
+        line(d, [(x, 77), (52 + (x - 10) // 2, 127)], P["floordark"])
+    for points in ([(18, 84), (114, 84), (143, 98)], [(27, 95), (122, 95), (128, 101)], [(38, 108), (110, 108)]):
+        line(d, points, P["floordark"])
+
+    # A small dithered wall bounce, behind the lamp only, keeps the light in the
+    # architecture. It never overlays the floor as a flat tan oval.
+    for x, y, size, color in [(90, 44, 10, P["peach"]), (94, 48, 7, P["sun"]), (87, 52, 4, P["gold"]), (104, 53, 4, P["gold"]), (101, 40, 3, P["sun"])]:
+        px(d, x, y, color, size, max(2, size // 2))
+
+    def draw_window(frame: list[tuple[int, int]], inside: list[tuple[int, int]], divider: bool = True) -> None:
+        poly(d, frame, P["ink"])
+        poly(d, inside, cfg["sky"])
+        if divider:
+            x1, y1 = inside[0]; x2, y2 = inside[2]
+            line(d, [((x1 + x2) // 2, y1), ((x1 + x2) // 2, y2)], P["ink"], 2)
+            line(d, [(x1, (y1 + y2) // 2), (x2, (y1 + y2) // 2)], P["ink"], 2)
+
     weather = cfg["weather"]
-    if weather == "rain":
-        for x, y in [(24, 24), (31, 30), (47, 25), (42, 42), (28, 46), (50, 48)]: line(d, [(x, y), (x-2, y+5)], P["rain"])
-    elif weather == "sun":
-        for x, y in [(24, 29), (29, 25), (46, 27), (49, 44), (26, 48)]: px(d, x, y, P["sun"], 3, 3)
-    elif weather == "hills":
-        d.polygon([(21, 48), (28, 39), (36, 47), (43, 35), (53, 48), (53, 55), (21, 55)], fill=rgba(P["sage"]))
-        d.polygon([(21, 52), (31, 44), (39, 52), (49, 42), (53, 52), (53, 55), (21, 55)], fill=rgba(P["leaf"]))
-    elif weather == "city":
-        for x, h in [(24, 11), (30, 18), (37, 9), (43, 16), (49, 12)]:
-            rect(d, (x, 55-h, x+4, 55), P["night"])
-            px(d, x+1, 53-h, P["sun"])
-    elif weather == "leaves":
-        for x, y in [(25, 25), (34, 29), (48, 26), (29, 42), (44, 46)]: px(d, x, y, P["gold"], 3, 2)
-    elif weather == "snow":
-        for x, y in [(25, 24), (34, 30), (46, 25), (27, 44), (45, 47)]: px(d, x, y, P["snow"], 2, 2)
-    elif weather == "sprout":
-        for x, y in [(25, 45), (31, 39), (37, 48), (45, 37), (50, 43)]:
-            px(d, x, y, P["leaf"], 4, 3)
-    elif weather == "moon":
-        px(d, 39, 27, P["mist"], 8, 8)
-        px(d, 43, 25, cfg["sky"], 6, 7)
-    # Desk / bed / shelf furniture included in every starter room.
-    rect(d, (70, 67, 132, 75), P["wood"], P["ink"])
-    d.polygon([(70, 67), (90, 57), (147, 73), (132, 75)], fill=rgba(P["wood"]), outline=rgba(P["ink"]))
-    rect(d, (75, 75, 82, 105), P["wooddark"], P["ink"])
-    rect(d, (124, 75, 131, 99), P["wooddark"], P["ink"])
-    rect(d, (97, 46, 103, 67), P["ink"], P["ink"])
-    d.polygon([(90, 46), (111, 46), (106, 56), (94, 56)], fill=rgba(P["sun"]), outline=rgba(P["ink"]))
-    rect(d, (9, 83, 55, 103), P["mint"], P["ink"])
-    rect(d, (12, 78, 45, 86), P["paper"], P["ink"])
-    rect(d, (13, 104, 51, 115), P["floordark"], P["ink"])
-    # Plant plus shelf form the room's consistent visual language.
-    rect(d, (137, 48, 150, 62), P["clay"], P["ink"])
-    for x, y in [(139, 47), (144, 43), (148, 47), (141, 39), (147, 38)]: px(d, x, y, cfg["leaf"], 6, 7)
-    rect(d, (115, 24, 151, 29), P["wooddark"], P["ink"])
-    for x, c in [(118, P["blue"]), (124, P["rose"]), (130, P["gold"]), (136, P["sage"]), (142, cfg["accent"])]: rect(d, (x, 16, x+4, 24), c, P["ink"])
-    # Useful object hot-spots visible in the base room: calendar, shelf, window, plant, desk.
-    rect(d, (62, 21, 75, 37), P["paper"], P["ink"])
-    line(d, [(64, 26), (73, 26)], P["rose"])
+    layout = cfg["layout"]
+
+    if layout == "train":
+        draw_window([(15, 18), (84, 18), (84, 58), (15, 58)], [(19, 22), (80, 22), (80, 54), (19, 54)], False)
+        poly(d, [(19, 50), (33, 37), (50, 48), (67, 34), (80, 50), (80, 54), (19, 54)], P["sage"])
+        poly(d, [(19, 53), (40, 42), (55, 52), (74, 43), (80, 53)], P["leaf"])
+        # Rail-car seat: seat, front face, and backrest are distinct planes.
+        poly(d, [(17, 69), (69, 72), (83, 83), (32, 82)], P["rose"], P["ink"])
+        poly(d, [(32, 82), (83, 83), (83, 94), (32, 93)], P["coral"], P["ink"])
+        poly(d, [(18, 53), (57, 55), (68, 73), (18, 69)], P["lavender"], P["ink"])
+        poly(d, [(94, 64), (130, 70), (142, 76), (105, 72)], P["wood"], P["ink"])
+        poly(d, [(105, 72), (142, 76), (142, 81), (105, 77)], P["wooddark"], P["ink"])
+        rect(d, (112, 77, 117, 101), P["wooddark"], P["ink"])
+        rect(d, (135, 80, 140, 96), P["wooddark"], P["ink"])
+        poly(d, [(116, 31), (145, 44), (145, 47), (116, 34)], P["wooddark"], P["ink"])
+        for x, c in [(120, P["blue"]), (126, P["gold"]), (132, P["rose"]), (138, cfg["accent"])]: rect(d, (x, 36, x + 3, 43), c, P["ink"])
+    elif layout == "city":
+        draw_window([(116, 28), (148, 43), (148, 76), (116, 63)], [(120, 33), (144, 45), (144, 71), (120, 61)], False)
+        for x, y, h in [(122, 55, 13), (128, 49, 19), (134, 57, 12), (140, 51, 18)]:
+            rect(d, (x, y, x + 3, y + h), P["night"], P["ink"])
+            px(d, x + 1, y + 3, P["sun"], 1, 2)
+        # Back-wall desk facing the skyline and a foreground chair establish a
+        # different, deeper composition from the bedroom.
+        poly(d, [(61, 67), (106, 71), (126, 79), (80, 76)], P["wood"], P["ink"])
+        poly(d, [(80, 76), (126, 79), (126, 85), (80, 82)], P["wooddark"], P["ink"])
+        rect(d, (84, 83, 90, 106), P["wooddark"], P["ink"])
+        rect(d, (118, 84, 124, 99), P["wooddark"], P["ink"])
+        poly(d, [(69, 91), (90, 94), (101, 103), (79, 101)], P["blue"], P["ink"])
+        poly(d, [(79, 101), (101, 103), (101, 113), (79, 111)], P["charcoal"], P["ink"])
+        rect(d, (26, 24, 39, 39), P["paper"], P["ink"])
+        line(d, [(28, 30), (37, 30)], P["lavender"])
+        line(d, [(28, 35), (36, 35)], P["rose"])
+    elif layout == "library":
+        draw_window([(18, 20), (53, 20), (53, 61), (18, 61)], [(22, 24), (49, 24), (49, 57), (22, 57)])
+        for x, y in [(25, 28), (31, 31), (43, 28), (28, 47), (45, 46)]: px(d, x, y, P["sun"], 3, 3)
+        # Tall back-wall shelving, a reading chair, and a compact writing table.
+        rect(d, (62, 19, 99, 67), P["wooddark"], P["ink"])
+        for y in (30, 42, 54): line(d, [(64, y), (97, y)], P["ink"], 2)
+        for x, y, c in [(66, 23, P["blue"]), (72, 21, P["rose"]), (78, 24, P["gold"]), (85, 22, P["sage"]), (91, 23, cfg["accent"]), (67, 44, P["sun"]), (74, 45, P["blue"]), (81, 43, P["rose"]), (89, 45, P["mint"])]:
+            rect(d, (x, y, x + 4, y + 7), c, P["ink"])
+        poly(d, [(20, 78), (49, 80), (63, 90), (31, 91)], P["sage"], P["ink"])
+        poly(d, [(31, 91), (63, 90), (63, 104), (31, 106)], P["leaf"], P["ink"])
+        poly(d, [(100, 70), (126, 74), (139, 81), (111, 78)], P["wood"], P["ink"])
+        poly(d, [(111, 78), (139, 81), (139, 86), (111, 83)], P["wooddark"], P["ink"])
+        rect(d, (114, 84, 119, 103), P["wooddark"], P["ink"])
+        rect(d, (133, 86, 138, 99), P["wooddark"], P["ink"])
+        rect(d, (104, 53, 109, 70), P["ink"], P["ink"])
+        poly(d, [(98, 53), (114, 53), (111, 60), (101, 60)], P["sun"], P["ink"])
+    else:
+        draw_window([(17, 18), (57, 18), (57, 60), (17, 60)], [(21, 22), (53, 22), (53, 56), (21, 56)])
+        if weather == "rain":
+            for x, y in [(24, 25), (31, 30), (48, 25), (43, 42), (27, 47), (50, 48)]: line(d, [(x, y), (x - 2, y + 5)], P["rain"])
+        elif weather == "leaves":
+            for x, y in [(25, 25), (34, 29), (48, 26), (29, 42), (44, 46)]: px(d, x, y, P["gold"], 3, 2)
+        elif weather == "snow":
+            for x, y in [(25, 24), (34, 30), (46, 25), (27, 44), (45, 47)]: px(d, x, y, P["snow"], 2, 2)
+        elif weather == "moon":
+            px(d, 39, 27, P["mist"], 8, 8)
+            px(d, 43, 25, cfg["sky"], 6, 7)
+        # Bed on the left: mattress top, front panel, headboard, pillow and
+        # blanket are separate planes rather than one long flat rectangle.
+        poly(d, [(14, 92), (57, 94), (77, 106), (34, 111)], P["floordark"])
+        poly(d, [(16, 78), (54, 80), (69, 89), (31, 91)], P["paper"], P["ink"])
+        poly(d, [(31, 91), (69, 89), (69, 100), (31, 103)], P["mint"], P["ink"])
+        poly(d, [(15, 76), (29, 77), (29, 101), (15, 99)], P["wooddark"], P["ink"])
+        poly(d, [(21, 81), (40, 82), (47, 86), (28, 87)], P["cream"], P["ink"])
+        line(d, [(44, 82), (62, 90)], P["blue"], 2)
+        # Desk on the right with distinct top/front planes, legs and a small lamp.
+        poly(d, [(77, 66), (120, 70), (139, 78), (94, 75)], P["wood"], P["ink"])
+        poly(d, [(94, 75), (139, 78), (139, 84), (94, 81)], P["wooddark"], P["ink"])
+        rect(d, (98, 82, 104, 106), P["wooddark"], P["ink"])
+        rect(d, (132, 84, 138, 101), P["wooddark"], P["ink"])
+        rect(d, (113, 51, 118, 69), P["ink"], P["ink"])
+        poly(d, [(107, 51), (124, 51), (121, 58), (110, 58)], P["sun"], P["ink"])
+        # A plant sits in the back corner; its pot has a front face and shadow.
+        poly(d, [(133, 57), (147, 59), (147, 69), (136, 68)], P["clay"], P["ink"])
+        for x, y in [(135, 55), (141, 51), (146, 55), (138, 47), (145, 46)]: px(d, x, y, cfg["leaf"], 5, 6)
+
+    # The shared calendar and side shelf deliberately remain predictable room
+    # buttons, while each surrounding room layout is distinct.
+    rect(d, (63, 22, 76, 38), P["paper"], P["ink"])
+    line(d, [(65, 27), (74, 27)], P["rose"])
+    line(d, [(65, 32), (72, 32)], P["lavender"])
+    poly(d, [(116, 27), (149, 42), (149, 46), (116, 32)], P["wooddark"], P["ink"])
+    for x, y, c in [(119, 20, P["blue"]), (126, 23, P["rose"]), (133, 26, P["gold"]), (140, 29, cfg["accent"])]:
+        rect(d, (x, y, x + 4, y + 8), c, P["ink"])
     return im
 
 

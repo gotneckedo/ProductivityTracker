@@ -189,6 +189,14 @@ jobs:
             n=$((n + 1))
           done
 
+          # Full-size visual review for each of the core perspective rooms;
+          # collection thumbnails alone are too small to verify room depth,
+          # furniture planes, and distinct scene composition.
+          for screen in room-library room-train room-city; do
+            shoot "$screen" "$(printf '%02d' $n)-$screen"
+            n=$((n + 1))
+          done
+
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4

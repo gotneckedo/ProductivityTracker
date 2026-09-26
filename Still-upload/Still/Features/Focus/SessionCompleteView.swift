@@ -57,7 +57,7 @@ struct SessionCompleteView: View {
 
     private func completionHero(session: FocusSession?) -> some View {
         let scene = appState.scene(session?.sceneID ?? appState.currentPreset.sceneID)
-        return ZStack(alignment: .bottomLeading) {
+        return VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
             RoomHeroView(
                 sceneName: scene.name,
                 sceneID: scene.id,
@@ -71,15 +71,11 @@ struct SessionCompleteView: View {
                 placedObjects: appState.placedRoomObjects(in: scene.id),
                 showsControls: false
             )
-            .aspectRatio(160.0 / 132.0, contentMode: .fill)
+            .aspectRatio(160.0 / 132.0, contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .frame(height: 190)
             .clipped()
-            .overlay(alignment: .bottom) {
-                LinearGradient(
-                    colors: [.clear, Color(hex: 0x9C92CC).opacity(0.92)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            }
+
             VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
                 Text(Copy.Completion.title)
                     .font(StillTypography.hero)
@@ -97,11 +93,10 @@ struct SessionCompleteView: View {
                         .foregroundStyle(StillDayPhase.dusk.accent)
                 }
             }
-            .padding(.top, StillTheme.Spacing.xxl)
             .padding(StillTheme.Spacing.m)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .stillGlass(radius: StillTheme.Radius.large, phase: .dusk)
         }
-        .frame(height: 245)
-        .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous))
         .stillEntrance()
     }
 

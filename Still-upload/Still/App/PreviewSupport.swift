@@ -10,7 +10,8 @@ enum PreviewSupport {
         renderMode: RenderMode? = nil,
         activeSession: Bool = false,
         activeSessionElapsed: TimeInterval = 7 * 60,
-        clockStart: Date? = nil
+        clockStart: Date? = nil,
+        stillPlus: Bool = false
     ) -> AppState {
         let clock = ManualClock(clockStart ?? Date())
         let bundledBooks = BundledBookLocator.urls(in: Bundle(for: AppState.self))
@@ -23,6 +24,9 @@ enum PreviewSupport {
             clock: clock,
             flags: .preview,
             audio: SilentAmbientAudioPlayer(status: .ready, availableSources: Set(AmbientSource.all.map(\.id))),
+            purchases: stillPlus
+                ? LocalPurchaseService(purchased: [PurchaseProductCatalog.stillPlusMonthly])
+                : nil,
             bookLibrary: bookLibrary
         )
         if populated {

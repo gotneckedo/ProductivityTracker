@@ -6,7 +6,9 @@ import Foundation
 ///
 ///   xcrun simctl launch booted com.cocomedia.still -still-demo home
 ///
-/// Screens: onboarding, home, focus-room, room-library, room-train, room-city, sprite-contact-sheet, cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, complete, break, sudoku, wordsearch,
+/// Screens: onboarding, home, focus-room, room-library, room-train, room-city,
+/// room-autumn, room-snow, room-spring, sprite-contact-sheet,
+/// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, complete, break, sudoku, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-seasonal, card,
 /// journal, presets, tasks, timeline, doodle, gallery, morning,
 /// calendar-settings, get-card.
@@ -56,6 +58,12 @@ enum DemoLaunch {
             return focusRoomState(hour: 14, sceneID: .trainWindow)
         case "room-city":
             return focusRoomState(hour: 20, sceneID: .nightCity)
+        case "room-autumn":
+            return focusRoomState(hour: 14, sceneID: .autumnWindow, stillPlus: true)
+        case "room-snow":
+            return focusRoomState(hour: 10, sceneID: .snowDay, stillPlus: true)
+        case "room-spring":
+            return focusRoomState(hour: 14, sceneID: .springRain, stillPlus: true)
         case "cat-morning":
             return focusRoomState(hour: 9)
         case "cat-reaction":
@@ -137,11 +145,16 @@ enum DemoLaunch {
         return state
     }
 
-    private static func focusRoomState(hour: Int, sceneID: SceneID = .rainyBedroom) -> AppState {
+    private static func focusRoomState(
+        hour: Int,
+        sceneID: SceneID = .rainyBedroom,
+        stillPlus: Bool = false
+    ) -> AppState {
         let state = PreviewSupport.appState(
             populated: true,
             completedSessions: sceneID == .rainyBedroom ? 1 : 30,
-            clockStart: screenshotDate(hour: hour, minute: 0)
+            clockStart: screenshotDate(hour: hour, minute: 0),
+            stillPlus: stillPlus
         )
         var preset = state.currentPreset
         preset.sceneID = sceneID

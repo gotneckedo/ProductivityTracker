@@ -6,6 +6,26 @@
 **Latest local validation:** `swift test` — **217 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).
 **Latest GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 36242555096](https://github.com/gotneckedo/ProductivityTracker/actions/runs/36242555096) completed successfully on `8dd3f9d`; its `still-screenshots` artifact contains and was visually reviewed across 48 simulator captures.
 
+## Master Plan decisions — product direction, not implementation proof
+
+These decisions were supplied by CoCo on 26 September 2026 in response to
+Section 7 of the Master Plan. They are binding for later implementation; they
+do **not** claim that the corresponding feature has shipped or passed CI.
+
+| Decision | Direction |
+|---|---|
+| **Free floor** | All four earned core rooms; three saved presets; three routine items; every break activity; Silence plus the four original bundled loops; the complete History list and lifetime totals. Local history is never deleted or gated. |
+| **Still+ scope** | Extra permanent rooms; unlimited presets and routine items; additional genuinely authored sound layers and locally saved custom mixes; History analysis (month/year views, subject breakdown, personal-usual comparison, filled calendar); alternate cat coats; Card alarm features; daily app limits and morning lock only when Apple permits them. Basic breaks are never gated. |
+| **Cat coats** | Ginger is free. Tabby, Cream, and Midnight are Still+ cosmetics only, with no behavioral difference. |
+| **Extra rooms** | Keep the three existing extra rooms permanently available through Still+. Remove the word **Seasonal** everywhere: there is no rotation, expiration, countdown, or limited-time framing. |
+| **Card alarm boundary** | User-installable builds, including TestFlight, show setup and information only: no armable alarm and no simulated ringing. DEBUG/CI builds may show the complete mock ring/card-tap flow for design evidence. A Preview tag never turns an alarm that cannot fire into a shippable capability. |
+| **Planning price** | Plan for **$2.99/month** and **$24.99/year**, subject to final physical-card economics. Enroll in Apple’s Small Business Program before App Store Connect setup. |
+
+### Master Plan debate calls
+
+- **A13 — study anchor:** accepted for Wave 3 as one optional pinned study anchor. It will remain silent when unmet, create no streak, and never produce a catch-up prompt; this preserves the useful “return point” without turning it into a daily obligation.
+- **F9 — settle-in fade:** accepted with the Master Plan condition: any 30-second sound fade happens **during the first 30 seconds of a started session**, never before Start, so Still never delays the first action.
+
 ## Phase 2 — verified sprite-first room checkpoint
 
 This checkpoint is limited to Phase 2’s original pixel package, sprite-first room seam, accessible object targets, and the evidence route. It does **not** claim the later Phase 2 cat behavior, full Today modes, alarm/wake flow, daily limits, or complete Still+ gating; those remain in progress.

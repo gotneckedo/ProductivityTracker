@@ -189,10 +189,11 @@ jobs:
             n=$((n + 1))
           done
 
-          # Full-size visual review for each of the core perspective rooms;
+          # Full-size visual review for each of the current perspective rooms;
           # collection thumbnails alone are too small to verify room depth,
-          # furniture planes, and distinct scene composition.
-          for screen in room-library room-train room-city; do
+          # furniture planes, and distinct scene composition. The three
+          # permanent Still+ rooms use an in-memory DEBUG entitlement only.
+          for screen in room-library room-train room-city room-autumn room-snow room-spring; do
             shoot "$screen" "$(printf '%02d' $n)-$screen"
             n=$((n + 1))
           done

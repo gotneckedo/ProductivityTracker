@@ -45,7 +45,11 @@ enum DemoLaunch {
         case "home":
             return PreviewSupport.appState(populated: true)
         case "focus-room":
-            return routed(.focusHome)
+            // One completed session leaves the first-three-days room labels
+            // visible in the CI proof while still providing a selected task.
+            let state = PreviewSupport.appState(populated: true, completedSessions: 1)
+            state.router.go(to: .focusHome)
+            return state
         case "sprite-contact-sheet":
             return routed(.spriteContactSheet)
         case "calm":

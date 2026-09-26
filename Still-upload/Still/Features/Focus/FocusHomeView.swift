@@ -31,9 +31,12 @@ struct FocusHomeView: View {
 
                             focusActionCard(preset: preset)
                                 .padding(.horizontal, StillTheme.Spacing.xs)
-                                .offset(y: 78)
+                                // Keep the room's cat and first-days object labels
+                                // visible above the overlap; the action card still
+                                // belongs to the room rather than becoming a slab.
+                                .offset(y: 170)
                         }
-                        .padding(.bottom, 72)
+                        .padding(.bottom, 166)
                         .stillEntrance()
 
                         header(scene: scene)

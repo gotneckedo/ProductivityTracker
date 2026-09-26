@@ -25,7 +25,6 @@ struct RoomHeroView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isFloating = false
-    @State private var labelsAreVisible = true
 
     private var resolvedPhase: StillDayPhase {
         phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
@@ -77,7 +76,7 @@ struct RoomHeroView: View {
 
             if let onRoomTarget {
                 RoomHotspotOverlay(
-                    showsLabels: labelsAreVisible && showsRoomLabels,
+                    showsLabels: showsRoomLabels,
                     action: onRoomTarget
                 )
             }
@@ -105,17 +104,10 @@ struct RoomHeroView: View {
             }
         }
         .onAppear {
-            labelsAreVisible = showsRoomLabels
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 4.2).repeatForever(autoreverses: true)) {
                 isFloating = true
             }
-        }
-        .task(id: showsRoomLabels) {
-            guard showsRoomLabels, !reduceMotion else { return }
-            try? await Task.sleep(nanoseconds: 3_200_000_000)
-            guard !Task.isCancelled else { return }
-            withAnimation(.easeOut(duration: 0.8)) { labelsAreVisible = false }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(sceneName) room. A warm, original isometric study room with a desk, window, books, and growing plant.")
@@ -184,11 +176,11 @@ enum RoomHotspot: String, CaseIterable, Identifiable {
 
     var normalizedPosition: CGPoint {
         switch self {
-        case .desk: return CGPoint(x: 0.64, y: 0.62)
-        case .shelf: return CGPoint(x: 0.83, y: 0.22)
-        case .calendar: return CGPoint(x: 0.43, y: 0.22)
-        case .plant: return CGPoint(x: 0.90, y: 0.44)
-        case .window: return CGPoint(x: 0.23, y: 0.30)
+        case .desk: return CGPoint(x: 0.64, y: 0.61)
+        case .shelf: return CGPoint(x: 0.80, y: 0.34)
+        case .calendar: return CGPoint(x: 0.43, y: 0.31)
+        case .plant: return CGPoint(x: 0.89, y: 0.49)
+        case .window: return CGPoint(x: 0.23, y: 0.40)
         }
     }
 }

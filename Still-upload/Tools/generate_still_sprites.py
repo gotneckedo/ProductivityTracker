@@ -76,7 +76,9 @@ def line(d: ImageDraw.ImageDraw, points: list[tuple[int, int]], color: str, widt
 
 
 def room_sprite(name: str, cfg: dict[str, str]) -> Image.Image:
-    im = image((160, 132), P["ink"])
+    # The outer canvas remains transparent: RoomHeroView supplies its warm page
+    # halo, so the room floats as architecture rather than a dark rectangle.
+    im = image((160, 132))
     d = ImageDraw.Draw(im)
     # Two fully opaque walls plus floor: no translucent pseudo-room plane.
     rect(d, (3, 7, 108, 75), cfg["wall"], P["ink"])

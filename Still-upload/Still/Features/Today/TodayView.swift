@@ -4,6 +4,7 @@ import SwiftUI
 /// and a small amount of context that helps someone leave the app again.
 struct TodayView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
     @State private var reflection = ""
     @State private var mood: JournalMood? = nil
 
@@ -13,8 +14,15 @@ struct TodayView: View {
 
     private var afterIDs: [BreakActivityID] { [.sudoku, .boxBreathing, .shortRead] }
 
+    /// Uses the same injected clock as Today’s greeting, records, and DEBUG
+    /// fixtures. This keeps the page phase truthful at runtime and permits a
+    /// deterministic morning screenshot without relying on status-bar chrome.
+    private var screenPhase: StillDayPhase {
+        StillDayPhase.automatic(date: appState.container.clock.now, colorScheme: colorScheme)
+    }
+
     var body: some View {
-        StillScreen {
+        StillScreen(phase: screenPhase) {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {

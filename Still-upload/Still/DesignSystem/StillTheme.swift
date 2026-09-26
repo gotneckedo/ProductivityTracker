@@ -41,7 +41,7 @@ enum StillDayPhase: String, CaseIterable, Hashable, Codable {
         switch self {
         // Light screens use a more opaque field than their page gradient so
         // groups, rows, and activity canvases retain a readable value ladder.
-        case .morning, .afternoon, .dusk: return .white.opacity(0.68)
+        case .morning, .afternoon, .dusk: return .white.opacity(0.84)
         case .night, .focus: return .white.opacity(0.08)
         }
     }
@@ -58,9 +58,9 @@ enum StillDayPhase: String, CaseIterable, Hashable, Codable {
     /// and from the matte activity canvas.
     var glassControlFallback: Color {
         switch self {
-        case .morning: return Color(hex: 0xFFF8F0, opacity: 0.96)
-        case .afternoon: return Color(hex: 0xF6FBF7, opacity: 0.96)
-        case .dusk: return Color(hex: 0xFCEFF0, opacity: 0.96)
+        case .morning: return Color(hex: 0xFFFDF9, opacity: 0.98)
+        case .afternoon: return Color(hex: 0xFBFCFA, opacity: 0.98)
+        case .dusk: return Color(hex: 0xFFF9F6, opacity: 0.98)
         case .night: return Color(hex: 0x282644, opacity: 0.98)
         case .focus: return Color(hex: 0x242038, opacity: 0.98)
         }
@@ -70,9 +70,9 @@ enum StillDayPhase: String, CaseIterable, Hashable, Codable {
     /// avoids turning every piece of content into floating glass.
     var plainGroupFill: Color {
         switch self {
-        case .morning: return Color(hex: 0xFFF8F0, opacity: 0.90)
-        case .afternoon: return Color(hex: 0xF8FCF8, opacity: 0.90)
-        case .dusk: return Color(hex: 0xFFF4F2, opacity: 0.90)
+        case .morning: return Color(hex: 0xFFFDF9, opacity: 0.95)
+        case .afternoon: return Color(hex: 0xFBFCFA, opacity: 0.95)
+        case .dusk: return Color(hex: 0xFFF9F6, opacity: 0.95)
         case .night: return Color(hex: 0x292742, opacity: 0.88)
         case .focus: return Color(hex: 0x222035, opacity: 0.90)
         }
@@ -105,11 +105,11 @@ enum StillDayPhase: String, CaseIterable, Hashable, Codable {
         let colors: [Color]
         switch self {
         case .morning:
-            colors = [Color(hex: 0xFBE7D8), Color(hex: 0xF9F0E8), Color(hex: 0xE1ECF2)]
+            colors = [Color(hex: 0xFFF9F3), Color(hex: 0xFCFAF6), Color(hex: 0xF3F5F3)]
         case .afternoon:
-            colors = [Color(hex: 0xDDEFE5), Color(hex: 0xF4F7F3), Color(hex: 0xE5EDF7)]
+            colors = [Color(hex: 0xF5F8F3), Color(hex: 0xFAFBF8), Color(hex: 0xF2F5F7)]
         case .dusk:
-            colors = [Color(hex: 0xF6D8CE), Color(hex: 0xE9D6E0), Color(hex: 0xC9C5DE)]
+            colors = [Color(hex: 0xFCF4EF), Color(hex: 0xF9F4F5), Color(hex: 0xF1F2F7)]
         case .night:
             colors = [Color(hex: 0x1C2244), Color(hex: 0x2A2556), Color(hex: 0x3A2C5C)]
         case .focus:
@@ -136,9 +136,9 @@ extension EnvironmentValues {
 enum StillTheme {
     /// Raw palette. Warm paper instead of white, navy-charcoal instead of black.
     enum Palette {
-        static let paper = Color(hex: 0xF7E8DA)
-        static let paperRaised = Color.white.opacity(0.46)
-        static let paperSunken = Color.white.opacity(0.24)
+        static let paper = Color(hex: 0xFAF6F0)
+        static let paperRaised = Color.white.opacity(0.72)
+        static let paperSunken = Color.white.opacity(0.42)
         static let ink = Color.dynamic(light: 0x2E2530, dark: 0xF5EEF8)
         static let inkSecondary = Color.dynamic(light: 0x4F4651, dark: 0xD9D0DE)
         static let inkTertiary = Color.dynamic(light: 0x786D78, dark: 0xB9ADBF)

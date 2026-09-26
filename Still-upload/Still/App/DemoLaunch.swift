@@ -6,7 +6,7 @@ import Foundation
 ///
 ///   xcrun simctl launch booted com.cocomedia.still -still-demo home
 ///
-/// Screens: onboarding, today, setup, home, focus-room, room-library, room-train, room-city,
+/// Screens: onboarding, today, today-light, setup, home, focus-room, room-library, room-train, room-city,
 /// room-autumn, room-snow, room-spring, room-sleep, sprite-contact-sheet,
 /// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, complete, break, sudoku, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
@@ -46,13 +46,19 @@ enum DemoLaunch {
             return PreviewSupport.appState(onboarded: false)
         case "today":
             return routed(.today)
+        case "today-light":
+            // `simctl status_bar` changes chrome only; the app's local clock
+            // still controls its time-aware phase. Pin a morning fixture so CI
+            // proves the intentionally light page and surface hierarchy.
+            return todayState(hour: 9)
         case "setup":
             return routed(.focusConfiguration)
         case "home":
             return PreviewSupport.appState(populated: true)
         case "focus-room":
-            // One completed session leaves the first-three-days room labels
-            // visible in the CI proof while still providing a selected task.
+            // One completed session provides a selected task while the native
+            // room targets remain invisible and VoiceOver-labeled, preserving
+            // a clean art review surface.
             let state = PreviewSupport.appState(populated: true, completedSessions: 1)
             state.router.go(to: .focusHome)
             return state
@@ -170,6 +176,15 @@ enum DemoLaunch {
         state.savePreset(preset)
         state.setCatName("Mochi")
         state.router.go(to: .focusHome)
+        return state
+    }
+
+    private static func todayState(hour: Int) -> AppState {
+        let state = PreviewSupport.appState(
+            populated: true,
+            clockStart: screenshotDate(hour: hour, minute: 0)
+        )
+        state.router.go(to: .today)
         return state
     }
 

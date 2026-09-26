@@ -151,7 +151,11 @@ jobs:
           # decide whether these visual claims can be marked complete.
           shoot "focus-room" "proof-focus-helper-clean"
           shoot "focus-room" "proof-room-art-unoccluded"
-          shoot "today" "proof-light-theme"
+          shoot "today-light" "proof-light-theme"
+          shoot_bottom "today" "proof-today-bottom-clear"
+          shoot_bottom "tasks" "proof-tasks-bottom-clear"
+          shoot_bottom "sudoku" "proof-sudoku-bottom-clear"
+          shoot_bottom "me" "proof-me-bottom-clear"
 
           for screen in break journal me scenes; do
             shoot_midpoint "$screen" "$(printf '%02d' $n)-$screen-midpoint"

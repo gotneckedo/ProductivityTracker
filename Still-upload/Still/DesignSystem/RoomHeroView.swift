@@ -188,16 +188,17 @@ private struct SpriteRoomLayout {
     let focusCat: CGPoint
     let breakCat: CGPoint
     let lamp: CGPoint
+    let objectAnchors: [RoomSlot: CGPoint]
     let hotspots: [RoomHotspot: CGPoint]
 
     static func forScene(_ id: SceneID) -> Self {
         switch id {
         case .libraryLight:
-            return Self(idleCat: CGPoint(x: 0.70, y: 0.71), focusCat: CGPoint(x: 0.66, y: 0.72), breakCat: CGPoint(x: 0.72, y: 0.57), lamp: CGPoint(x: 0.83, y: 0.50), hotspots: standardHotspots(desk: .init(x: 0.66, y: 0.63), shelf: .init(x: 0.28, y: 0.38), calendar: .init(x: 0.73, y: 0.41), plant: .init(x: 0.22, y: 0.39), window: .init(x: 0.58, y: 0.37)))
+            return Self(idleCat: CGPoint(x: 0.70, y: 0.71), focusCat: CGPoint(x: 0.66, y: 0.72), breakCat: CGPoint(x: 0.72, y: 0.57), lamp: CGPoint(x: 0.83, y: 0.50), objectAnchors: objectAnchors(desk: .init(x: 0.66, y: 0.62), shelf: .init(x: 0.26, y: 0.33), floor: .init(x: 0.47, y: 0.77), wall: .init(x: 0.47, y: 0.36), sill: .init(x: 0.58, y: 0.37)), hotspots: standardHotspots(desk: .init(x: 0.66, y: 0.63), shelf: .init(x: 0.28, y: 0.38), calendar: .init(x: 0.73, y: 0.41), plant: .init(x: 0.22, y: 0.39), window: .init(x: 0.58, y: 0.37)))
         case .trainWindow:
-            return Self(idleCat: CGPoint(x: 0.69, y: 0.69), focusCat: CGPoint(x: 0.65, y: 0.70), breakCat: CGPoint(x: 0.50, y: 0.58), lamp: CGPoint(x: 0.60, y: 0.32), hotspots: standardHotspots(desk: .init(x: 0.50, y: 0.65), shelf: .init(x: 0.72, y: 0.34), calendar: .init(x: 0.72, y: 0.31), plant: .init(x: 0.72, y: 0.34), window: .init(x: 0.34, y: 0.34)))
+            return Self(idleCat: CGPoint(x: 0.69, y: 0.69), focusCat: CGPoint(x: 0.65, y: 0.70), breakCat: CGPoint(x: 0.50, y: 0.58), lamp: CGPoint(x: 0.60, y: 0.32), objectAnchors: objectAnchors(desk: .init(x: 0.50, y: 0.64), shelf: .init(x: 0.72, y: 0.35), floor: .init(x: 0.72, y: 0.77), wall: .init(x: 0.62, y: 0.39), sill: .init(x: 0.34, y: 0.34)), hotspots: standardHotspots(desk: .init(x: 0.50, y: 0.65), shelf: .init(x: 0.72, y: 0.34), calendar: .init(x: 0.72, y: 0.31), plant: .init(x: 0.72, y: 0.34), window: .init(x: 0.34, y: 0.34)))
         case .nightCity:
-            return Self(idleCat: CGPoint(x: 0.31, y: 0.72), focusCat: CGPoint(x: 0.40, y: 0.73), breakCat: CGPoint(x: 0.70, y: 0.57), lamp: CGPoint(x: 0.63, y: 0.54), hotspots: standardHotspots(desk: .init(x: 0.62, y: 0.61), shelf: .init(x: 0.76, y: 0.35), calendar: .init(x: 0.26, y: 0.40), plant: .init(x: 0.73, y: 0.35), window: .init(x: 0.37, y: 0.35)))
+            return Self(idleCat: CGPoint(x: 0.31, y: 0.72), focusCat: CGPoint(x: 0.40, y: 0.73), breakCat: CGPoint(x: 0.70, y: 0.57), lamp: CGPoint(x: 0.63, y: 0.54), objectAnchors: objectAnchors(desk: .init(x: 0.62, y: 0.60), shelf: .init(x: 0.76, y: 0.35), floor: .init(x: 0.28, y: 0.77), wall: .init(x: 0.26, y: 0.42), sill: .init(x: 0.37, y: 0.35)), hotspots: standardHotspots(desk: .init(x: 0.62, y: 0.61), shelf: .init(x: 0.76, y: 0.35), calendar: .init(x: 0.26, y: 0.40), plant: .init(x: 0.73, y: 0.35), window: .init(x: 0.37, y: 0.35)))
         case .autumnWindow:
             return bedroom(idleCat: .init(x: 0.62, y: 0.72), focusCat: .init(x: 0.67, y: 0.73), lamp: .init(x: 0.29, y: 0.52))
         case .snowDay:
@@ -211,7 +212,12 @@ private struct SpriteRoomLayout {
 
     private static func bedroom(idleCat: CGPoint, focusCat: CGPoint, lamp: CGPoint) -> Self {
         Self(idleCat: idleCat, focusCat: focusCat, breakCat: .init(x: 0.77, y: 0.61), lamp: lamp,
+             objectAnchors: objectAnchors(desk: .init(x: 0.67, y: 0.60), shelf: .init(x: 0.76, y: 0.34), floor: .init(x: 0.28, y: 0.77), wall: .init(x: 0.26, y: 0.42), sill: .init(x: 0.39, y: 0.35)),
              hotspots: standardHotspots(desk: .init(x: 0.67, y: 0.60), shelf: .init(x: 0.76, y: 0.34), calendar: .init(x: 0.26, y: 0.42), plant: .init(x: 0.79, y: 0.37), window: .init(x: 0.39, y: 0.35)))
+    }
+
+    private static func objectAnchors(desk: CGPoint, shelf: CGPoint, floor: CGPoint, wall: CGPoint, sill: CGPoint) -> [RoomSlot: CGPoint] {
+        [.desk: desk, .shelf: shelf, .floorCorner: floor, .wall: wall, .windowsill: sill]
     }
 
     private static func standardHotspots(desk: CGPoint, shelf: CGPoint, calendar: CGPoint, plant: CGPoint, window: CGPoint) -> [RoomHotspot: CGPoint] {
@@ -349,7 +355,7 @@ private struct SpriteFirstRoomSurface: View {
                         .interpolation(.none)
                         .scaledToFit()
                         .opacity(dimmed ? 0.66 : 1)
-                    SpriteRoomObjectOverlay(placements: placedObjects)
+                    SpriteRoomObjectOverlay(sceneID: sceneID, placements: placedObjects)
                 }
             } else if reduceMotion {
                 RoomCanvas(sceneName: sceneName, sceneID: sceneID, phase: phase, time: 0, dimmed: dimmed,
@@ -366,6 +372,7 @@ private struct SpriteFirstRoomSurface: View {
 }
 
 private struct SpriteRoomObjectOverlay: View {
+    let sceneID: SceneID
     let placements: [RoomPlacement]
 
     var body: some View {
@@ -395,13 +402,8 @@ private struct SpriteRoomObjectOverlay: View {
     }
 
     private func position(for slot: RoomSlot, in size: CGSize) -> CGPoint {
-        switch slot {
-        case .shelf: return CGPoint(x: size.width * 0.82, y: size.height * 0.24)
-        case .floorCorner: return CGPoint(x: size.width * 0.23, y: size.height * 0.78)
-        case .wall: return CGPoint(x: size.width * 0.50, y: size.height * 0.30)
-        case .windowsill: return CGPoint(x: size.width * 0.26, y: size.height * 0.45)
-        case .desk: return CGPoint(x: size.width * 0.65, y: size.height * 0.58)
-        }
+        let anchor = SpriteRoomLayout.forScene(sceneID).objectAnchors[slot] ?? .init(x: 0.5, y: 0.5)
+        return CGPoint(x: size.width * anchor.x, y: size.height * anchor.y)
     }
 }
 

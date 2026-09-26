@@ -140,7 +140,9 @@ jobs:
             n=$((n + 1))
           done
 
-          for screen in home break journal me; do
+          # The long contact sheet is captured at both ends, so the artifact
+          # proves the cat frames and lower activity/empty-state sprites too.
+          for screen in home break journal me sprite-contact-sheet; do
             shoot_bottom "$screen" "$(printf '%02d' $n)-$screen-bottom"
             n=$((n + 1))
           done

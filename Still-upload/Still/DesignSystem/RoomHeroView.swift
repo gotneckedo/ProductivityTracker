@@ -69,7 +69,9 @@ struct RoomHeroView: View {
                 let side = max(20, min(proxy.size.width * 0.20, proxy.size.height * 0.28))
                 RoomCatSprite(coat: catCoat, reduceMotion: reduceMotion)
                     .frame(width: side, height: side)
-                    .position(x: proxy.size.width * 0.35, y: proxy.size.height * 0.76)
+                    // A resting cat sits on the starter bed, fully above the
+                    // overlapping action card rather than being a hidden prop.
+                    .position(x: proxy.size.width * 0.33, y: proxy.size.height * 0.62)
                     .offset(y: reduceMotion ? 0 : (isFloating ? -3 : 2))
             }
             .accessibilityHidden(true)
@@ -157,8 +159,8 @@ enum RoomHotspot: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .desk: return "Desk"
-        case .shelf: return "Shelf"
-        case .calendar: return "Calendar"
+        case .shelf: return "Bookshelf"
+        case .calendar: return "Wall calendar"
         case .plant: return "Plant"
         case .window: return "Window"
         }

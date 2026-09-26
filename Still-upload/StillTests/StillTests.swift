@@ -1321,7 +1321,9 @@ final class RouteResolverTests: XCTestCase {
 
     func testTodayOwnsReflectionAndIsAlwaysTheHomeTab() {
         XCTAssertEqual(AppTab.visibleTabs(flags: .v1), [.today, .focus, .breakShelf, .me])
-        XCTAssertEqual(RouteResolver(flags: .v1).destination(for: .journal, currentTab: .focus).tab, .today)
+        let journal = RouteResolver(flags: .v1).destination(for: .journal, currentTab: .focus)
+        XCTAssertEqual(journal.tab, .focus)
+        XCTAssertEqual(journal.sheet, .journal)
         XCTAssertEqual(RouteResolver(flags: .current).destination(for: .today, currentTab: .focus).tab, .today)
     }
 }

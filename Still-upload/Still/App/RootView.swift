@@ -55,6 +55,10 @@ struct MainTabView: View {
                     .presentationDragIndicator(.visible)
                 case .nextStep:
                     NextStepGuideView()
+                case .journal:
+                    JournalView()
+                        .presentationDetents([.large])
+                        .presentationDragIndicator(.visible)
                 }
             }
             .environment(appState)

@@ -115,7 +115,7 @@ struct SceneCollectionView: View {
                 HStack {
                     SectionHeader(title: "Still+")
                 }
-                if purchasedProductIDs.contains(PurchaseProductCatalog.stillPlusMonthly) {
+                if appState.hasStillPlus {
                     Text("Still+ is active on this device.")
                         .font(StillTypography.footnote)
                         .foregroundStyle(StillTheme.textSecondary)
@@ -173,66 +173,75 @@ private struct SceneCard: View {
     let onSelect: () -> Void
 
     var body: some View {
-        Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
-                ZStack {
-                    RoomHeroView(
-                        sceneName: scene.name,
-                        sceneID: scene.id,
-                        phase: .afternoon,
-                        plantStage: .full,
-                        showsControls: false
-                    )
-                        .saturation(isUnlocked ? 1 : 0.2)
-                        .opacity(isUnlocked ? 1 : 0.55)
-                    if !isUnlocked {
-                        Image(systemName: "lock")
-                            .font(StillTypography.title3)
-                            .foregroundStyle(StillTheme.Palette.sceneText)
-                            .padding(StillTheme.Spacing.s)
-                            .background(Circle().fill(StillTheme.Palette.navyShadow.opacity(0.6)))
-                    }
-                }
-                .aspectRatio(160.0 / 132.0, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
-                        .strokeBorder(isSelected ? StillTheme.accent : StillTheme.border, lineWidth: isSelected ? 2 : StillTheme.Stroke.hairline)
-                )
-
-                HStack(spacing: StillTheme.Spacing.xxs) {
-                    Text(scene.name)
-                        .font(StillTypography.bodyEmphasis)
-                        .foregroundStyle(StillTheme.textPrimary)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.82)
-                    if isSelected {
-                        Image(systemName: "checkmark")
-                            .font(StillTypography.caption.weight(.semibold))
-                            .foregroundStyle(StillTheme.accent)
-                    }
-                }
-                Text(isUnlocked ? scene.summary : unlockText)
-                    .font(StillTypography.footnote)
-                    .foregroundStyle(StillTheme.textSecondary)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
+        Group {
+            if isUnlocked {
+                Button(action: onSelect) { cardContent }
+                    .buttonStyle(.plain)
+            } else {
+                cardContent
             }
-            .padding(StillTheme.Spacing.s)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
-                    .fill(StillTheme.calmSoft.opacity(0.64))
-            )
-            .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
         }
-        .buttonStyle(.plain)
         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
-        .disabled(!isUnlocked)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(scene.name)
         .accessibilityValue(isUnlocked ? (isSelected ? "Selected. \(scene.summary)" : scene.summary) : unlockText)
-        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+        .accessibilityAddTraits(isUnlocked ? (isSelected ? [.isButton, .isSelected] : .isButton) : [])
+    }
+
+    private var cardContent: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
+            ZStack {
+                RoomHeroView(
+                    sceneName: scene.name,
+                    sceneID: scene.id,
+                    phase: .afternoon,
+                    allowsCatInteraction: false,
+                    plantStage: .full,
+                    showsControls: false
+                )
+                .saturation(isUnlocked ? 1 : 0.22)
+                .opacity(isUnlocked ? 1 : 0.68)
+                if !isUnlocked {
+                    Rectangle().fill(StillTheme.Palette.navyShadow.opacity(0.22))
+                    Image(systemName: "lock.fill")
+                        .font(StillTypography.title3)
+                        .foregroundStyle(.white)
+                        .frame(width: StillTheme.minimumTapSize, height: StillTheme.minimumTapSize)
+                        .background(Circle().fill(StillTheme.Palette.navyShadow.opacity(0.82)))
+                }
+            }
+            .aspectRatio(160.0 / 132.0, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
+                    .strokeBorder(isSelected ? StillTheme.accent : StillTheme.border, lineWidth: isSelected ? 2 : StillTheme.Stroke.hairline)
+            )
+
+            HStack(spacing: StillTheme.Spacing.xxs) {
+                Text(scene.name)
+                    .font(StillTypography.bodyEmphasis)
+                    .foregroundStyle(StillTheme.textPrimary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.82)
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(StillTypography.caption.weight(.semibold))
+                        .foregroundStyle(StillTheme.accent)
+                }
+            }
+            Text(isUnlocked ? scene.summary : unlockText)
+                .font(StillTypography.footnote.weight(isUnlocked ? .regular : .medium))
+                .foregroundStyle(isUnlocked ? StillTheme.textSecondary : StillTheme.textPrimary)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(StillTheme.Spacing.s)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
+                .fill(StillTheme.calmSoft.opacity(isUnlocked ? 0.64 : 0.76))
+        )
+        .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
     }
 
     private var unlockText: String {

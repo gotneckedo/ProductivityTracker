@@ -311,9 +311,7 @@ private struct ProfileHero: View {
 
     private var profileLine: String {
         let sessions = stats.completedSessions
-        let sessionLine = Copy.Count.session(sessions)
-        guard stats.hasHistory else { return sessionLine }
-        return "\(sessionLine) · \(StatsCalculator.streakLine(current: max(1, stats.currentStreak)))"
+        return Copy.Count.session(sessions)
     }
 }
 

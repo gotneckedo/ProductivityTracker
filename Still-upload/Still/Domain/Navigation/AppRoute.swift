@@ -130,6 +130,8 @@ enum SheetRoute: String, Identifiable, Hashable {
     case tasks
     case dayTimeline
     case nextStep
+    /// Reflection is intentionally secondary to Today’s immediate action.
+    case journal
 
     var id: String { rawValue }
 }
@@ -182,7 +184,7 @@ struct RouteResolver {
         case .habits:
             return RouteDestination(tab: .today, stack: [], sheet: nil, completionSessionID: nil)
         case .journal:
-            return RouteDestination(tab: .today, stack: [], sheet: nil, completionSessionID: nil)
+            return RouteDestination(tab: currentTab, stack: [], sheet: .journal, completionSessionID: nil)
         }
     }
 }

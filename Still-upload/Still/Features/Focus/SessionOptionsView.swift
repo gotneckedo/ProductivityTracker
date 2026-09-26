@@ -225,7 +225,13 @@ private struct SceneChoice: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
-                RoomHeroView(sceneName: scene.name, sceneID: scene.id, plantStage: .full)
+                RoomHeroView(
+                    sceneName: scene.name,
+                    sceneID: scene.id,
+                    allowsCatInteraction: false,
+                    plantStage: .full,
+                    showsControls: false
+                )
                     .frame(width: 112, height: 100)
                     .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
                     .overlay(

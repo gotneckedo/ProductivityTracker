@@ -20,6 +20,7 @@ enum SceneCatalog {
         soundAffinity: .rain,
         motionElements: [.rain, .lampGlow],
         accessibilityDescription: "A dim bedroom at night. Rain runs down a tall window, a small plant sits on the sill, and a desk lamp glows warm.",
+        spriteAssetName: "StillRoomRainyBedroom",
         entitlementKey: nil,
         sortOrder: 0
     )
@@ -42,6 +43,7 @@ enum SceneCatalog {
         soundAffinity: .fireplace,
         motionElements: [.dustMotes, .lampGlow],
         accessibilityDescription: "A quiet library corner. Shelves of colored book spines, a tall window letting in a warm shaft of light, and dust drifting slowly through it.",
+        spriteAssetName: "StillRoomLibraryLight",
         entitlementKey: nil,
         sortOrder: 1
     )
@@ -64,6 +66,7 @@ enum SceneCatalog {
         soundAffinity: .rain,
         motionElements: [.passingLandscape],
         accessibilityDescription: "The view from a train window at dusk. Layers of soft hills drift past under a peach sky with a low sun.",
+        spriteAssetName: "StillRoomTrainWindow",
         entitlementKey: nil,
         sortOrder: 2
     )
@@ -86,6 +89,7 @@ enum SceneCatalog {
         soundAffinity: .cafe,
         motionElements: [.windowLights],
         accessibilityDescription: "A city skyline at night under a pale moon. Apartment windows slowly light up and go dark.",
+        spriteAssetName: "StillRoomNightCity",
         entitlementKey: nil,
         sortOrder: 3
     )
@@ -104,6 +108,7 @@ enum SceneCatalog {
         soundAffinity: .fireplace,
         motionElements: [.leafSway, .lampGlow],
         accessibilityDescription: "A warm study room with copper autumn colors beyond the window and a softly glowing desk lamp.",
+        spriteAssetName: "StillRoomAutumnWindow",
         entitlementKey: PurchaseProductCatalog.stillPlusMonthly,
         sortOrder: 100
     )
@@ -122,6 +127,7 @@ enum SceneCatalog {
         soundAffinity: .fireplace,
         motionElements: [.rain, .lampGlow],
         accessibilityDescription: "A blue winter room with pale snow outside the window and a warm lamp beside the desk.",
+        spriteAssetName: "StillRoomSnowDay",
         entitlementKey: PurchaseProductCatalog.stillPlusMonthly,
         sortOrder: 101
     )
@@ -140,6 +146,7 @@ enum SceneCatalog {
         soundAffinity: .rain,
         motionElements: [.rain, .leafSway],
         accessibilityDescription: "A green spring study room after rain, with fresh leaves and a bright window.",
+        spriteAssetName: "StillRoomSpringRain",
         entitlementKey: PurchaseProductCatalog.stillPlusMonthly,
         sortOrder: 102
     )

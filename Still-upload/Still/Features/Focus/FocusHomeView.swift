@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Still begins with one readable next step: an original room, a task, and one
-/// lit focus action. Options stay quiet and open the existing configuration sheet.
+/// Focus begins with an inhabited room and one immediate action. The lower card
+/// overlaps the room edge so the environment remains the visual lead instead of
+/// becoming a small decorative header.
 struct FocusHomeView: View {
     @Environment(AppState.self) private var appState
 
@@ -12,84 +13,62 @@ struct FocusHomeView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
-                    RoomHeroView(
-                        sceneName: scene.name,
-                        sceneID: scene.id,
-                        catCoat: appState.preferences.catCoat,
-                        plantStage: appState.plantStage,
-                        bookCount: 2 + appState.books.count,
-                        doodle: appState.doodles.max { $0.updatedAt < $1.updatedAt }?.doodle,
-                        placedObjects: appState.placedRoomObjects(in: scene.id),
-                        onPrevious: { cycleScene(from: preset, direction: -1) },
-                        onNext: { cycleScene(from: preset, direction: 1) }
-                    )
-                    .aspectRatio(160.0 / 132.0, contentMode: .fit)
-                    .stillEntrance()
+                        ZStack(alignment: .bottom) {
+                            RoomHeroView(
+                                sceneName: scene.name,
+                                sceneID: scene.id,
+                                catCoat: appState.preferences.catCoat,
+                                plantStage: appState.plantStage,
+                                bookCount: 2 + appState.books.count,
+                                doodle: appState.doodles.max { $0.updatedAt < $1.updatedAt }?.doodle,
+                                placedObjects: appState.placedRoomObjects(in: scene.id),
+                                onPrevious: { cycleScene(from: preset, direction: -1) },
+                                onNext: { cycleScene(from: preset, direction: 1) },
+                                onRoomTarget: open,
+                                showsRoomLabels: focusDayCount < 3
+                            )
+                            .aspectRatio(160.0 / 132.0, contentMode: .fit)
 
-                    header(scene: scene)
-
-                    StillCard(padding: StillTheme.Spacing.m) {
-                        VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
-                            HomeTaskLine(task: appState.selectedTask, emphasized: appState.personalization.emphasizesTasks) {
-                                appState.router.go(to: .tasks)
-                            }
-
-                            Button {
-                                appState.startFocus()
-                            } label: {
-                                Text(Copy.Home.startFocus(DurationFormatter.short(preset.timer.focusDuration)))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
-                            }
-                            .buttonStyle(QuietPrimaryButtonStyle())
-                            .accessibilityHint("Starts \(DurationFormatter.short(preset.timer.focusDuration)) of focus.")
-
-                            ViewThatFits(in: .horizontal) {
-                                HStack(spacing: StillTheme.Spacing.xs) {
-                                    optionPill(title: preset.name, symbol: "timer")
-                                    optionPill(title: preset.ambientMix.isSilent ? "Sound off" : preset.ambientMix.summaryLine, symbol: preset.ambientMix.isSilent ? "speaker.slash" : "speaker.wave.1")
-                                    optionPill(title: preset.blockerIntent == .none ? "No blocking" : "Blocking", symbol: "shield")
-                                }
-                                VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
-                                    optionPill(title: preset.name, symbol: "timer")
-                                    optionPill(title: preset.ambientMix.isSilent ? "Sound off" : preset.ambientMix.summaryLine, symbol: preset.ambientMix.isSilent ? "speaker.slash" : "speaker.wave.1")
-                                    optionPill(title: preset.blockerIntent == .none ? "No blocking" : "Blocking", symbol: "shield")
-                                }
-                            }
+                            focusActionCard(preset: preset)
+                                .padding(.horizontal, StillTheme.Spacing.xs)
+                                .offset(y: 78)
                         }
-                    }
+                        .padding(.bottom, 72)
+                        .stillEntrance()
 
-                    Button {
-                        appState.router.go(to: .roomCollection)
-                    } label: {
-                        HStack(spacing: StillTheme.Spacing.s) {
-                            Image(systemName: "shippingbox")
-                                .foregroundStyle(StillTheme.accent)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(Copy.Home.yourThings)
-                                    .font(StillTypography.bodyEmphasis)
-                                    .foregroundStyle(StillTheme.textPrimary)
-                                Text(Copy.Home.yourThingsHint)
-                                    .font(StillTypography.footnote)
-                                    .foregroundStyle(StillTheme.textSecondary)
+                        header(scene: scene)
+
+                        Button {
+                            appState.router.go(to: .roomCollection)
+                        } label: {
+                            HStack(spacing: StillTheme.Spacing.s) {
+                                Image(systemName: "shippingbox")
+                                    .foregroundStyle(StillTheme.accent)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(Copy.Home.yourThings)
+                                        .font(StillTypography.bodyEmphasis)
+                                        .foregroundStyle(StillTheme.textPrimary)
+                                    Text(Copy.Home.yourThingsHint)
+                                        .font(StillTypography.footnote)
+                                        .foregroundStyle(StillTheme.textSecondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .foregroundStyle(StillTheme.textTertiary)
                             }
-                            Spacer()
-                            Image(systemName: "chevron.right")
-                                .foregroundStyle(StillTheme.textTertiary)
+                            .padding(StillTheme.Spacing.s)
+                            .stillGlass(radius: StillTheme.Radius.medium)
                         }
-                        .padding(StillTheme.Spacing.s)
-                        .stillGlass(radius: StillTheme.Radius.medium)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityHint("Opens your earned room objects and placement slots.")
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Opens your earned room objects and placement slots.")
 
-                    if let unlocked = appState.newlyUnlockedScenes.first {
-                        QuietNote(text: "\(unlocked.name) is open now. Visit it whenever you like.", symbol: "sparkles")
-                    }
-                    if appState.audioStatus == .assetsMissing && !preset.ambientMix.isSilent {
-                        QuietNote(text: AmbientAudioCopy.assetsMissing)
-                    }
-                    Color.clear.frame(height: 1).id("focus-home-bottom")
+                        if let unlocked = appState.newlyUnlockedScenes.first {
+                            QuietNote(text: "\(unlocked.name) is open now. Visit it whenever you like.", symbol: "sparkles")
+                        }
+                        if appState.audioStatus == .assetsMissing && !preset.ambientMix.isSilent {
+                            QuietNote(text: AmbientAudioCopy.assetsMissing)
+                        }
+                        Color.clear.frame(height: 1).id("focus-home-bottom")
                     }
                     .padding(.horizontal, StillTheme.Spacing.screen)
                     .padding(.top, StillTheme.Spacing.s)
@@ -117,6 +96,39 @@ struct FocusHomeView: View {
                 .font(StillTypography.callout)
                 .foregroundStyle(StillTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func focusActionCard(preset: FocusPreset) -> some View {
+        StillCard(padding: StillTheme.Spacing.m) {
+            VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
+                HomeTaskLine(task: appState.selectedTask, emphasized: appState.personalization.emphasizesTasks) {
+                    appState.router.go(to: .tasks)
+                }
+
+                Button {
+                    appState.startFocus()
+                } label: {
+                    Text(Copy.Home.startFocus(DurationFormatter.short(preset.timer.focusDuration)))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                .buttonStyle(QuietPrimaryButtonStyle())
+                .accessibilityHint("Starts \(DurationFormatter.short(preset.timer.focusDuration)) of focus.")
+
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: StillTheme.Spacing.xs) {
+                        optionPill(title: preset.name, symbol: "timer")
+                        optionPill(title: preset.ambientMix.isSilent ? "Sound off" : preset.ambientMix.summaryLine, symbol: preset.ambientMix.isSilent ? "speaker.slash" : "speaker.wave.1")
+                        optionPill(title: preset.blockerIntent == .none ? "No blocking" : "Blocking", symbol: "shield")
+                    }
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
+                        optionPill(title: preset.name, symbol: "timer")
+                        optionPill(title: preset.ambientMix.isSilent ? "Sound off" : preset.ambientMix.summaryLine, symbol: preset.ambientMix.isSilent ? "speaker.slash" : "speaker.wave.1")
+                        optionPill(title: preset.blockerIntent == .none ? "No blocking" : "Blocking", symbol: "shield")
+                    }
+                }
+            }
         }
     }
 
@@ -152,6 +164,27 @@ struct FocusHomeView: View {
         edited.sceneID = available[nextIndex].id
         edited.renderMode = .scene
         appState.savePreset(edited)
+    }
+
+    private var focusDayCount: Int {
+        Set(appState.sessions.filter { $0.state == .completed }.map {
+            Calendar.autoupdatingCurrent.startOfDay(for: $0.endedAt ?? $0.startedAt)
+        }).count
+    }
+
+    private func open(_ hotspot: RoomHotspot) {
+        switch hotspot {
+        case .desk:
+            appState.router.go(to: .tasks)
+        case .shelf:
+            appState.router.go(to: .breakShelf)
+        case .calendar:
+            appState.router.go(to: .today)
+        case .plant:
+            appState.router.go(to: .me)
+        case .window:
+            appState.router.go(to: .sceneCollection)
+        }
     }
 }
 

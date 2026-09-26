@@ -190,6 +190,8 @@ struct RouteView: View {
             SceneCollectionView()
         case .roomCollection:
             RoomCollectionView()
+        case .spriteContactSheet:
+            SpriteContactSheetView()
         case .presets:
             PresetsView()
         case .doodleGallery:

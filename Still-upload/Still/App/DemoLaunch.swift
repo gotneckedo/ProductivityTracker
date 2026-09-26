@@ -6,7 +6,7 @@ import Foundation
 ///
 ///   xcrun simctl launch booted com.cocomedia.still -still-demo home
 ///
-/// Screens: onboarding, home, calm, active, complete, break, sudoku, wordsearch,
+/// Screens: onboarding, home, focus-room, sprite-contact-sheet, calm, active, complete, break, sudoku, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-seasonal, card,
 /// journal, presets, tasks, timeline, doodle, gallery, morning,
 /// calendar-settings, get-card.
@@ -44,6 +44,10 @@ enum DemoLaunch {
             return PreviewSupport.appState(onboarded: false)
         case "home":
             return PreviewSupport.appState(populated: true)
+        case "focus-room":
+            return routed(.focusHome)
+        case "sprite-contact-sheet":
+            return routed(.spriteContactSheet)
         case "calm":
             return PreviewSupport.appState(goal: .calmerPhone, renderMode: .calm)
         case "active":

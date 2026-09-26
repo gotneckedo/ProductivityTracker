@@ -15,13 +15,16 @@ layouts, puzzles, or branding.
 
 | Asset | Where | Provenance | License |
 |---|---|---|---|
-| Pixel scenes (Rainy Bedroom, Library Light, Train Window, Night City) | `DesignSystem/Scenes/SceneArtwork.swift` | Drawn in code for Still | Original |
-| Isometric room renderer | `DesignSystem/RoomHeroView.swift` | Drawn in code for Still; optional local Pixel Doodle display | Original |
+| Pixel room package (8 rooms including seasonal/sleep room) | `Assets.xcassets/StillRoom*.imageset`, source PNGs in `Resources/Sprites/` | Generated from checked-in rectangle/polygon pixel geometry in `Tools/generate_still_sprites.py` using Still's authored 32-color palette | Original |
+| Collectible room objects (20) | `Assets.xcassets/StillObject*.imageset`, source PNGs in `Resources/Sprites/` | Generated from checked-in Still-specific pixel geometry in `Tools/generate_still_sprites.py`; one named asset per catalog object | Original |
+| Break, empty-state, Focus Card, and bird illustrations | `Assets.xcassets/StillBreak*.imageset`, `StillEmpty*.imageset`, `StillFocusCardSprite.imageset`, `StillPixelBird.imageset` | Generated from checked-in Still-specific pixel geometry in `Tools/generate_still_sprites.py` | Original |
+| Sprite contact sheet | `Assets.xcassets/StillSpriteContactSheet.imageset`, `Resources/Sprites/still-sprite-contact-sheet.png` | Deterministically composed by `Tools/generate_still_sprites.py`; includes rooms, objects, icons, UI illustrations, and the cat source sheet | Original |
+| Code-drawn room fallback | `DesignSystem/RoomHeroView.swift` | Original fallback when a named development/future scene asset is unavailable; production catalog routes to the pixel package first | Original |
 | Calm plant nook | `DesignSystem/Scenes/SceneArtwork.swift` | Drawn in code for Still | Original |
 | App icon (pixel sprout) | `Assets.xcassets/AppIcon.appiconset` | Generated for Still from a 16×16 pixel design | Original |
 | Ambient loops (rain, café, fireplace, waves) | `Resources/AmbientAudio/*.m4a` | Procedurally generated (NumPy/SciPy, ffmpeg) | Original |
 | Ambient mixer architecture (12 independent layers, built-in combinations, locally saved mixes) | `Domain/AmbientMix.swift`, `Domain/Soundscape.swift`, `Services/Audio/AVAmbientAudioPlayer.swift` | Written for Still; no reference-app audio, interface, or branding used | Original |
-| Still cat sprite set (six poses × four coats) | `Assets.xcassets/StillCat{Ginger,Tabby,Cream,Midnight}SpriteSheet.imageset` and `StillCatSpriteContactSheet.imageset` | Original transparent pixel-art base sheet generated from a Still-specific prompt with no character/game reference; Ginger, Tabby, Cream, and Midnight coat variants were deterministically palette-edited by `create_still_cat_coats.py`. Contact sheet is included for review. | Original |
+| Still cat sprite set (six poses × four coats) | `Assets.xcassets/StillCat{Ginger,Tabby,Cream,Midnight}SpriteSheet.imageset` and `StillCatSpriteContactSheet.imageset` | Original transparent pixel-art base sheet generated from a Still-specific prompt with no character/game reference; Ginger, Tabby, Cream, and Midnight coat variants were deterministically palette-edited by `create_still_cat_coats.py`. The full package contact sheet includes this source sheet for review. | Original |
 | Short reads (4 micro-essays) | `Data/SeedData/ReadingLibrary.swift` | Written for Still | Original, owned by the publisher |
 | Creative prompts | `Data/SeedData/ReadingLibrary.swift` | Written for Still | Original |
 | Sudoku, Picross, Word Search puzzles | `Data/SeedData/PuzzleLibrary.swift` | Generated for Still; uniqueness verified in `PuzzleTests` | Original |

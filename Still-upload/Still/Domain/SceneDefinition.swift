@@ -70,6 +70,9 @@ struct SceneDefinition: Codable, Identifiable, Hashable {
     var soundAffinity: AmbientSourceID?
     var motionElements: [SceneMotionElement]
     var accessibilityDescription: String
+    /// Name of Still's original raster room sprite. Nil preserves the
+    /// code-drawn renderer as a safe fallback for future or imported scenes.
+    var spriteAssetName: String?
     /// Cosmetic entitlement only. Every session-earned scene keeps this nil.
     var entitlementKey: String?
     var sortOrder: Int

@@ -42,6 +42,34 @@ enum RoomObjectRenderKey: String, Codable, Hashable {
     case catBed, stringLights, globe, bookends, bookStack
     case pencilCup, tinyClock, ceramicBird, paperStars, wateringCan
     case floorCushion, pinboard, radio, candle, telescope
+
+    /// Original 32px sprite authored in `Tools/generate_still_sprites.py`.
+    /// Keeping this key beside the code-drawn fallback lets every catalog item
+    /// render safely even if an asset is ever absent from a development build.
+    var spriteAssetName: String {
+        switch self {
+        case .trailingPlant: return "StillObjectTrailingPlant"
+        case .deskLamp: return "StillObjectDeskLamp"
+        case .artPoster: return "StillObjectArtPoster"
+        case .recordPlayer: return "StillObjectRecordPlayer"
+        case .wovenRug: return "StillObjectWovenRug"
+        case .catBed: return "StillObjectCatBed"
+        case .stringLights: return "StillObjectStringLights"
+        case .globe: return "StillObjectGlobe"
+        case .bookends: return "StillObjectBookends"
+        case .bookStack: return "StillObjectBookStack"
+        case .pencilCup: return "StillObjectPencilCup"
+        case .tinyClock: return "StillObjectTinyClock"
+        case .ceramicBird: return "StillObjectCeramicBird"
+        case .paperStars: return "StillObjectPaperStars"
+        case .wateringCan: return "StillObjectWateringCan"
+        case .floorCushion: return "StillObjectFloorCushion"
+        case .pinboard: return "StillObjectPinboard"
+        case .radio: return "StillObjectRadio"
+        case .candle: return "StillObjectCandle"
+        case .telescope: return "StillObjectTelescope"
+        }
+    }
 }
 
 enum RoomUnlockRule: Hashable, Codable {
@@ -70,8 +98,8 @@ enum RoomUnlockRule: Hashable, Codable {
     }
 }
 
-/// Catalog metadata is platform-neutral. `renderKey` selects original code-drawn art;
-/// `spriteAssetName` is the replacement seam for commissioned art later.
+/// Catalog metadata is platform-neutral. `spriteAssetName` selects the authored
+/// original pixel package; `renderKey` preserves a code-drawn fallback.
 struct RoomObject: Identifiable, Hashable, Codable {
     var id: RoomObjectID
     var name: String
@@ -142,7 +170,7 @@ enum RoomObjectCatalog {
     private static func object(_ id: RoomObjectID, _ name: String, _ summary: String, _ slot: RoomSlot,
                                _ rule: RoomUnlockRule, _ renderKey: RoomObjectRenderKey) -> RoomObject {
         RoomObject(id: id, name: name, summary: summary, slot: slot, unlockRule: rule,
-                   renderKey: renderKey, spriteAssetName: nil, sortOrder: 0)
+                   renderKey: renderKey, spriteAssetName: renderKey.spriteAssetName, sortOrder: 0)
     }
 }
 

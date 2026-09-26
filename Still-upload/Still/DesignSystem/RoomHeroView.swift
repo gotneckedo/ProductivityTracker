@@ -1,8 +1,9 @@
 import SwiftUI
+import UIKit
 
-/// The room is Still's one hero object. It is original, code-drawn pixel art on a
-/// 160×132 virtual grid so sprites can replace individual objects without changing
-/// its public API. Motion is limited to lamp warmth, rain, steam, dust, and leaves.
+/// The room is Still's one hero object. It renders Still's original 160×132
+/// raster sprites first and retains a code-drawn fallback on the same grid.
+/// Motion is limited to lamp warmth, rain, steam, dust, and leaves.
 struct RoomHeroView: View {
     let sceneName: String
     var sceneID: SceneID = .rainyBedroom
@@ -15,11 +16,16 @@ struct RoomHeroView: View {
     var placedObjects: [RoomPlacement] = []
     var onPrevious: (() -> Void)?
     var onNext: (() -> Void)?
+    var onRoomTarget: ((RoomHotspot) -> Void)?
+    /// During someone's first three focus days, names make the illustrated
+    /// objects discoverable before their labels gently fade away.
+    var showsRoomLabels = false
     var showsControls = true
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isFloating = false
+    @State private var labelsAreVisible = true
 
     private var resolvedPhase: StillDayPhase {
         phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
@@ -46,20 +52,18 @@ struct RoomHeroView: View {
             RoomMotes(phase: resolvedPhase, dimmed: dimmed)
                 .accessibilityHidden(true)
 
-            Group {
-                if reduceMotion {
-                    RoomCanvas(sceneName: sceneName, sceneID: sceneID, phase: resolvedPhase, time: 0, dimmed: dimmed,
-                               plantStage: plantStage, bookCount: bookCount, doodle: doodle, placedObjects: placedObjects)
-                } else {
-                    TimelineView(.animation(minimumInterval: 1.0 / 12.0, paused: false)) { timeline in
-                        RoomCanvas(sceneName: sceneName, sceneID: sceneID, phase: resolvedPhase,
-                                   time: timeline.date.timeIntervalSinceReferenceDate, dimmed: dimmed,
-                                   plantStage: plantStage, bookCount: bookCount, doodle: doodle, placedObjects: placedObjects)
-                    }
-                }
-            }
+            SpriteFirstRoomSurface(
+                sceneName: sceneName,
+                sceneID: sceneID,
+                phase: resolvedPhase,
+                dimmed: dimmed,
+                plantStage: plantStage,
+                bookCount: bookCount,
+                doodle: doodle,
+                placedObjects: placedObjects,
+                reduceMotion: reduceMotion
+            )
             .aspectRatio(160.0 / 132.0, contentMode: .fit)
-            .drawingGroup(opaque: false, colorMode: .extendedLinear)
             .offset(y: reduceMotion ? 0 : (isFloating ? -3 : 2))
 
             GeometryReader { proxy in
@@ -70,6 +74,13 @@ struct RoomHeroView: View {
                     .offset(y: reduceMotion ? 0 : (isFloating ? -3 : 2))
             }
             .accessibilityHidden(true)
+
+            if let onRoomTarget {
+                RoomHotspotOverlay(
+                    showsLabels: labelsAreVisible && showsRoomLabels,
+                    action: onRoomTarget
+                )
+            }
 
             if showsControls {
                 VStack {
@@ -94,10 +105,17 @@ struct RoomHeroView: View {
             }
         }
         .onAppear {
+            labelsAreVisible = showsRoomLabels
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 4.2).repeatForever(autoreverses: true)) {
                 isFloating = true
             }
+        }
+        .task(id: showsRoomLabels) {
+            guard showsRoomLabels, !reduceMotion else { return }
+            try? await Task.sleep(nanoseconds: 3_200_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: 0.8)) { labelsAreVisible = false }
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(sceneName) room. A warm, original isometric study room with a desk, window, books, and growing plant.")
@@ -133,6 +151,163 @@ private struct RoomMotes: View {
                     .frame(width: point.2, height: point.2)
                     .position(x: proxy.size.width * point.0, y: proxy.size.height * point.1)
             }
+        }
+    }
+}
+
+/// The five reliable, named touch targets in the starter room. Their actions
+/// are routed by FocusHomeView, not hidden in the illustration itself.
+enum RoomHotspot: String, CaseIterable, Identifiable {
+    case desk, shelf, calendar, plant, window
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .desk: return "Desk"
+        case .shelf: return "Shelf"
+        case .calendar: return "Calendar"
+        case .plant: return "Plant"
+        case .window: return "Window"
+        }
+    }
+
+    var hint: String {
+        switch self {
+        case .desk: return "Opens today’s tasks."
+        case .shelf: return "Opens finite break activities."
+        case .calendar: return "Opens Today."
+        case .plant: return "Opens your focus statistics."
+        case .window: return "Opens rooms and Scenes."
+        }
+    }
+
+    var normalizedPosition: CGPoint {
+        switch self {
+        case .desk: return CGPoint(x: 0.64, y: 0.62)
+        case .shelf: return CGPoint(x: 0.83, y: 0.22)
+        case .calendar: return CGPoint(x: 0.43, y: 0.22)
+        case .plant: return CGPoint(x: 0.90, y: 0.44)
+        case .window: return CGPoint(x: 0.23, y: 0.30)
+        }
+    }
+}
+
+private struct RoomHotspotOverlay: View {
+    let showsLabels: Bool
+    let action: (RoomHotspot) -> Void
+
+    var body: some View {
+        GeometryReader { proxy in
+            ForEach(RoomHotspot.allCases) { hotspot in
+                Button { action(hotspot) } label: {
+                    Group {
+                        if showsLabels {
+                            Text(hotspot.title)
+                                .font(StillTypography.caption.weight(.semibold))
+                                .foregroundStyle(StillTheme.textPrimary)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 5)
+                                .background(.ultraThinMaterial, in: Capsule())
+                                .overlay(Capsule().strokeBorder(Color.white.opacity(0.64), lineWidth: 1))
+                        } else {
+                            Color.clear
+                        }
+                    }
+                    .frame(width: max(44, proxy.size.width * 0.18), height: max(44, proxy.size.height * 0.18))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(hotspot.title)
+                .accessibilityHint(hotspot.hint)
+                .position(x: proxy.size.width * hotspot.normalizedPosition.x,
+                          y: proxy.size.height * hotspot.normalizedPosition.y)
+            }
+        }
+    }
+}
+
+/// Prefers the authored PNG package on an integer-friendly pixel grid. The
+/// existing code renderer is retained as a complete fallback, so missing assets
+/// never leave an empty room in development, previews, or future scene data.
+private struct SpriteFirstRoomSurface: View {
+    let sceneName: String
+    let sceneID: SceneID
+    let phase: StillDayPhase
+    let dimmed: Bool
+    let plantStage: PlantGrowthStage
+    let bookCount: Int
+    let doodle: PixelDoodle?
+    let placedObjects: [RoomPlacement]
+    let reduceMotion: Bool
+
+    private var spriteName: String? { SceneCatalog.scene(sceneID).spriteAssetName }
+
+    private var hasSprite: Bool {
+        guard let spriteName else { return false }
+        return UIImage(named: spriteName) != nil
+    }
+
+    var body: some View {
+        Group {
+            if let spriteName, hasSprite {
+                ZStack {
+                    Image(spriteName)
+                        .resizable()
+                        .interpolation(.none)
+                        .scaledToFit()
+                        .opacity(dimmed ? 0.66 : 1)
+                    SpriteRoomObjectOverlay(placements: placedObjects)
+                }
+            } else if reduceMotion {
+                RoomCanvas(sceneName: sceneName, sceneID: sceneID, phase: phase, time: 0, dimmed: dimmed,
+                           plantStage: plantStage, bookCount: bookCount, doodle: doodle, placedObjects: placedObjects)
+            } else {
+                TimelineView(.animation(minimumInterval: 1.0 / 12.0, paused: false)) { timeline in
+                    RoomCanvas(sceneName: sceneName, sceneID: sceneID, phase: phase,
+                               time: timeline.date.timeIntervalSinceReferenceDate, dimmed: dimmed,
+                               plantStage: plantStage, bookCount: bookCount, doodle: doodle, placedObjects: placedObjects)
+                }
+            }
+        }
+    }
+}
+
+private struct SpriteRoomObjectOverlay: View {
+    let placements: [RoomPlacement]
+
+    var body: some View {
+        GeometryReader { proxy in
+            ForEach(placements) { placement in
+                if let object = RoomObjectCatalog.object(placement.objectID),
+                   let assetName = object.spriteAssetName,
+                   UIImage(named: assetName) != nil {
+                    Image(assetName)
+                        .resizable()
+                        .interpolation(.none)
+                        .frame(width: size(for: object.slot, in: proxy.size), height: size(for: object.slot, in: proxy.size))
+                        .position(position(for: object.slot, in: proxy.size))
+                        .accessibilityHidden(true)
+                }
+            }
+        }
+    }
+
+    private func size(for slot: RoomSlot, in size: CGSize) -> CGFloat {
+        switch slot {
+        case .wall: return size.width * 0.18
+        case .shelf, .windowsill: return size.width * 0.16
+        case .desk, .floorCorner: return size.width * 0.20
+        }
+    }
+
+    private func position(for slot: RoomSlot, in size: CGSize) -> CGPoint {
+        switch slot {
+        case .shelf: return CGPoint(x: size.width * 0.82, y: size.height * 0.24)
+        case .floorCorner: return CGPoint(x: size.width * 0.23, y: size.height * 0.78)
+        case .wall: return CGPoint(x: size.width * 0.50, y: size.height * 0.30)
+        case .windowsill: return CGPoint(x: size.width * 0.26, y: size.height * 0.45)
+        case .desk: return CGPoint(x: size.width * 0.65, y: size.height * 0.58)
         }
     }
 }

@@ -2227,15 +2227,24 @@ final class PixelDoodleTests: XCTestCase {
 final class RoomCollectionTests: XCTestCase {
     private let evaluator = RoomUnlockEvaluator()
 
-    func testCatalogHasTwentyOriginalReplaceableObjectsAndEveryFixedSlot() {
+    func testCatalogHasTwentyOriginalSpriteBackedObjectsAndEveryFixedSlot() {
         XCTAssertEqual(RoomObjectCatalog.all.count, 20)
         XCTAssertEqual(Set(RoomObjectCatalog.all.map(\.id)).count, 20)
         XCTAssertEqual(Set(RoomObjectCatalog.all.map(\.sortOrder)), Set(0..<20))
         XCTAssertEqual(Set(RoomObjectCatalog.all.map(\.slot)), Set(RoomSlot.allCases))
         XCTAssertTrue(RoomObjectCatalog.all.allSatisfy { !$0.name.isEmpty && !$0.unlockRule.plainLanguage.isEmpty })
-        XCTAssertTrue(RoomObjectCatalog.all.allSatisfy { $0.spriteAssetName == nil }, "V1 objects are original code-drawn art with a sprite replacement seam.")
+        XCTAssertTrue(RoomObjectCatalog.all.allSatisfy { $0.spriteAssetName?.hasPrefix("StillObject") == true },
+                      "Every collectible has an explicit original sprite asset key.")
+        XCTAssertEqual(Set(RoomObjectCatalog.all.compactMap(\.spriteAssetName)).count, 20,
+                       "Collectibles must not silently share a placeholder sprite.")
         XCTAssertEqual(Set(RoomObjectCatalog.all.map(\.unlockRule).map(ruleKind)),
                        ["sessions", "days", "reads", "doodles", "completedActivities", "triedActivities", "category", "allActivities", "minutes"])
+    }
+
+    func testEveryCatalogSceneHasAnOriginalSpriteAssetKey() {
+        XCTAssertEqual(SceneCatalog.completeCatalog.count, 7)
+        XCTAssertTrue(SceneCatalog.completeCatalog.allSatisfy { $0.spriteAssetName?.hasPrefix("StillRoom") == true })
+        XCTAssertEqual(Set(SceneCatalog.completeCatalog.compactMap(\.spriteAssetName)).count, SceneCatalog.completeCatalog.count)
     }
 
     func testEveryCatalogUnlockRuleAtItsBoundary() {

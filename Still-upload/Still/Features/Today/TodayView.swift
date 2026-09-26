@@ -153,8 +153,8 @@ struct TodayView: View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
             SectionHeader(title: "Your day", detail: "A little context, not a score.")
             HStack(spacing: StillTheme.Spacing.s) {
-                contextMetric("Focus today", DurationFormatter.short(appState.stats.todayFocusDuration))
-                contextMetric("Usual", DurationFormatter.short(appState.stats.usualDailyFocusDuration))
+                contextMetric("Focus today", DurationFormatter.short(appState.stats.todayFocus))
+                contextMetric("Usual", usualFocusLabel)
                 contextMetric("Open", "\(appState.todaysTasks.filter { !$0.isCompleted }.count) task\(appState.todaysTasks.filter { !$0.isCompleted }.count == 1 ? "" : "s")")
             }
             Button("See your day") { appState.router.go(to: .dayTimeline) }
@@ -216,6 +216,11 @@ struct TodayView: View {
     private func durationText(_ duration: TimeInterval?) -> String {
         guard let duration else { return "25 min" }
         return "\(max(1, Int((duration / 60).rounded()))) min"
+    }
+
+    private var usualFocusLabel: String {
+        guard let usual = appState.stats.usualDailyFocus, usual > 0 else { return "Learning" }
+        return DurationFormatter.short(usual)
     }
 
     private func contextMetric(_ label: String, _ value: String) -> some View {

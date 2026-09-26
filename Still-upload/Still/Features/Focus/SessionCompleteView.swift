@@ -57,7 +57,7 @@ struct SessionCompleteView: View {
 
     private func completionHero(session: FocusSession?) -> some View {
         let scene = appState.scene(session?.sceneID ?? appState.currentPreset.sceneID)
-        ZStack(alignment: .bottomLeading) {
+        return ZStack(alignment: .bottomLeading) {
             RoomHeroView(
                 sceneName: scene.name,
                 sceneID: scene.id,

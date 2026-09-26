@@ -92,6 +92,10 @@ final class PreferencesController {
         update { $0.catCoat = coat }
     }
 
+    func setCatName(_ raw: String?) {
+        update { $0.catName = CatName.normalized(raw) }
+    }
+
     func saveSoundscape(_ soundscape: SavedSoundscape) {
         update { prefs in
             let normalized = SavedSoundscape(id: soundscape.id, name: soundscape.name, mix: soundscape.mix.normalized())

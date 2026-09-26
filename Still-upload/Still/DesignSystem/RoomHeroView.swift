@@ -8,6 +8,14 @@ struct RoomHeroView: View {
     let sceneName: String
     var sceneID: SceneID = .rainyBedroom
     var catCoat: CatCoat = .ginger
+    var catName: String? = nil
+    var catState: CatRoomState = .idle
+    /// Used by the DEBUG screenshot route only; normal reactions start from a
+    /// direct cat tap and clear automatically.
+    var initialCatReaction: CatReaction = .none
+    /// A parent control (such as Today’s room link) can keep the entire room a
+    /// single activation target without nesting a Button around the cat.
+    var allowsCatInteraction = true
     var phase: StillDayPhase? = nil
     var dimmed = false
     var plantStage: PlantGrowthStage = .full
@@ -25,6 +33,8 @@ struct RoomHeroView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isFloating = false
+    @State private var catTapTracker = CatTapTracker()
+    @State private var catReaction: CatReaction = .none
 
     private var resolvedPhase: StillDayPhase {
         phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
@@ -67,14 +77,24 @@ struct RoomHeroView: View {
 
             GeometryReader { proxy in
                 let side = max(20, min(proxy.size.width * 0.20, proxy.size.height * 0.28))
-                RoomCatSprite(coat: catCoat, reduceMotion: reduceMotion)
-                    .frame(width: side, height: side)
-                    // A resting cat sits on the starter bed, fully above the
-                    // overlapping action card rather than being a hidden prop.
-                    .position(x: proxy.size.width * 0.33, y: proxy.size.height * 0.62)
+                if allowsCatInteraction {
+                    Button(action: reactToCat) {
+                        catSprite(side: side)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .frame(width: max(44, side), height: max(44, side))
+                    .position(catPosition(in: proxy.size))
                     .offset(y: reduceMotion ? 0 : (isFloating ? -3 : 2))
+                    .accessibilityLabel(catAccessibilityLabel)
+                    .accessibilityHint("Double tap for a small reaction.")
+                } else {
+                    catSprite(side: side)
+                        .position(catPosition(in: proxy.size))
+                        .offset(y: reduceMotion ? 0 : (isFloating ? -3 : 2))
+                        .accessibilityHidden(true)
+                }
             }
-            .accessibilityHidden(true)
 
             if let onRoomTarget {
                 RoomHotspotOverlay(
@@ -106,13 +126,55 @@ struct RoomHeroView: View {
             }
         }
         .onAppear {
+            if initialCatReaction != .none {
+                catReaction = initialCatReaction
+            }
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 4.2).repeatForever(autoreverses: true)) {
                 isFloating = true
             }
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityElement(children: .contain)
         .accessibilityLabel("\(sceneName) room. A warm, original isometric study room with a desk, window, books, and growing plant.")
+    }
+
+    private var catAccessibilityLabel: String {
+        let name = CatName.normalized(catName)
+        let companion = name.map { "\($0), your \(catCoat.title.lowercased()) cat" }
+            ?? "Your \(catCoat.title.lowercased()) cat"
+        return "\(companion). \(catState.accessibilityDescription)."
+    }
+
+    private func catSprite(side: CGFloat) -> some View {
+        CatCompanionSprite(
+            coat: catCoat,
+            state: catState,
+            reaction: catReaction,
+            reduceMotion: reduceMotion
+        )
+        .frame(width: side, height: side)
+    }
+
+    private func catPosition(in size: CGSize) -> CGPoint {
+        switch catState {
+        case .focus, .sleeping, .complete:
+            return CGPoint(x: size.width * 0.53, y: size.height * 0.68)
+        case .breakTime:
+            return CGPoint(x: size.width * 0.77, y: size.height * 0.47)
+        case .idle, .morning:
+            return CGPoint(x: size.width * 0.33, y: size.height * 0.62)
+        }
+    }
+
+    private func reactToCat() {
+        let reaction = catTapTracker.registerTap(at: .now)
+        catReaction = reaction
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        guard !reduceMotion else { return }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(reaction == .rare ? 1.6 : 1.2))
+            catReaction = .none
+        }
     }
 
     @ViewBuilder
@@ -332,28 +394,33 @@ private struct SpriteRoomObjectOverlay: View {
     }
 }
 
-/// Uses Still's original six-frame sprite sheet. The clipping geometry chooses
+/// Uses Still's original six-pose sprite sheet. The clipping geometry chooses
 /// one of the 3×2 cells without smoothing its deliberately crisp pixels.
-private struct RoomCatSprite: View {
+/// State maps to pose sequences rather than an opaque animation, which keeps
+/// Reduce Motion and VoiceOver behavior predictable.
+private struct CatCompanionSprite: View {
     let coat: CatCoat
+    let state: CatRoomState
+    let reaction: CatReaction
     let reduceMotion: Bool
 
     var body: some View {
+        let plan = CatCompanion.animation(for: state, reaction: reaction)
         Group {
             if reduceMotion {
-                sprite(frame: 0)
+                sprite(pose: plan.poses[0])
             } else {
-                TimelineView(.periodic(from: .now, by: 2.4)) { timeline in
-                    let frame = Int(timeline.date.timeIntervalSinceReferenceDate / 2.4) % 6
-                    sprite(frame: frame)
+                TimelineView(.periodic(from: .now, by: plan.secondsPerPose)) { timeline in
+                    let step = Int(timeline.date.timeIntervalSinceReferenceDate / plan.secondsPerPose)
+                    sprite(pose: plan.pose(at: step))
                 }
             }
         }
-        .accessibilityLabel("A small \(coat.title.lowercased()) cat resting in the room")
     }
 
-    private func sprite(frame: Int) -> some View {
+    private func sprite(pose: CatPose) -> some View {
         GeometryReader { proxy in
+            let frame = pose.rawValue
             let column = frame % 3
             let row = frame / 3
             Image(coat.spriteAssetName)

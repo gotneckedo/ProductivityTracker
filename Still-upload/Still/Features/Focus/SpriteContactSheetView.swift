@@ -22,9 +22,10 @@ struct SpriteContactSheetView: View {
                             .resizable()
                             .interpolation(.none)
                             .scaledToFit()
-                            .accessibilityLabel("Still original pixel sprite contact sheet. It shows eight room scenes, twenty collectible objects, ten break icons, a Focus Card, bird, and three empty state illustrations.")
+                            .accessibilityLabel("Still original pixel sprite contact sheet. It shows eight room scenes, twenty collectible objects, ten break icons, a Focus Card, bird, three empty state illustrations, and four cat coats with six poses each.")
 
-                        QuietNote(text: "All assets in this sheet are generated locally from Still’s checked-in pixel geometry. No reference-app art is included.", symbol: "checkmark.seal")
+                        QuietNote(text: "Cat poses: sit, idle, walk, sleep, stretch, and look up. Every pose has four original coats.", symbol: "pawprint")
+                        QuietNote(text: "Every asset in this sheet has a checked-in provenance record. No reference-app art is included.", symbol: "checkmark.seal")
                         Color.clear.frame(height: 1).id("sprite-sheet-bottom")
                     }
                     .padding(.horizontal, StillTheme.Spacing.screen)

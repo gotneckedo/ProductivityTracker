@@ -157,9 +157,12 @@ struct UserPreferences: Codable, Equatable {
     var savedSoundscapes: [SavedSoundscape] = []
     /// Cosmetic room-company preference. Missing legacy values use Ginger.
     var catCoat: CatCoat = .ginger
+    /// Optional, device-local companion name. It appears only in Cat settings
+    /// and in a rare completed-session acknowledgement.
+    var catName: String? = nil
     var schemaVersion: Int = UserPreferences.currentSchemaVersion
 
-    static let currentSchemaVersion = 4
+    static let currentSchemaVersion = 5
 
     init() {}
 
@@ -167,7 +170,7 @@ struct UserPreferences: Codable, Equatable {
         case hasCompletedOnboarding, onboardingGoal, breakAppeal, appAccentPalette, defaultPresetID, selectedTaskID
         case animationIntensity, hasRequestedNotificationPermission, notificationPermissionGranted
         case pendingCompletionSessionID, acknowledgedUnlockedSceneCount, morningStart, wakeUpStopMethod
-        case showsCalendarEvents, showsGoogleCalendarEvents, savedSoundscapes, catCoat, schemaVersion
+        case showsCalendarEvents, showsGoogleCalendarEvents, savedSoundscapes, catCoat, catName, schemaVersion
     }
 
     init(from decoder: Decoder) throws {
@@ -190,6 +193,7 @@ struct UserPreferences: Codable, Equatable {
         showsGoogleCalendarEvents = (try? c.decodeIfPresent(Bool.self, forKey: .showsGoogleCalendarEvents)) ?? false
         savedSoundscapes = (try? c.decodeIfPresent([SavedSoundscape].self, forKey: .savedSoundscapes)) ?? []
         catCoat = (try? c.decodeIfPresent(CatCoat.self, forKey: .catCoat)) ?? .ginger
+        catName = CatName.normalized(try? c.decodeIfPresent(String.self, forKey: .catName))
         schemaVersion = try c.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
         self = migrated()
     }
@@ -210,6 +214,10 @@ struct UserPreferences: Codable, Equatable {
         if result.schemaVersion < 4 {
             result.catCoat = .ginger
         }
+        if result.schemaVersion < 5 {
+            result.catName = CatName.normalized(result.catName)
+        }
+        result.catName = CatName.normalized(result.catName)
         result.schemaVersion = Self.currentSchemaVersion
         return result
     }

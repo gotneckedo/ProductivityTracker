@@ -196,7 +196,11 @@ struct TodayView: View {
     private var roomMoment: some View {
         Button { appState.router.go(to: .sceneCollection) } label: {
             RoomHeroView(sceneName: appState.currentPreset.sceneID.rawValue, sceneID: appState.currentPreset.sceneID,
-                         catCoat: appState.preferences.catCoat, plantStage: appState.plantStage, bookCount: appState.books.count)
+                         catCoat: appState.preferences.catCoat,
+                         catName: appState.catName,
+                         catState: CatCompanion.state(hour: Calendar.autoupdatingCurrent.component(.hour, from: appState.container.clock.now)),
+                         allowsCatInteraction: false,
+                         plantStage: appState.plantStage, bookCount: appState.books.count)
                 .frame(maxWidth: .infinity)
                 .aspectRatio(1.65, contentMode: .fit)
                 .accessibilityLabel("Your focus room. Opens rooms.")

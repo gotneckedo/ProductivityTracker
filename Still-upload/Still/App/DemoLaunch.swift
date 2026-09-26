@@ -6,7 +6,7 @@ import Foundation
 ///
 ///   xcrun simctl launch booted com.cocomedia.still -still-demo home
 ///
-/// Screens: onboarding, home, focus-room, sprite-contact-sheet, calm, active, complete, break, sudoku, wordsearch,
+/// Screens: onboarding, home, focus-room, sprite-contact-sheet, cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, complete, break, sudoku, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-seasonal, card,
 /// journal, presets, tasks, timeline, doodle, gallery, morning,
 /// calendar-settings, get-card.
@@ -50,6 +50,28 @@ enum DemoLaunch {
             let state = PreviewSupport.appState(populated: true, completedSessions: 1)
             state.router.go(to: .focusHome)
             return state
+        case "cat-morning":
+            return focusRoomState(hour: 9)
+        case "cat-reaction":
+            return focusRoomState(hour: 14)
+        case "cat-focus":
+            return PreviewSupport.appState(
+                populated: true,
+                activeSession: true,
+                activeSessionElapsed: 4 * 60,
+                clockStart: screenshotDate(hour: 14, minute: 0)
+            )
+        case "cat-asleep":
+            return PreviewSupport.appState(
+                populated: true,
+                activeSession: true,
+                activeSessionElapsed: 12 * 60,
+                clockStart: screenshotDate(hour: 14, minute: 0)
+            )
+        case "cat-complete":
+            let completed = PreviewSupport.completedSession()
+            completed.state.setCatName("Mochi")
+            return completed.state
         case "sprite-contact-sheet":
             return routed(.spriteContactSheet)
         case "calm":
@@ -123,12 +145,27 @@ enum DemoLaunch {
         return state
     }
 
-    private static var screenshotActiveSessionStart: Date {
+    private static func focusRoomState(hour: Int) -> AppState {
+        let state = PreviewSupport.appState(
+            populated: true,
+            completedSessions: 1,
+            clockStart: screenshotDate(hour: hour, minute: 0)
+        )
+        state.setCatName("Mochi")
+        state.router.go(to: .focusHome)
+        return state
+    }
+
+    private static func screenshotDate(hour: Int, minute: Int) -> Date {
         var components = Calendar.autoupdatingCurrent.dateComponents([.year, .month, .day], from: .now)
-        components.hour = 9
-        components.minute = 34
+        components.hour = hour
+        components.minute = minute
         components.second = 0
         return Calendar.autoupdatingCurrent.date(from: components) ?? .now
+    }
+
+    private static var screenshotActiveSessionStart: Date {
+        screenshotDate(hour: 9, minute: 34)
     }
 }
 #endif

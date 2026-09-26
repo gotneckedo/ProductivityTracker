@@ -180,6 +180,15 @@ jobs:
             n=$((n + 1))
           done
 
+          # Phase 2 cat checkpoint: the same local companion must visibly vary
+          # by morning, focus, long-focus sleep, completion, and a direct-tap
+          # reaction without introducing a care or streak mechanic.
+          xcrun simctl ui "$UDID" appearance light
+          for screen in cat-morning cat-focus cat-asleep cat-complete cat-reaction; do
+            shoot "$screen" "$(printf '%02d' $n)-$screen"
+            n=$((n + 1))
+          done
+
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4

@@ -17,6 +17,8 @@ struct RoomCollectionView: View {
                         sceneName: scene.name,
                         sceneID: scene.id,
                         catCoat: appState.preferences.catCoat,
+                        catName: appState.catName,
+                        catState: .idle,
                         plantStage: appState.plantStage,
                         bookCount: 2 + appState.books.count,
                         doodle: appState.doodles.max { $0.updatedAt < $1.updatedAt }?.doodle,

@@ -2,9 +2,24 @@
 
 **Branch:** `redesign`  
 **Pull request:** [#1 — Redesign Still with a room-first focus flow](https://github.com/gotneckedo/ProductivityTracker/pull/1)  
-**Verified UI head:** `ce6fd8a`
-**Local validation:** `swift test` — **214 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).
-**GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 35997812807](https://github.com/gotneckedo/ProductivityTracker/actions/runs/35997812807) completed successfully on `ce6fd8a`; its `still-screenshots` artifact contains and was visually reviewed across 45 simulator captures.
+**Latest verified UI head:** `8dd3f9d`
+**Latest local validation:** `swift test` — **217 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).
+**Latest GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 36242555096](https://github.com/gotneckedo/ProductivityTracker/actions/runs/36242555096) completed successfully on `8dd3f9d`; its `still-screenshots` artifact contains and was visually reviewed across 48 simulator captures.
+
+## Phase 2 — verified sprite-first room checkpoint
+
+This checkpoint is limited to Phase 2’s original pixel package, sprite-first room seam, accessible object targets, and the evidence route. It does **not** claim the later Phase 2 cat behavior, full Today modes, alarm/wake flow, daily limits, or complete Still+ gating; those remain in progress.
+
+The accepted artifact is `still-screenshots` from [run 36242555096](https://github.com/gotneckedo/ProductivityTracker/actions/runs/36242555096) at `8dd3f9d` (**48 PNGs**). The immediately preceding room screenshot was rejected because the Bookshelf target label wrapped. Commit `8dd3f9d` makes all first-three-days labels readable on one line and is the only artifact cited below.
+
+| Requirement | Implementation | Proving capture(s) | Review result |
+|---|---|---|---|
+| **Original 32-color pixel package** | `Tools/generate_still_sprites.py` deterministically creates eight original room bases, starter furniture, 20 collectible object sprites, break/empty-state/card assets, bird, and four six-frame cat coats. The asset catalog retains transparent PNG backgrounds and the policy records provenance. | `04-sprite-contact-sheet.png`, `29-sprite-contact-sheet-bottom.png` | The first capture shows the eight room bases and object package; the lower capture shows the remaining UI assets plus all four cat coats and their six-frame sets. The visible provenance statement confirms assets are generated locally from Still’s checked-in pixel geometry. |
+| **Sprite-first Focus room** | `SceneDefinition.spriteAssetName`, `RoomObject.spriteAssetName`, and `SpriteFirstRoomSurface` select authored PNG rooms and object assets with pixel interpolation, retaining a code-drawn fallback for missing assets. Starter furniture is visible from the first room. | `03-focus-room.png` | Rainy Bedroom renders as a crisp pixel room with starter bed, desk, lamp, shelf, plant, window, and cat—without an empty-room reward state. |
+| **Accessible first-three-days object targets** | Desk, Bookshelf, Calendar, Plant, and Window have 44pt targets, VoiceOver labels/hints, app routes, and first-three-days visual labels. `8dd3f9d` constrains the labels to a one-line readable treatment while retaining full accessibility names. | `03-focus-room.png` | All five labels are legible and uncut: **Desk**, **Bookshelf**, **Calendar**, **Plant**, and **Window**. The Bookshelf label no longer wraps into an unreadable fragment. |
+| **Core room collection and seasonal seam** | The scene catalog binds the original art to Rainy Bedroom, Library Light, Train Window, Night City, and seasonal rooms; free core rooms remain distinct while seasonal Still+ cosmetics use the honest locked state. | `34-scenes-all.png`, `35-scenes-seasonal.png` | Four core room thumbnails are fully inside the two-column layout with visibly distinct window/light variants. Seasonal cards are visibly locked and described as Still+ cosmetics rather than session-earned digital access. |
+
+**Known Phase 3 difference:** the accepted Phase 2 Focus evidence still uses the existing action card beneath the room. Phase 3 explicitly replaces that composition with a full-bleed room and floating controls; this Phase 2 proof makes no Phase 3 visual claim.
 
 ## Visual correction pass
 

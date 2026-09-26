@@ -654,15 +654,69 @@ private struct AppearanceSection: View {
                 Text("Room cat")
                     .font(StillTypography.bodyEmphasis)
                     .foregroundStyle(StillTheme.textPrimary)
-                SelectionPill(
-                    options: CatCoat.allCases,
-                    selection: Binding(get: { appState.preferences.catCoat }, set: { appState.setCatCoat($0) }),
-                    title: { $0.title }
-                )
-                Text("Company only — no needs, scores, or streaks.")
+                CatAppearancePicker()
+                Text("Company only — no needs, scores, or streaks. Ginger is free; other coats are Still+.")
                     .font(StillTypography.footnote)
                     .foregroundStyle(StillTheme.textSecondary)
             }
+        }
+    }
+}
+
+private struct CatAppearancePicker: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            HStack(spacing: StillTheme.Spacing.xxs) {
+                ForEach(CatCoat.allCases, id: \.self) { coat in
+                    let isSelected = appState.preferences.catCoat == coat
+                    let isAvailable = appState.canUseCatCoat(coat)
+                    Button {
+                        if isAvailable {
+                            _ = appState.setCatCoat(coat)
+                        } else {
+                            appState.router.go(to: .stillPlus)
+                        }
+                    } label: {
+                        VStack(spacing: 2) {
+                            Text(coat.title)
+                                .lineLimit(1)
+                            if !isAvailable {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                        .font(StillTypography.caption.weight(isSelected ? .semibold : .regular))
+                        .foregroundStyle(isSelected ? StillTheme.textPrimary : StillTheme.textSecondary)
+                        .frame(maxWidth: .infinity, minHeight: StillTheme.minimumTapSize)
+                        .background(isSelected ? StillTheme.accentSoft : StillTheme.surfaceSunken.opacity(0.72), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .strokeBorder(isSelected ? StillTheme.accent.opacity(0.72) : StillTheme.border, lineWidth: StillTheme.Stroke.hairline))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(coat.title) cat coat")
+                    .accessibilityValue(isAvailable ? (isSelected ? "Selected" : "Available") : "Still+ required")
+                    .accessibilityHint(isAvailable ? "Sets the cat's coat." : "Opens Still+ details.")
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
+            }
+            TextField(
+                "Cat name (optional)",
+                text: Binding(
+                    get: { appState.catName ?? "" },
+                    set: { appState.setCatName($0) }
+                )
+            )
+            .textInputAutocapitalization(.words)
+            .autocorrectionDisabled()
+            .font(StillTypography.callout)
+            .foregroundStyle(StillTheme.textPrimary)
+            .padding(.horizontal, StillTheme.Spacing.s)
+            .frame(minHeight: StillTheme.minimumTapSize)
+            .background(StillTheme.surfaceSunken, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .accessibilityLabel("Cat name, optional")
         }
     }
 }

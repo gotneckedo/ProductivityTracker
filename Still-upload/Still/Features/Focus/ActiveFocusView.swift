@@ -93,6 +93,13 @@ struct ActiveFocusView: View {
                         sceneName: scene.name,
                         sceneID: scene.id,
                         catCoat: appState.preferences.catCoat,
+                        catName: appState.catName,
+                        catState: CatCompanion.state(
+                            isFocusRunning: snapshot.isRunning && !snapshot.phaseKind.isBreak,
+                            isBreakPhase: snapshot.phaseKind.isBreak,
+                            focusedSeconds: snapshot.totalFocusElapsed,
+                            hour: Calendar.autoupdatingCurrent.component(.hour, from: appState.container.clock.now)
+                        ),
                         phase: .focus,
                         dimmed: true,
                         plantStage: appState.plantStage,

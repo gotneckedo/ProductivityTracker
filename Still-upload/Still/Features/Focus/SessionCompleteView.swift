@@ -56,12 +56,30 @@ struct SessionCompleteView: View {
     }
 
     private func completionHero(session: FocusSession?) -> some View {
+        let scene = appState.scene(session?.sceneID ?? appState.currentPreset.sceneID)
         ZStack(alignment: .bottomLeading) {
-            Circle()
-                .fill(RadialGradient(colors: [StillDayPhase.dusk.roomHalo, .clear], center: .center, startRadius: 0, endRadius: 170))
-                .blur(radius: 18)
-                .frame(width: 250, height: 170)
-                .offset(x: 40, y: -8)
+            RoomHeroView(
+                sceneName: scene.name,
+                sceneID: scene.id,
+                catCoat: appState.preferences.catCoat,
+                catName: appState.catName,
+                catState: .complete,
+                phase: .dusk,
+                plantStage: appState.plantStage,
+                bookCount: 2 + appState.books.count,
+                doodle: appState.doodles.max { $0.updatedAt < $1.updatedAt }?.doodle,
+                placedObjects: appState.placedRoomObjects(in: scene.id),
+                showsControls: false
+            )
+            .aspectRatio(160.0 / 132.0, contentMode: .fill)
+            .clipped()
+            .overlay(alignment: .bottom) {
+                LinearGradient(
+                    colors: [.clear, Color(hex: 0x9C92CC).opacity(0.92)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
             VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
                 Text(Copy.Completion.title)
                     .font(StillTypography.hero)
@@ -73,9 +91,17 @@ struct SessionCompleteView: View {
                 Text(usualLine)
                     .font(StillTypography.footnote)
                     .foregroundStyle(StillTheme.textTertiary)
+                if let catLine = catCompletionLine(session) {
+                    Text(catLine)
+                        .font(StillTypography.footnote.weight(.semibold))
+                        .foregroundStyle(StillDayPhase.dusk.accent)
+                }
             }
             .padding(.top, StillTheme.Spacing.xxl)
+            .padding(StillTheme.Spacing.m)
         }
+        .frame(height: 245)
+        .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous))
         .stillEntrance()
     }
 
@@ -186,6 +212,16 @@ struct SessionCompleteView: View {
         let minutes = Int((seconds / 60).rounded())
         if minutes >= 60 { return DurationFormatter.short(seconds) }
         return minutes == 1 ? "1 minute" : "\(minutes) minutes"
+    }
+
+    /// A small, deterministic discovery rather than an every-session mascot
+    /// narration. It is intentionally the only non-settings place a cat name
+    /// appears.
+    private func catCompletionLine(_ session: FocusSession?) -> String? {
+        guard let name = appState.catName, let session else { return nil }
+        let checksum = session.id.uuidString.utf8.reduce(0) { $0 + Int($1) }
+        guard checksum.isMultiple(of: 5) else { return nil }
+        return "\(name) stayed with you the whole time."
     }
 }
 

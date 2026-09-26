@@ -9,6 +9,7 @@ enum PreviewSupport {
         completedSessions: Int = 9,
         renderMode: RenderMode? = nil,
         activeSession: Bool = false,
+        activeSessionElapsed: TimeInterval = 7 * 60,
         clockStart: Date? = nil
     ) -> AppState {
         let clock = ManualClock(clockStart ?? Date())
@@ -36,7 +37,7 @@ enum PreviewSupport {
             container.preferences.save(preset)
         }
         if activeSession {
-            PreviewFixtures.startSession(container)
+            PreviewFixtures.startSession(container, elapsed: activeSessionElapsed)
             if let task = container.tasks.allTasks().last {
                 container.preferences.update { $0.selectedTaskID = task.id }
             }

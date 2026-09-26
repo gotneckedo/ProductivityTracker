@@ -106,8 +106,25 @@ extension AppState {
         reload()
     }
 
-    func setCatCoat(_ coat: CatCoat) {
+    var catName: String? { preferences.catName }
+
+    func canUseCatCoat(_ coat: CatCoat) -> Bool {
+        CatAppearanceAccess.canUse(coat, hasStillPlus: hasStillPlus)
+    }
+
+    @discardableResult
+    func setCatCoat(_ coat: CatCoat) -> Bool {
+        guard canUseCatCoat(coat) else {
+            notice = StillNotice(text: "Still+ adds the additional cat coats. Ginger stays free.")
+            return false
+        }
         container.preferences.setCatCoat(coat)
+        reload()
+        return true
+    }
+
+    func setCatName(_ raw: String) {
+        container.preferences.setCatName(raw)
         reload()
     }
 

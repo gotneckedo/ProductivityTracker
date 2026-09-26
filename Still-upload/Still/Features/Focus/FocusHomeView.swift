@@ -9,6 +9,7 @@ struct FocusHomeView: View {
     var body: some View {
         let preset = appState.currentPreset
         let scene = displayScene(for: preset)
+        let catState = CatCompanion.state(hour: Calendar.autoupdatingCurrent.component(.hour, from: appState.container.clock.now))
         StillScreen {
             ScrollViewReader { proxy in
                 ScrollView {
@@ -18,6 +19,9 @@ struct FocusHomeView: View {
                                 sceneName: scene.name,
                                 sceneID: scene.id,
                                 catCoat: appState.preferences.catCoat,
+                                catName: appState.catName,
+                                catState: catState,
+                                initialCatReaction: initialCatReaction,
                                 plantStage: appState.plantStage,
                                 bookCount: 2 + appState.books.count,
                                 doodle: appState.doodles.max { $0.updatedAt < $1.updatedAt }?.doodle,
@@ -173,6 +177,14 @@ struct FocusHomeView: View {
         Set(appState.sessions.filter { $0.state == .completed }.map {
             Calendar.autoupdatingCurrent.startOfDay(for: $0.endedAt ?? $0.startedAt)
         }).count
+    }
+
+    private var initialCatReaction: CatReaction {
+        #if DEBUG
+        return DemoLaunch.requestedScreen == "cat-reaction" ? .rare : .none
+        #else
+        return .none
+        #endif
     }
 
     private func open(_ hotspot: RoomHotspot) {

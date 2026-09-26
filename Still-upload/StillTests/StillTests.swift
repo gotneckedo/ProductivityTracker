@@ -1693,7 +1693,47 @@ final class CopyCountTests: XCTestCase {
         XCTAssertEqual(Set(CatCoat.allCases.map(\.spriteAssetName)).count, CatCoat.allCases.count)
         let legacy = try RecordCoding.decoder().decode(UserPreferences.self, from: Data(#"{"schemaVersion":3}"#.utf8))
         XCTAssertEqual(legacy.catCoat, .ginger)
+        XCTAssertNil(legacy.catName)
         XCTAssertEqual(legacy.schemaVersion, UserPreferences.currentSchemaVersion)
+    }
+}
+
+final class CatCompanionTests: XCTestCase {
+    func testStatePrioritizesCompletionThenBreakThenFocusSleep() {
+        XCTAssertEqual(CatCompanion.state(isCompletion: true, isFocusRunning: true, isBreakPhase: true, focusedSeconds: 900, hour: 9), .complete)
+        XCTAssertEqual(CatCompanion.state(isBreakPhase: true, hour: 14), .breakTime)
+        XCTAssertEqual(CatCompanion.state(isFocusRunning: true, focusedSeconds: 9 * 60 + 59, hour: 14), .focus)
+        XCTAssertEqual(CatCompanion.state(isFocusRunning: true, focusedSeconds: 10 * 60, hour: 14), .sleeping)
+        XCTAssertEqual(CatCompanion.state(hour: 9), .morning)
+        XCTAssertEqual(CatCompanion.state(hour: 14), .idle)
+    }
+
+    func testStateAnimationUsesOnlyOriginalSixSheetPoses() {
+        for state in CatRoomState.allCases {
+            let plan = CatCompanion.animation(for: state)
+            XCTAssertFalse(plan.poses.isEmpty)
+            XCTAssertTrue(plan.poses.allSatisfy { (0...5).contains($0.rawValue) })
+        }
+        XCTAssertEqual(CatCompanion.animation(for: .sleeping).poses, [.sleep])
+        XCTAssertEqual(CatCompanion.animation(for: .complete).poses.first, .lookUp)
+    }
+
+    func testTapTrackerReservesRareReactionForThirdTapWithinWindow() {
+        var tracker = CatTapTracker()
+        let now = referenceDate
+        XCTAssertEqual(tracker.registerTap(at: now), .ordinary)
+        XCTAssertEqual(tracker.registerTap(at: now.addingTimeInterval(1)), .ordinary)
+        XCTAssertEqual(tracker.registerTap(at: now.addingTimeInterval(2)), .rare)
+        XCTAssertEqual(tracker.registerTap(at: now.addingTimeInterval(6)), .ordinary)
+    }
+
+    func testNameNormalizationAndCoatEntitlementKeepStarterFree() {
+        XCTAssertNil(CatName.normalized("  \n  "))
+        XCTAssertEqual(CatName.normalized("  Mochi  "), "Mochi")
+        XCTAssertEqual(CatName.normalized(String(repeating: "x", count: 30))?.count, CatName.maximumLength)
+        XCTAssertTrue(CatAppearanceAccess.canUse(.ginger, hasStillPlus: false))
+        XCTAssertFalse(CatAppearanceAccess.canUse(.tabby, hasStillPlus: false))
+        XCTAssertTrue(CatAppearanceAccess.canUse(.midnight, hasStillPlus: true))
     }
 }
 

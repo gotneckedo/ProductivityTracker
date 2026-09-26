@@ -250,21 +250,8 @@ private struct HabitRow: View {
                     Text(day.habit.title)
                         .font(StillTypography.body)
                         .foregroundStyle(StillTheme.textPrimary)
-                    if let run = HabitController.runLine(day.currentRun) {
-                        Text(run)
-                            .font(StillTypography.caption)
-                            .foregroundStyle(StillTheme.textTertiary)
-                    }
                 }
                 Spacer(minLength: StillTheme.Spacing.xs)
-                HStack(spacing: 3) {
-                    ForEach(Array(day.lastSevenDays.enumerated()), id: \.offset) { entry in
-                        RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                            .fill(entry.element ? StillTheme.accent : StillTheme.border)
-                            .frame(width: 6, height: 6)
-                    }
-                }
-                .accessibilityHidden(true)
             }
             .padding(.horizontal, StillTheme.Spacing.xs)
             .padding(.vertical, StillTheme.Spacing.xxs)

@@ -28,8 +28,9 @@ struct FocusHomeView: View {
                                 placedObjects: appState.placedRoomObjects(in: scene.id),
                                 onPrevious: { cycleScene(from: preset, direction: -1) },
                                 onNext: { cycleScene(from: preset, direction: 1) },
-                                onRoomTarget: open,
-                                showsRoomLabels: focusDayCount < 3
+                                // Object targets remain 44pt and fully named for VoiceOver,
+                                // but no persistent labels sit on top of the authored room art.
+                                onRoomTarget: open
                             )
                             .aspectRatio(160.0 / 132.0, contentMode: .fit)
 
@@ -169,12 +170,6 @@ struct FocusHomeView: View {
         appState.savePreset(edited)
     }
 
-    private var focusDayCount: Int {
-        Set(appState.sessions.filter { $0.state == .completed }.map {
-            Calendar.autoupdatingCurrent.startOfDay(for: $0.endedAt ?? $0.startedAt)
-        }).count
-    }
-
     private var initialCatReaction: CatReaction {
         #if DEBUG
         return DemoLaunch.requestedScreen == "cat-reaction" ? .rare : .none
@@ -216,10 +211,12 @@ private struct HomeTaskLine: View {
                         .font(StillTypography.bodyEmphasis)
                         .foregroundStyle(StillTheme.textPrimary)
                         .lineLimit(2)
-                    Text(task?.subject.map { "\($0.name) · \(Copy.Home.taskReady)" } ?? Copy.Home.optionalTask)
-                        .font(StillTypography.footnote)
-                        .foregroundStyle(StillTheme.textSecondary)
-                        .lineLimit(2)
+                    if let subject = task?.subject {
+                        Text("\(subject.name) · \(Copy.Home.taskReady)")
+                            .font(StillTypography.footnote)
+                            .foregroundStyle(StillTheme.textSecondary)
+                            .lineLimit(2)
+                    }
                 }
                 Spacer(minLength: StillTheme.Spacing.xs)
                 Image(systemName: "chevron.right")

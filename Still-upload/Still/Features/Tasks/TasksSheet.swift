@@ -15,44 +15,56 @@ struct TasksSheet: View {
         let phase = StillDayPhase.automatic(colorScheme: colorScheme)
         NavigationStack {
             StillScreen(phase: phase) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
-                        VStack(alignment: .leading, spacing: 3) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                             Text("Today")
                                 .font(StillTypography.display)
                                 .foregroundStyle(StillTheme.textPrimary)
-                        }
-                        addBox(phase: phase)
-                        if appState.todaysTasks.isEmpty {
-                            EmptyState(symbol: "checklist", title: "Nothing here yet", message: "A task is optional. One clear thing is usually enough.")
+
+                            addBox(phase: phase)
+                            if appState.todaysTasks.isEmpty {
+                                EmptyState(
+                                    symbol: "checklist",
+                                    title: "Nothing here yet",
+                                    message: "A task is optional. One clear thing is usually enough."
+                                )
                                 .padding(.vertical, StillTheme.Spacing.xl)
-                        } else {
-                            StillInsetList {
-                                VStack(spacing: 0) {
-                                    ForEach(Array(appState.todaysTasks.enumerated()), id: \.element.id) { index, task in
-                                        TaskFocusCard(
-                                            task: task,
-                                            detailLine: detailLine(for: task),
-                                            isSelected: appState.preferences.selectedTaskID == task.id && !task.isCompleted,
-                                            onSelect: { toggleSelection(task) },
-                                            onToggleDone: { appState.setTaskCompleted(task.id, !task.isCompleted) },
-                                            onToggleStep: { step in appState.toggleTaskStep(taskID: task.id, stepID: step.id) },
-                                            onDetails: { detailTaskID = task.id },
-                                            onDelete: { appState.deleteTask(task.id) },
-                                            phase: phase
-                                        )
-                                        if index < appState.todaysTasks.count - 1 {
-                                            InsetRowDivider(leading: StillTheme.minimumTapSize + StillTheme.Spacing.s)
+                            } else {
+                                StillInsetList {
+                                    VStack(spacing: 0) {
+                                        ForEach(Array(appState.todaysTasks.enumerated()), id: \.element.id) { index, task in
+                                            TaskFocusCard(
+                                                task: task,
+                                                detailLine: detailLine(for: task),
+                                                isSelected: appState.preferences.selectedTaskID == task.id && !task.isCompleted,
+                                                onSelect: { toggleSelection(task) },
+                                                onToggleDone: { appState.setTaskCompleted(task.id, !task.isCompleted) },
+                                                onToggleStep: { step in appState.toggleTaskStep(taskID: task.id, stepID: step.id) },
+                                                onDetails: { detailTaskID = task.id },
+                                                onDelete: { appState.deleteTask(task.id) },
+                                                phase: phase
+                                            )
+                                            if index < appState.todaysTasks.count - 1 {
+                                                InsetRowDivider(leading: StillTheme.minimumTapSize + StillTheme.Spacing.s)
+                                            }
                                         }
                                     }
                                 }
                             }
+                            Color.clear.frame(height: 1).id("tasks-bottom")
                         }
+                        .padding(.horizontal, StillTheme.Spacing.screen)
+                        .padding(.vertical, StillTheme.Spacing.m)
                     }
-                    .padding(.horizontal, StillTheme.Spacing.screen)
-                    .padding(.vertical, StillTheme.Spacing.m)
+                    .stillScrollableViewport(reservingFloatingTabBar: false)
+                    .onAppear {
+                        #if DEBUG
+                        guard DemoLaunch.shouldScrollToBottom("tasks") else { return }
+                        DispatchQueue.main.async { proxy.scrollTo("tasks-bottom", anchor: .bottom) }
+                        #endif
+                    }
                 }
-                .stillScrollableViewport(reservingFloatingTabBar: false)
             }
             .navigationTitle("Tasks")
             .navigationBarTitleDisplayMode(.inline)

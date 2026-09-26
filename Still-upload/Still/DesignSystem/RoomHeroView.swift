@@ -25,9 +25,6 @@ struct RoomHeroView: View {
     var onPrevious: (() -> Void)?
     var onNext: (() -> Void)?
     var onRoomTarget: ((RoomHotspot) -> Void)?
-    /// During someone's first three focus days, names make the illustrated
-    /// objects discoverable before their labels gently fade away.
-    var showsRoomLabels = false
     var showsControls = true
 
     @Environment(\.colorScheme) private var colorScheme
@@ -97,10 +94,7 @@ struct RoomHeroView: View {
             }
 
             if let onRoomTarget {
-                RoomHotspotOverlay(
-                    showsLabels: showsRoomLabels,
-                    action: onRoomTarget
-                )
+                RoomHotspotOverlay(action: onRoomTarget)
             }
 
             if showsControls {
@@ -228,25 +222,6 @@ enum RoomHotspot: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Compact on-art copy; VoiceOver retains the fuller object title above.
-    /// These labels only appear during the first three focus days, when
-    /// immediate readability matters more than repeating the full noun phrase.
-    var displayLabel: String {
-        switch self {
-        case .calendar: return "Calendar"
-        default: return title
-        }
-    }
-
-    var labelWidth: CGFloat {
-        switch self {
-        case .shelf: return 86
-        case .calendar: return 76
-        case .desk: return 60
-        case .plant, .window: return 66
-        }
-    }
-
     var hint: String {
         switch self {
         case .desk: return "Opens today’s tasks."
@@ -269,34 +244,17 @@ enum RoomHotspot: String, CaseIterable, Identifiable {
 }
 
 private struct RoomHotspotOverlay: View {
-    let showsLabels: Bool
     let action: (RoomHotspot) -> Void
 
     var body: some View {
         GeometryReader { proxy in
             ForEach(RoomHotspot.allCases) { hotspot in
                 Button { action(hotspot) } label: {
-                    Group {
-                        if showsLabels {
-                            Text(hotspot.displayLabel)
-                                .font(StillTypography.caption.weight(.semibold))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.78)
-                                .foregroundStyle(StillTheme.textPrimary)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 5)
-                                .background(.ultraThinMaterial, in: Capsule())
-                                .overlay(Capsule().strokeBorder(Color.white.opacity(0.64), lineWidth: 1))
-                        } else {
-                            Color.clear
-                        }
-                    }
-                    .frame(
-                        width: showsLabels
-                            ? min(proxy.size.width * 0.28, max(44, hotspot.labelWidth))
-                            : max(44, proxy.size.width * 0.18),
-                        height: max(44, proxy.size.height * 0.18)
-                    )
+                    Color.clear
+                        .frame(
+                            width: max(44, proxy.size.width * 0.18),
+                            height: max(44, proxy.size.height * 0.18)
+                        )
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

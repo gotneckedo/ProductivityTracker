@@ -39,14 +39,16 @@ enum StillDayPhase: String, CaseIterable, Hashable, Codable {
 
     var glassFill: Color {
         switch self {
-        case .morning, .afternoon, .dusk: return .white.opacity(0.46)
+        // Light screens use a more opaque field than their page gradient so
+        // groups, rows, and activity canvases retain a readable value ladder.
+        case .morning, .afternoon, .dusk: return .white.opacity(0.68)
         case .night, .focus: return .white.opacity(0.08)
         }
     }
 
     var glassBorder: Color {
         switch self {
-        case .morning, .afternoon, .dusk: return .white.opacity(0.75)
+        case .morning, .afternoon, .dusk: return .white.opacity(0.92)
         case .night, .focus: return .white.opacity(0.16)
         }
     }
@@ -68,9 +70,9 @@ enum StillDayPhase: String, CaseIterable, Hashable, Codable {
     /// avoids turning every piece of content into floating glass.
     var plainGroupFill: Color {
         switch self {
-        case .morning: return Color(hex: 0xFFF8F0, opacity: 0.68)
-        case .afternoon: return Color(hex: 0xF8FCF8, opacity: 0.68)
-        case .dusk: return Color(hex: 0xFFF0EF, opacity: 0.66)
+        case .morning: return Color(hex: 0xFFF8F0, opacity: 0.90)
+        case .afternoon: return Color(hex: 0xF8FCF8, opacity: 0.90)
+        case .dusk: return Color(hex: 0xFFF4F2, opacity: 0.90)
         case .night: return Color(hex: 0x292742, opacity: 0.88)
         case .focus: return Color(hex: 0x222035, opacity: 0.90)
         }
@@ -103,11 +105,11 @@ enum StillDayPhase: String, CaseIterable, Hashable, Codable {
         let colors: [Color]
         switch self {
         case .morning:
-            colors = [Color(hex: 0xF9D6C2), Color(hex: 0xF7E8DA), Color(hex: 0xD4E7F0)]
+            colors = [Color(hex: 0xFBE7D8), Color(hex: 0xF9F0E8), Color(hex: 0xE1ECF2)]
         case .afternoon:
-            colors = [Color(hex: 0xC9EADC), Color(hex: 0xEAF3EB), Color(hex: 0xD6E6F6)]
+            colors = [Color(hex: 0xDDEFE5), Color(hex: 0xF4F7F3), Color(hex: 0xE5EDF7)]
         case .dusk:
-            colors = [Color(hex: 0xF3B39C), Color(hex: 0xDDA8C2), Color(hex: 0x9C92CC)]
+            colors = [Color(hex: 0xF6D8CE), Color(hex: 0xE9D6E0), Color(hex: 0xC9C5DE)]
         case .night:
             colors = [Color(hex: 0x1C2244), Color(hex: 0x2A2556), Color(hex: 0x3A2C5C)]
         case .focus:

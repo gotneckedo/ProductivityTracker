@@ -161,7 +161,7 @@ struct SessionCompleteView: View {
     private func metrics(session: FocusSession?) -> some View {
         let duration = session?.completedFocusDuration ?? 0
         let completedSessions = appState.stats.todayFocus == 0 ? 1 : appState.stats.completedSessions
-        let focusDays = appState.stats.currentStreak
+        let focusDays = max(1, appState.stats.lastSevenDays.filter { $0.focusDuration > 0 }.count)
         return LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: StillTheme.Spacing.s) {
             CompletionMetric(value: DurationFormatter.short(duration), label: "this session")
             CompletionMetric(value: "\(completedSessions)", label: Copy.Count.sessionLabel(completedSessions))

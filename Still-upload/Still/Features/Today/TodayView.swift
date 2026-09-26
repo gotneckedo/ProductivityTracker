@@ -15,20 +15,28 @@ struct TodayView: View {
 
     var body: some View {
         StillScreen {
-            ScrollView {
+            ScrollViewReader { proxy in
+                ScrollView {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                         greeting
                         nextAction
                         afterSection
-                    dayContext
-                    reflectionCard
-                    roomMoment
-                    Color.clear.frame(height: 1)
+                        dayContext
+                        reflectionCard
+                        roomMoment
+                        Color.clear.frame(height: 1).id("today-bottom")
+                    }
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.vertical, StillTheme.Spacing.m)
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.vertical, StillTheme.Spacing.m)
+                .stillScrollableViewport()
+                .onAppear {
+                    #if DEBUG
+                    guard DemoLaunch.shouldScrollToBottom("today") else { return }
+                    DispatchQueue.main.async { proxy.scrollTo("today-bottom", anchor: .bottom) }
+                    #endif
+                }
             }
-            .stillScrollableViewport()
         }
         .toolbar(.hidden, for: .navigationBar)
         .onAppear {

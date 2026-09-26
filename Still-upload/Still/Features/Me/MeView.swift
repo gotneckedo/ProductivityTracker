@@ -353,11 +353,7 @@ private struct StatsSection: View {
                             }
                             GridRow {
                                 SubtleMetric(value: DurationFormatter.short(stats.averageSessionDuration), label: "Average session")
-                                if let longest = StatsCalculator.streakValue(stats.longestStreak) {
-                                    SubtleMetric(value: longest, label: "Longest run of focus days")
-                                } else {
-                                    SubtleMetric(value: "Starts with one session", label: "Focus rhythm")
-                                }
+                                SubtleMetric(value: "\(focusDaysThisWeek)", label: "Focus days this week")
                             }
                         }
                     }
@@ -372,6 +368,10 @@ private struct StatsSection: View {
                 }
             }
         }
+    }
+
+    private var focusDaysThisWeek: Int {
+        stats.lastSevenDays.filter { $0.focusDuration > 0 }.count
     }
 }
 

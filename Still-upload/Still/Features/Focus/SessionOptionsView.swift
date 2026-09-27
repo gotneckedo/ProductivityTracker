@@ -32,8 +32,14 @@ struct SessionOptionsView: View {
                     .stillScrollableViewport(reservingFloatingTabBar: false)
                     .onAppear {
                         #if DEBUG || STILL_PROOF
-                        guard DemoLaunch.requestedScreen == "mixer" else { return }
-                        DispatchQueue.main.async { proxy.scrollTo("soundscape-proof", anchor: .bottom) }
+                        switch DemoLaunch.requestedScreen {
+                        case "mixer":
+                            DispatchQueue.main.async { proxy.scrollTo("soundscape-proof", anchor: .bottom) }
+                        case "mixer-available":
+                            DispatchQueue.main.async { proxy.scrollTo("soundscape-available-proof", anchor: .top) }
+                        default:
+                            break
+                        }
                         #endif
                     }
                 }
@@ -174,6 +180,7 @@ struct SessionOptionsView: View {
                 AmbientMixEditor(mix: binding(\.ambientMix, fallback: .silent), status: appState.audioStatus) { source in
                     appState.container.audio.isAssetAvailable(source)
                 }
+                .id("soundscape-available-proof")
                 Button("Save this soundscape") {
                     savedSoundscapeName = ""
                     isNamingSoundscape = true

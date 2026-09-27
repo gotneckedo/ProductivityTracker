@@ -33,11 +33,13 @@ struct MeView: View {
                 }
                 .stillScrollableViewport()
                 .onAppear {
-                    #if DEBUG
+                    #if DEBUG || STILL_PROOF
                     if DemoLaunch.shouldScrollToBottom("me") {
                         DispatchQueue.main.async { proxy.scrollTo("me-bottom", anchor: .bottom) }
                     } else if DemoLaunch.shouldScrollToMidpoint("me") {
                         DispatchQueue.main.async { proxy.scrollTo("me-midpoint", anchor: .top) }
+                    } else if DemoLaunch.requestedScreen == "release-me-your-days" {
+                        DispatchQueue.main.async { proxy.scrollTo("your-days-proof", anchor: .top) }
                     }
                     #endif
                 }
@@ -159,6 +161,7 @@ struct MeView: View {
                 }
             }
         }
+        .id("your-days-proof")
     }
 
     private var cardAndBlockingSection: some View {

@@ -11,7 +11,7 @@ import Foundation
 /// room-autumn, room-snow, room-spring, room-sleep, room-collectibles, sprite-contact-sheet,
 /// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, complete, break, sudoku, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
-/// journal, presets, tasks, timeline, doodle, gallery, morning,
+/// journal, presets, tasks, timeline, doodle, gallery, morning, mixer-available,
 /// calendar-settings, get-card.
 enum DemoLaunch {
     static let argument = "-still-demo"
@@ -57,6 +57,8 @@ enum DemoLaunch {
             return releaseRouted(.stillPlus)
         case "release-card":
             return releaseRouted(.nfcSetup)
+        case "release-me-your-days":
+            return releaseRouted(.me)
         case "onboarding":
             return PreviewSupport.appState(onboarded: false)
         case "today":
@@ -73,6 +75,10 @@ enum DemoLaunch {
             state.router.go(to: .focusConfiguration)
             return state
         case "mixer-top":
+            let state = releaseProofState()
+            state.router.go(to: .focusConfiguration)
+            return state
+        case "mixer-available":
             let state = releaseProofState()
             state.router.go(to: .focusConfiguration)
             return state

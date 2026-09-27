@@ -171,7 +171,7 @@ jobs:
           shoot_bottom "today" "proof-today-reflection-link"
           shoot "read" "proof-short-read-top"
           shoot_bottom "read" "proof-short-read-bottom"
-          shoot "mixer-top" "proof-ambient-available"
+          shoot "mixer-available" "proof-ambient-available"
           shoot "mixer" "proof-ambient-unavailable"
 
           # Truth-pass release proof. This is a Release configuration compiled
@@ -209,6 +209,7 @@ jobs:
           shoot_release "release-plus" "proof-release-still-plus"
           shoot_release "release-locked-room" "proof-release-locked-room"
           shoot_release "release-card" "proof-release-focus-card"
+          shoot_release "release-me-your-days" "proof-release-me-your-days"
 
       - name: Upload screenshots
         if: always()

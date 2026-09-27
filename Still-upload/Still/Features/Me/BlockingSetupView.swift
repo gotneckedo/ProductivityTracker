@@ -12,30 +12,25 @@ struct BlockingSetupView: View {
     var body: some View {
         StillScreen {
             ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
-                    VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
-                        Text("App blocking")
-                            .font(StillTypography.title)
-                            .foregroundStyle(StillTheme.textPrimary)
-                            .accessibilityAddTraits(.isHeader)
-                        Text("Choose a few apps that can wait. The shield stays kind: focus on your task, or take a little break.")
-                            .font(StillTypography.callout)
-                            .foregroundStyle(StillTheme.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                if isReleaseBoundary {
+                    releaseBoundary
+                } else {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+                        header
+                        BlockingPreviewDiagram()
+                        content
+                        BlockingScheduleSection()
+                        Button("End blocking now") { isConfirmingEnd = true }
+                            .buttonStyle(QuietSecondaryButtonStyle(foreground: StillTheme.attention))
+                            .frame(maxWidth: .infinity)
+                        Text("This button always works. It does not end a focus timer.")
+                            .font(StillTypography.caption)
+                            .foregroundStyle(StillTheme.textTertiary)
+                            .frame(maxWidth: .infinity, alignment: .center)
                     }
-                    BlockingPreviewDiagram()
-                    content
-                    BlockingScheduleSection()
-                    Button("End blocking now") { isConfirmingEnd = true }
-                        .buttonStyle(QuietSecondaryButtonStyle(foreground: StillTheme.attention))
-                        .frame(maxWidth: .infinity)
-                    Text("This button always works. It does not end a focus timer.")
-                        .font(StillTypography.caption)
-                        .foregroundStyle(StillTheme.textTertiary)
-                        .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.vertical, StillTheme.Spacing.m)
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.vertical, StillTheme.Spacing.m)
             }
             .stillScrollableViewport()
         }
@@ -47,6 +42,51 @@ struct BlockingSetupView: View {
         } message: {
             Text("Your chosen apps open again right away. You can turn the schedule back on later.")
         }
+    }
+
+    private var isReleaseBoundary: Bool { !appState.container.flags.appBlocking }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
+            Text("App blocking")
+                .font(StillTypography.title)
+                .foregroundStyle(StillTheme.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+            Text("Choose a few apps that can wait. The shield stays kind: focus on your task, or take a little break.")
+                .font(StillTypography.callout)
+                .foregroundStyle(StillTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Release remains an honest information screen until a DeviceActivity
+    /// extension and the Family Controls entitlement can make shielding real.
+    private var releaseBoundary: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+            VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
+                Text("App blocking")
+                    .font(StillTypography.title)
+                    .foregroundStyle(StillTheme.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                Text("A future version can help you set aside distracting apps when Screen Time access is available.")
+                    .font(StillTypography.callout)
+                    .foregroundStyle(StillTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            StillCard {
+                VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
+                    Text("Not available in this build")
+                        .font(StillTypography.bodyEmphasis)
+                        .foregroundStyle(StillTheme.textPrimary)
+                    Text("The time and preset are saved, but this build cannot shield apps. Nothing is blocked until Screen Time access is available.")
+                        .font(StillTypography.footnote)
+                        .foregroundStyle(StillTheme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(.horizontal, StillTheme.Spacing.screen)
+        .padding(.vertical, StillTheme.Spacing.m)
     }
 
     @ViewBuilder

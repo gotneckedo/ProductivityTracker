@@ -68,7 +68,7 @@ extension DependencyContainer {
 
         let purchases: PurchaseService
         #if canImport(StoreKit) && os(iOS) && DEBUG
-        purchases = flags.seasonalPurchasesPreview ? StoreKitPurchaseService() : NoPurchaseService()
+        purchases = flags.purchasePreview ? StoreKitPurchaseService() : NoPurchaseService()
         #else
         purchases = NoPurchaseService()
         #endif

@@ -123,7 +123,7 @@ final class DependencyContainer {
         self.googleCalendar = flags.googleCalendarPreview ? googleCalendar : NoGoogleCalendarAdapter()
         self.morningStart = morningStart
         self.wakeUp = wakeUp ?? NotificationWakeUpScheduler(notifications: morningStart)
-        self.purchases = flags.seasonalPurchasesPreview ? purchases : NoPurchaseService()
+        self.purchases = flags.purchasePreview ? purchases : NoPurchaseService()
         self.focusCardOffering = flags.brandedFocusCardPreview ? focusCardOffering : NoFocusCardOffering()
         self.widgetSnapshots = widgetSnapshots
         self.alternateAppIcons = alternateAppIcons
@@ -199,7 +199,7 @@ final class DependencyContainer {
             wakeUp: flags.wakeUpPreview
                 ? PreviewWakeUpScheduler(fallback: morningStart)
                 : NotificationWakeUpScheduler(notifications: morningStart),
-            purchases: purchases ?? (flags.seasonalPurchasesPreview ? LocalPurchaseService() : NoPurchaseService()),
+            purchases: purchases ?? (flags.purchasePreview ? LocalPurchaseService() : NoPurchaseService()),
             focusCardOffering: focusCardOffering ?? (flags.brandedFocusCardPreview
                 ? PlaceholderFocusCardOffering()
                 : NoFocusCardOffering())

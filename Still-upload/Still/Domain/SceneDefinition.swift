@@ -10,8 +10,8 @@ extension Identifier where Tag == SceneTag {
     static let springRain: SceneID = "springRain"
 }
 
-/// Which drawing routine renders a scene. Several scenes may share a kind;
-/// seasonal variants would reuse a kind with a new palette.
+/// Which drawing routine renders a scene. Several permanent palette variants
+/// may share a kind with different colors.
 enum SceneRendererKind: String, Codable, Hashable {
     case rainyBedroom
     case libraryLight

@@ -17,9 +17,9 @@ struct FeatureFlags: Equatable {
     var calendarEvents: Bool = false
     /// P9 Wake up planning and DEBUG card-wait simulation.
     var wakeUpPreview: Bool = false
-    /// Legacy P9 preview flag retained for migration compatibility; seasonal
-    /// Still+ rooms now use StoreKit entitlement directly.
-    var seasonalPurchasesPreview: Bool = false
+    /// DEBUG-only StoreKit boundary preview. Permanent Still+ rooms resolve
+    /// through this entitlement boundary rather than rotation or expiry rules.
+    var purchasePreview: Bool = false
     /// P9 direct-Google sample events and calendar settings.
     var googleCalendarPreview: Bool = false
     /// P9 branded-card setup placeholder. This never enables commerce.
@@ -38,7 +38,7 @@ struct FeatureFlags: Equatable {
         voiceCapture: true,
         calendarEvents: true,
         wakeUpPreview: false,
-        seasonalPurchasesPreview: false,
+        purchasePreview: false,
         googleCalendarPreview: false,
         brandedFocusCardPreview: false
     )
@@ -53,7 +53,7 @@ struct FeatureFlags: Equatable {
         #if DEBUG
         var flags = current
         flags.wakeUpPreview = true
-        flags.seasonalPurchasesPreview = true
+        flags.purchasePreview = true
         flags.googleCalendarPreview = true
         flags.brandedFocusCardPreview = true
         return flags

@@ -1822,7 +1822,7 @@ final class FeatureFlagTests: XCTestCase {
     func testEveryP9StandInIsOffInV1CurrentAndRelease() {
         for (name, flags) in [("v1", FeatureFlags.v1), ("current", .current), ("release", .release)] {
             XCTAssertFalse(flags.wakeUpPreview, "Wake up stand-in must be off in \(name).")
-            XCTAssertFalse(flags.seasonalPurchasesPreview, "Purchase stand-in must be off in \(name).")
+            XCTAssertFalse(flags.purchasePreview, "Purchase stand-in must be off in \(name).")
             XCTAssertFalse(flags.googleCalendarPreview, "Google sample events must be off in \(name).")
             XCTAssertFalse(flags.brandedFocusCardPreview, "Card placeholder must be off in \(name).")
         }

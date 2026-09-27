@@ -81,8 +81,8 @@ as Still’s 20 named collectible image sets.
 ## 4. Room-specific visual identity
 
 The four earned rooms stay free and permanent. The three Still+ rooms are
-permanent additional rooms: there is no “seasonal,” rotation, countdown, or
-expiry framing.
+permanent additional rooms: there is no rotation, countdown, or expiry
+framing.
 
 | Room | Visual identity |
 |---|---|

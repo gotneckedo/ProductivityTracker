@@ -309,7 +309,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: still-full-gallery
-          path: ${{ steps.loc.outputs.dir }}/full-gallery/
+          # capture-full-gallery.sh writes directly to GITHUB_WORKSPACE so the
+          # gallery is independent of the nested Xcode project location.
+          path: ${{ github.workspace }}/full-gallery/
           if-no-files-found: warn
 
       - name: Upload full gallery build log

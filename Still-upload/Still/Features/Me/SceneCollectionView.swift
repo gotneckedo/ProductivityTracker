@@ -40,7 +40,6 @@ struct SceneCollectionView: View {
                                 scene: scene,
                                 isUnlocked: appState.isUnlocked(scene),
                                 isSelected: preset.sceneID == scene.id && preset.renderMode == .scene,
-                                remaining: max(0, scene.unlockRule.requiredSessions - appState.completedSessionCount)
                             ) {
                                 var edited = preset
                                 edited.sceneID = scene.id
@@ -97,7 +96,6 @@ struct SceneCollectionView: View {
                         scene: scene,
                         isUnlocked: entitled,
                         isSelected: preset.sceneID == scene.id && preset.renderMode == .scene,
-                        remaining: 0,
                         lockedText: "Still+ room"
                     ) {
                         var edited = preset
@@ -178,7 +176,6 @@ private struct SceneCard: View {
     let scene: SceneDefinition
     let isUnlocked: Bool
     let isSelected: Bool
-    let remaining: Int
     var lockedText: String? = nil
     let onSelect: () -> Void
     var onLocked: (() -> Void)? = nil

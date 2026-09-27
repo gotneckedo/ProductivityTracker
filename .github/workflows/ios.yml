@@ -300,7 +300,8 @@ jobs:
           xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 || true
           xcrun simctl install "$UDID" "$APP"
           chmod +x ../.github/scripts/capture-full-gallery.sh
-          ../.github/scripts/capture-full-gallery.sh
+          UDID="$UDID" BUNDLE_ID="$BUNDLE_ID" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" \
+            ../.github/scripts/capture-full-gallery.sh
 
       - name: Upload full gallery
         if: always()

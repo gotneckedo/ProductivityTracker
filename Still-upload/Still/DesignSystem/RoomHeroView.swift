@@ -385,25 +385,45 @@ private struct SpriteRoomObjectOverlay: View {
                         .resizable()
                         .interpolation(.none)
                         .scaledToFit()
-                        .frame(width: size(for: object.slot, in: proxy.size), height: size(for: object.slot, in: proxy.size))
-                        .position(position(for: object.slot, in: proxy.size))
+                        .frame(width: size(for: object, in: proxy.size), height: size(for: object, in: proxy.size))
+                        .position(position(for: object, in: proxy.size))
                         .accessibilityHidden(true)
                 }
             }
         }
     }
 
-    private func size(for slot: RoomSlot, in size: CGSize) -> CGFloat {
-        switch slot {
-        case .wall: return size.width * 0.18
-        case .shelf, .windowsill: return size.width * 0.16
-        case .desk, .floorCorner: return size.width * 0.20
+    /// The supplied sheet is tight alpha-bounded, so its objects need physical
+    /// furniture-scale rather than a shared, oversized slot square. A pencil
+    /// cup, for example, is intentionally smaller than a floor rug even though
+    /// both assets are crisp square PNGs in the catalog.
+    private func size(for object: RoomObject, in size: CGSize) -> CGFloat {
+        let factor: CGFloat
+        switch object.id {
+        case .pencilCup: factor = 0.105
+        case .ceramicBird, .candle, .tinyClock: factor = 0.075
+        case .deskLamp, .globe, .bookends, .bookStack, .catBed: factor = 0.115
+        case .radio, .recordPlayer: factor = 0.13
+        case .trailingPlant, .wateringCan, .telescope: factor = 0.14
+        case .wovenRug, .floorCushion: factor = 0.17
+        case .stringLights, .artPoster, .paperStars, .pinboard: factor = 0.14
+        default:
+            factor = object.slot == .desk ? 0.11 : 0.14
         }
+        return size.width * factor
     }
 
-    private func position(for slot: RoomSlot, in size: CGSize) -> CGPoint {
-        let anchor = SpriteRoomLayout.forScene(sceneID).objectAnchors[slot] ?? .init(x: 0.5, y: 0.5)
-        return CGPoint(x: size.width * anchor.x, y: size.height * anchor.y)
+    private func position(for object: RoomObject, in size: CGSize) -> CGPoint {
+        let base = SpriteRoomLayout.forScene(sceneID).objectAnchors[object.slot] ?? .init(x: 0.5, y: 0.5)
+        let offset: CGPoint
+        switch object.id {
+        case .pencilCup: offset = .init(x: -0.025, y: -0.045)
+        case .wovenRug: offset = .init(x: 0.14, y: -0.065)
+        case .floorCushion: offset = .init(x: 0.08, y: -0.035)
+        case .trailingPlant: offset = .init(x: 0, y: -0.025)
+        default: offset = .zero
+        }
+        return CGPoint(x: size.width * (base.x + offset.x), y: size.height * (base.y + offset.y))
     }
 }
 

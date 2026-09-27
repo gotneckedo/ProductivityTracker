@@ -2,13 +2,37 @@
 
 **Branch:** `redesign`  
 **Pull request:** [#1 — Redesign Still with a room-first focus flow](https://github.com/gotneckedo/ProductivityTracker/pull/1)  
-**Latest verified UI head:** `036bfb0`
-**Latest local validation:** `swift test` — **222 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).
-**Latest GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 36291223612](https://github.com/gotneckedo/ProductivityTracker/actions/runs/36291223612) completed successfully on `036bfb0`; its `still-screenshots` artifact contains and was visually reviewed across **72** simulator captures.
+**Latest verified P0 UI head:** `00a7269`
+**Latest local validation:** `swift test` — **227 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).
+**Latest compact P0 CI:** **Passed.** [Run 36357146770](https://github.com/gotneckedo/ProductivityTracker/actions/runs/36357146770) on `00a7269` built/tests the simulator app and produced **23** reviewed named P0 captures.
+**Latest full visual gallery:** **Passed.** [Run 36356954441](https://github.com/gotneckedo/ProductivityTracker/actions/runs/36356954441) on `86a1278` produced and uploaded a **90-frame** full gallery. Commits after that gallery are source-only P0 terminology, countdown-state, and workflow-artifact corrections; no visual rendering code changed.
 
-## P0 truth pass — implementation pending CI proof
+## P0 truth pass — accepted evidence (27 September 2026)
 
-The current P0 branch changes are deliberately **not marked verified yet**. The next CI run must supply named release-configuration screenshots for blocking copy, Focus chip removal, Morning Start, Still+ availability, locked-room handoff, and Focus Card setup; plus DEBUG evidence for Journal/Habits navigation, all ten Break activities, Autumn Window during an entitled active session, unavailable ambient layers, Short Read, Get a Card, and the doodle state matrix. This heading prevents local work from being described as accepted before the captures are reviewed.
+The P0 release-truth and visual-P0 changes are accepted only to the scope proved below. Release claims are backed by a Release configuration compiled with `STILL_PROOF` solely to expose deterministic internal routes; `FeatureFlags.release` remains active, so the captures do **not** rely on DEBUG stand-ins.
+
+| P0 item | Result | Proving capture(s) | Review result / boundary |
+|---|---|---|---|
+| 1. Scheduled-blocking claim | **Done** | `proof-release-blocking.png` | Release says the time/preset can be saved but this build cannot shield apps; no simulated schedule can be started. |
+| 2. Focus blocking chip | **Done** | `proof-release-focus-home.png` | No blocking-status chip appears on Focus in release. |
+| 3. Morning Start | **Done** | `proof-release-morning.png`, `proof-release-morning-delivery-note.png` | Release shows **Button** as the only stop method and the local-notification/silent-mode delivery note; no card wait, checklist, or alarm claim remains. |
+| 4. Capability-copy audit | **Done** | All eight `proof-release-*.png` captures | Blocking, Morning Start, Still+, Focus Card, locked-room, and Your days release copy were reviewed against their actual release boundaries. |
+| 5. Still+ CTA removal | **Done** | `proof-release-still-plus.png`, `proof-release-locked-room.png`, `proof-release-me-your-days.png` | Informational Still+ and locked-room surfaces have no price, buy, or restore control while release uses `NoPurchaseService`. |
+| 6. Free Focus Card setup | **Done** | `proof-release-focus-card.png` | The writable-tag/link guide is release-accessible and contains no Still+ gate; physical hardware still needs iPhone/NFC validation. |
+| 7. Journal reconnect | **Done** | `proof-journal-navigation.png`, `proof-today-reflection-link.png` | Me → Your days opens Journal, and Today’s reflection links through. |
+| 8. Habits reconnect | **Done** | `proof-habits-navigation.png` | Me → Your days opens the standalone Habits screen. |
+| 9. All break activities | **Done** | `proof-break-all-top.png`, `proof-break-all-bottom.png` | The first and last shelf positions show the complete finite ten-activity catalog; none is paywalled. |
+| 10. Entitled extra-room session | **Done (DEBUG evidence)** | `11-active-autumn.png` from full gallery run `36356954441` | An injected entitlement resolves a live Focus session in Autumn Window. Release remains locked because purchase is intentionally unavailable. |
+| 11. Ambient availability | **Done** | `proof-ambient-available.png`, `proof-ambient-unavailable.png` | Four authored layers are selectable; the other eight explicitly render unavailable and cannot be selected. |
+| 12. Documentation drift | **Done (source/doc audit)** | No screenshot required | `README.md`, `FUTURE_CAPABILITIES.md`, product copy, and preview terminology now state that release StoreKit is unavailable and extra rooms are permanent. |
+| 13. Focus greeting removal | **Done** | `proof-release-focus-home.png`, `07-focus-room.png` from full gallery | Focus is room/action led; the day greeting remains solely on Today. |
+| 14. Short Read inset list | **Done** | `proof-short-read-top.png`, `proof-short-read-bottom.png` | Books use one divided inset list, including the full lower clearance. |
+| 15. First-play explanatory copy | **Done to the reviewed screens** | `14-sudoku.png`, `15-wordsearch.png`, `16-picross.png`, `18-breathing.png`, `20-doodle.png`, `proof-short-read-top.png` from full gallery | Activity surfaces are immediately usable; explanatory text remains only in empty/error states. |
+| 16. Named visual ledger | **Done** | `proof-break-all-top.png`, `proof-scenes-locked-core.png`, `proof-release-focus-card.png`, `proof-short-read-top.png`, `proof-short-read-bottom.png` | Stable proof names exist for the disputed surfaces. `proof-scenes-locked-core.png` shows static “Opens after 12 sessions,” not a remaining-work countdown. |
+| 17. Doodle states | **Done** | `15-gallery-empty.png`, `16-gallery-one.png`, `17-gallery-several.png`, `18-gallery-error.png` | Empty, one, several, and honest storage-error states are all captured. |
+| 18. Get a Card | **Done (DEBUG review surface)** | `22-get-card.png` | The secondary setup control and explicit no-commerce disclosure are visible. It remains preview-only, with no order or payment flow. |
+
+**Decision recorded:** room unlocks communicate one fixed milestone (“Opens after 12 sessions”) rather than a changing “sessions to go” counter. This preserves the earned-room model without importing countdown pressure.
 
 ## Master Plan decisions — product direction, not implementation proof
 

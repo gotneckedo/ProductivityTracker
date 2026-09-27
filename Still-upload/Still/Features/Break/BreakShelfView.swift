@@ -8,7 +8,10 @@ struct BreakShelfView: View {
 
     private var visibleActivities: [BreakActivity] {
         let ranked = BreakShelfRanking().ranked(
-            catalog: ActivityCatalog.launchShelf,
+            // The shelf is finite, but every locally implemented activity is
+            // available from it. Suggestions may rank a smaller set; they do
+            // not hide working alternatives.
+            catalog: ActivityCatalog.available,
             usages: appState.usages,
             personalization: appState.personalization
         )
@@ -45,7 +48,7 @@ struct BreakShelfView: View {
                 }
                 .stillScrollableViewport()
                 .onAppear {
-                    #if DEBUG
+                    #if DEBUG || STILL_PROOF
                     if DemoLaunch.shouldScrollToBottom("break") {
                         DispatchQueue.main.async { proxy.scrollTo("break-bottom", anchor: .bottom) }
                     }

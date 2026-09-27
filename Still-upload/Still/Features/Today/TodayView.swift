@@ -195,6 +195,9 @@ struct TodayView: View {
                 Button("Save") { appState.saveJournal(text: reflection, mood: mood) }
                     .buttonStyle(QuietSecondaryButtonStyle())
             }
+            Button("Open Journal") { appState.router.go(to: .journal) }
+                .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
+                .accessibilityHint("Opens your private journal and habits.")
         }
         .modifier(NextActionSurface())
     }

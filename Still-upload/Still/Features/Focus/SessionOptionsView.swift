@@ -12,22 +12,31 @@ struct SessionOptionsView: View {
     var body: some View {
         NavigationStack {
             StillScreen {
-                ScrollView {
-                    if let preset = draft {
-                        VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
-                            presetAndTaskSection(preset)
-                            timerSection
-                            roomSection(preset)
-                            soundSection
-                            if appState.container.flags.appBlocking {
-                                blockingSection
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        if let preset = draft {
+                            VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+                                presetAndTaskSection(preset)
+                                timerSection
+                                roomSection(preset)
+                                soundSection
+                                if appState.container.flags.appBlocking {
+                                    blockingSection
+                                }
+                                Color.clear.frame(height: 1).id("soundscape-proof")
                             }
+                            .padding(.horizontal, StillTheme.Spacing.screen)
+                            .padding(.vertical, StillTheme.Spacing.m)
                         }
-                        .padding(.horizontal, StillTheme.Spacing.screen)
-                        .padding(.vertical, StillTheme.Spacing.m)
+                    }
+                    .stillScrollableViewport(reservingFloatingTabBar: false)
+                    .onAppear {
+                        #if DEBUG || STILL_PROOF
+                        guard DemoLaunch.requestedScreen == "mixer" else { return }
+                        DispatchQueue.main.async { proxy.scrollTo("soundscape-proof", anchor: .bottom) }
+                        #endif
                     }
                 }
-                .stillScrollableViewport(reservingFloatingTabBar: false)
             }
             .navigationTitle("Session setup")
             .navigationBarTitleDisplayMode(.inline)
@@ -135,7 +144,7 @@ struct SessionOptionsView: View {
                 SelectionPill(options: RenderMode.allCases, selection: binding(\.renderMode, fallback: .scene), title: { $0.displayName })
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: StillTheme.Spacing.s) {
-                        ForEach(SceneCatalog.all.filter { appState.isUnlocked($0) }) { scene in
+                        ForEach(SceneCatalog.completeCatalog.filter { appState.isUnlocked($0) }) { scene in
                             SceneChoice(scene: scene, isSelected: scene.id == preset.sceneID) {
                                 draft?.sceneID = scene.id
                                 draft?.renderMode = .scene
@@ -284,14 +293,15 @@ struct AmbientMixEditor: View {
                     levelRow(
                         title: source.displayName,
                         value: Binding(get: { mix.level(for: source.id) }, set: { mix.setLevel($0, for: source.id) }),
-                        note: (status == .ready && !isAvailable(source.id)) ? AmbientAudioCopy.sourceMissing : nil
+                        note: (status == .ready && !isAvailable(source.id)) ? AmbientAudioCopy.sourceUnavailable : nil,
+                        isAvailable: status != .ready || isAvailable(source.id)
                     )
                 }
             }
         }
     }
 
-    private func levelRow(title: String, value: Binding<Double>, note: String?) -> some View {
+    private func levelRow(title: String, value: Binding<Double>, note: String?, isAvailable: Bool = true) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
                 Text(title)
@@ -305,6 +315,7 @@ struct AmbientMixEditor: View {
             Slider(value: value, in: 0...1)
                 .accessibilityLabel(title)
                 .accessibilityValue(value.wrappedValue < 0.01 ? "Off" : "\(Int((value.wrappedValue * 100).rounded())) percent")
+                .disabled(!isAvailable)
             if let note {
                 Text(note)
                     .font(StillTypography.caption)
@@ -312,6 +323,8 @@ struct AmbientMixEditor: View {
             }
         }
         .stillInsetRow()
+        .opacity(isAvailable ? 1 : 0.58)
+        .accessibilityHint(isAvailable ? "" : "Unavailable because this build has no audio file for this layer.")
     }
 }
 

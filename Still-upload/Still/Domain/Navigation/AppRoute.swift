@@ -182,7 +182,7 @@ struct RouteResolver {
         case .dayTimeline:
             return RouteDestination(tab: currentTab, stack: [], sheet: .dayTimeline, completionSessionID: nil)
         case .habits:
-            return RouteDestination(tab: .today, stack: [], sheet: nil, completionSessionID: nil)
+            return RouteDestination(tab: .me, stack: [route], sheet: nil, completionSessionID: nil)
         case .journal:
             return RouteDestination(tab: currentTab, stack: [], sheet: .journal, completionSessionID: nil)
         }

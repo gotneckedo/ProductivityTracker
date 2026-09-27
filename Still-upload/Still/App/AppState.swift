@@ -210,7 +210,8 @@ final class AppState {
     func scene(_ id: SceneID) -> SceneDefinition { SceneCatalog.scene(id) }
 
     func isUnlocked(_ scene: SceneDefinition) -> Bool {
-        ProgressionEvaluator().isUnlocked(scene, completedSessions: completedSessionCount)
+        let hasEntitlement = scene.entitlementKey == nil || hasStillPlus
+        return hasEntitlement && ProgressionEvaluator().isUnlocked(scene, completedSessions: completedSessionCount)
     }
 
     var nextLockedScene: (scene: SceneDefinition, remaining: Int)? {

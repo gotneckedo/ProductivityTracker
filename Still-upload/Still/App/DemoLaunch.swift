@@ -1,8 +1,9 @@
-#if DEBUG
+#if DEBUG || STILL_PROOF
 import Foundation
 
-/// Debug-only: opens the app on a specific screen with sample data, so CI can
-/// take simulator screenshots. Never compiled into Release builds.
+/// CI-only: opens the app on a specific screen with sample data, so CI can
+/// take simulator screenshots. `STILL_PROOF` may be applied to a Release
+/// configuration for truth screenshots without enabling preview flags.
 ///
 ///   xcrun simctl launch booted com.cocomedia.still -still-demo home
 ///
@@ -42,6 +43,18 @@ enum DemoLaunch {
     static func appState() -> AppState? {
         guard let screen = requestedScreen else { return nil }
         switch screen {
+        case "release-home":
+            return releaseRouted(.focusHome)
+        case "release-blocking":
+            return releaseRouted(.blockingSetup)
+        case "release-morning":
+            return releaseRouted(.morningStart)
+        case "release-plus":
+            return releaseRouted(.stillPlus)
+        case "release-locked-room":
+            return releaseRouted(.sceneCollection)
+        case "release-card":
+            return releaseRouted(.nfcSetup)
         case "onboarding":
             return PreviewSupport.appState(onboarded: false)
         case "today":
@@ -53,6 +66,10 @@ enum DemoLaunch {
             return todayState(hour: 9)
         case "setup":
             return routed(.focusConfiguration)
+        case "mixer":
+            let state = releaseProofState()
+            state.router.go(to: .focusConfiguration)
+            return state
         case "home":
             return PreviewSupport.appState(populated: true)
         case "focus-room":
@@ -81,6 +98,8 @@ enum DemoLaunch {
             return routed(.spriteContactSheet)
         case "room-collectibles":
             return roomWithPlacedCollectibles()
+        case "active-autumn":
+            return activeEntitledRoomState()
         case "cat-morning":
             return focusRoomState(hour: 9)
         case "cat-reaction":
@@ -135,6 +154,8 @@ enum DemoLaunch {
             return routed(.nfcSetup)
         case "journal":
             return routed(.journal)
+        case "habits":
+            return routed(.habits)
         case "presets":
             return routed(.presets)
         case "tasks":
@@ -145,6 +166,14 @@ enum DemoLaunch {
             return routed(.breakActivity(.pixelDoodle, .shelf))
         case "gallery":
             return routed(.doodleGallery)
+        case "gallery-empty":
+            return emptyGalleryState()
+        case "gallery-one":
+            return routed(.doodleGallery)
+        case "gallery-several":
+            return severalDoodlesState()
+        case "gallery-error":
+            return emptyGalleryState()
         case "morning":
             return routed(.morningStart)
         case "calendar-settings":
@@ -160,6 +189,34 @@ enum DemoLaunch {
         let state = PreviewSupport.appState(populated: true)
         state.router.go(to: route)
         return state
+    }
+
+    /// These screenshots keep FeatureFlags.release intact: no future stand-in
+    /// becomes visible merely because the app is launched for CI proof.
+    private static func releaseRouted(_ route: AppRoute) -> AppState {
+        let state = releaseProofState()
+        state.router.go(to: route)
+        return state
+    }
+
+    /// Unlike `PreviewSupport`, this fixture injects the exact release
+    /// boundaries: no purchase products and only the four actually authored
+    /// ambient sources. It is used solely for screenshot navigation in a
+    /// Release build compiled with `STILL_PROOF`.
+    private static func releaseProofState() -> AppState {
+        let clock = ManualClock(screenshotDate(hour: 9, minute: 41))
+        let container = DependencyContainer.inMemory(
+            clock: clock,
+            flags: .release,
+            audio: SilentAmbientAudioPlayer(
+                status: .ready,
+                availableSources: [.rain, .cafe, .fireplace, .waves]
+            ),
+            purchases: NoPurchaseService()
+        )
+        PreviewFixtures.populate(container)
+        PreviewFixtures.populateDailyLife(container)
+        return AppState(container: container)
     }
 
     private static func focusRoomState(
@@ -208,6 +265,42 @@ enum DemoLaunch {
         state.placeRoomObject(.wovenRug, in: .rainyBedroom, slot: .floorCorner)
         state.placeRoomObject(.trailingPlant, in: .rainyBedroom, slot: .windowsill)
         state.notice = nil
+        return state
+    }
+
+    private static func activeEntitledRoomState() -> AppState {
+        let state = PreviewSupport.appState(
+            populated: true,
+            completedSessions: 30,
+            clockStart: screenshotDate(hour: 14, minute: 0),
+            stillPlus: true
+        )
+        var preset = state.currentPreset
+        preset.sceneID = .autumnWindow
+        preset.renderMode = .scene
+        state.savePreset(preset)
+        state.startFocus(source: .manual)
+        return state
+    }
+
+    private static func emptyGalleryState() -> AppState {
+        let state = PreviewSupport.appState(populated: false)
+        state.container.preferences.completeOnboarding(goal: .focusBetter)
+        state.reload()
+        state.router.go(to: .doodleGallery)
+        return state
+    }
+
+    private static func severalDoodlesState() -> AppState {
+        let state = PreviewSupport.appState(populated: true)
+        var first = PixelDoodle()
+        first.paint(x: 3, y: 3, color: 1)
+        first.paint(x: 4, y: 4, color: 2)
+        _ = state.autosaveDoodle(first, existingID: nil)
+        var second = PixelDoodle()
+        for x in 9..<14 { second.paint(x: x, y: 8, color: 5) }
+        _ = state.autosaveDoodle(second, existingID: nil)
+        state.router.go(to: .doodleGallery)
         return state
     }
 

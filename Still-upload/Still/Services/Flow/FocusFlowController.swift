@@ -40,6 +40,7 @@ final class FocusFlowController {
     private let liveActivity: LiveActivityUpdating
     private let events: EventTracking
     private let scenes: [SceneDefinition]
+    private let purchases: PurchaseService
     private let progression = ProgressionEvaluator()
 
     private(set) var activeSession: FocusSession?
@@ -58,7 +59,8 @@ final class FocusFlowController {
         blocking: FocusBlockingService,
         liveActivity: LiveActivityUpdating,
         events: EventTracking,
-        scenes: [SceneDefinition] = SceneCatalog.all
+        scenes: [SceneDefinition] = SceneCatalog.completeCatalog,
+        purchases: PurchaseService = NoPurchaseService()
     ) {
         self.clock = clock
         self.timer = timer
@@ -72,6 +74,7 @@ final class FocusFlowController {
         self.liveActivity = liveActivity
         self.events = events
         self.scenes = scenes
+        self.purchases = purchases
     }
 
     // MARK: - Lifecycle
@@ -124,7 +127,7 @@ final class FocusFlowController {
         }()
 
         let scene = scenes.first { $0.id == preset.sceneID }
-        let sceneID = scene.map { progression.isUnlocked($0, completedSessions: completedSessionCount) } == true
+        let sceneID = scene.map(isAvailableForSession) == true
             ? preset.sceneID
             : SceneCatalog.rainyBedroom.id
 
@@ -159,6 +162,11 @@ final class FocusFlowController {
             .userInitiated(source == .manual))
 
         return requested == nil ? .startedWithFallback(session, requested: presetID) : .started(session)
+    }
+
+    private func isAvailableForSession(_ scene: SceneDefinition) -> Bool {
+        let hasRequiredEntitlement = scene.entitlementKey == nil || purchases.hasStillPlus
+        return hasRequiredEntitlement && progression.isUnlocked(scene, completedSessions: completedSessionCount)
     }
 
     // MARK: - Ticking

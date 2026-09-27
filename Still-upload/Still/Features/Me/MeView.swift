@@ -138,17 +138,24 @@ struct MeView: View {
                         iconBackground: StillTheme.attentionSoft,
                         route: .doodleGallery
                     )
-                    if !appState.container.flags.journalTab {
-                        InsetRowDivider(leading: 52)
-                        settingLink(
-                            symbol: "checkmark.circle",
-                            title: "Small habits",
-                            value: "\(appState.habitDays.count)",
-                            iconTint: StillTheme.accent,
-                            iconBackground: StillTheme.accentSoft,
-                            route: .habits
-                        )
-                    }
+                    InsetRowDivider(leading: 52)
+                    settingLink(
+                        symbol: "text.book.closed",
+                        title: "Journal",
+                        value: appState.journalToday == nil ? "A line for today" : "Today saved",
+                        iconTint: StillTheme.calm,
+                        iconBackground: StillTheme.calmSoft,
+                        route: .journal
+                    )
+                    InsetRowDivider(leading: 52)
+                    settingLink(
+                        symbol: "checkmark.circle",
+                        title: "Small habits",
+                        value: "\(appState.habitDays.count)",
+                        iconTint: StillTheme.accent,
+                        iconBackground: StillTheme.accentSoft,
+                        route: .habits
+                    )
                 }
             }
         }
@@ -163,7 +170,7 @@ struct MeView: View {
                     settingLink(
                         symbol: "sparkles",
                         title: "Still+",
-                        value: appState.hasStillPlus ? "Active" : "Optional subscription",
+                        value: appState.hasStillPlus ? "Active" : "Coming later",
                         iconTint: StillTheme.warm,
                         iconBackground: StillTheme.warmSoft,
                         route: .stillPlus

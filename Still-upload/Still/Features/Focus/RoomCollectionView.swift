@@ -65,7 +65,7 @@ struct RoomCollectionView: View {
                 .foregroundStyle(StillTheme.textPrimary)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: StillTheme.Spacing.xs) {
-                    ForEach(SceneCatalog.all.filter(appState.isUnlocked)) { room in
+                    ForEach(SceneCatalog.completeCatalog.filter(appState.isUnlocked)) { room in
                         Button(room.name) { selectedSceneID = room.id }
                             .buttonStyle(RoomCollectionPill(selected: selectedSceneID == room.id))
                             .accessibilityAddTraits(selectedSceneID == room.id ? .isSelected : [])

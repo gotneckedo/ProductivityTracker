@@ -6,6 +6,10 @@
 **Latest local validation:** `swift test` — **222 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).
 **Latest GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 36291223612](https://github.com/gotneckedo/ProductivityTracker/actions/runs/36291223612) completed successfully on `036bfb0`; its `still-screenshots` artifact contains and was visually reviewed across **72** simulator captures.
 
+## P0 truth pass — implementation pending CI proof
+
+The current P0 branch changes are deliberately **not marked verified yet**. The next CI run must supply named release-configuration screenshots for blocking copy, Focus chip removal, Morning Start, Still+ availability, locked-room handoff, and Focus Card setup; plus DEBUG evidence for Journal/Habits navigation, all ten Break activities, Autumn Window during an entitled active session, unavailable ambient layers, Short Read, Get a Card, and the doodle state matrix. This heading prevents local work from being described as accepted before the captures are reviewed.
+
 ## Master Plan decisions — product direction, not implementation proof
 
 These decisions were supplied by CoCo on 26 September 2026 in response to

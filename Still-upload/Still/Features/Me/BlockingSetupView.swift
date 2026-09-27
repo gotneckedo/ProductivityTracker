@@ -216,9 +216,11 @@ private struct BlockingScheduleSection: View {
         case .disabled:
             return "Optional. When it is off, nothing starts in the background."
         case .waiting:
-            return appState.blockingCapability == .authorized
-                ? "At that time, iOS shields the apps in this preset. Blocking continues until you tap your Focus Card or choose End blocking now."
-                : "The time and preset are saved, but this build cannot shield apps. Nothing is blocked until Screen Time access is available."
+            // A future DeviceActivity extension will be the only component that
+            // can start a shield while Still is closed. Until it exists and its
+            // entitlement is granted, an authorized picker is not enough to
+            // make this schedule truthful as a blocking schedule.
+            return "The time and preset are saved, but this build cannot shield apps. Nothing is blocked until Screen Time access is available."
         case .blockingUntilCardTap:
             return appState.isShieldingApps
                 ? "The schedule is active. Tap your Focus Card to end it, or use End blocking now below."

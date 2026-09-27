@@ -135,7 +135,7 @@ jobs:
           n=1
           # Phase 2 sprite checkpoint: Focus room has labeled object targets;
           # the review sheet proves the authored package is bundled.
-          for screen in onboarding today setup home focus-room sprite-contact-sheet calm active complete break sudoku wordsearch picross picross-320 breathing read doodle journal tasks timeline presets gallery morning me scenes card; do
+          for screen in onboarding today setup mixer home focus-room sprite-contact-sheet calm active active-autumn complete break sudoku wordsearch picross picross-320 breathing read doodle journal habits tasks timeline presets gallery gallery-empty gallery-one gallery-several gallery-error morning me scenes card get-card; do
             shoot "$screen" "$(printf '%02d' $n)-$screen"
             n=$((n + 1))
           done
@@ -152,6 +152,14 @@ jobs:
           shoot "focus-room" "proof-focus-helper-clean"
           shoot "focus-room" "proof-room-art-unoccluded"
           shoot "room-collectibles" "proof-room-collectible-anchors"
+          shoot "break" "proof-break-all-top"
+          shoot_bottom "break" "proof-break-all-bottom"
+          shoot "journal" "proof-journal-navigation"
+          shoot "habits" "proof-habits-navigation"
+          shoot_bottom "today" "proof-today-reflection-link"
+          shoot "read" "proof-short-read-top"
+          shoot_bottom "read" "proof-short-read-bottom"
+          shoot "mixer" "proof-ambient-availability"
           shoot "today-light" "proof-light-theme"
           shoot_bottom "today" "proof-today-bottom-clear"
           shoot_bottom "tasks" "proof-tasks-bottom-clear"
@@ -208,6 +216,35 @@ jobs:
             shoot "$screen" "$(printf '%02d' $n)-$screen"
             n=$((n + 1))
           done
+
+          # Truth-pass release proof. This is a Release configuration compiled
+          # with only the internal STILL_PROOF navigation condition; FeatureFlags
+          # remain `.release`, so these cannot accidentally prove DEBUG stand-ins.
+          xcodebuild build \
+            -project Still.xcodeproj \
+            -scheme Still \
+            -configuration Release \
+            -destination "id=$UDID" \
+            -derivedDataPath release-proof \
+            CODE_SIGNING_ALLOWED=NO \
+            OTHER_SWIFT_FLAGS='$(inherited) -DSTILL_PROOF' \
+            > release-proof-build.log 2>&1
+          RELEASE_APP=$(find release-proof/Build/Products -path "*iphonesimulator*" -name "Still.app" -maxdepth 3 | head -1)
+          echo "Release proof app: $RELEASE_APP"
+          xcrun simctl install "$UDID" "$RELEASE_APP"
+
+          shoot_release() {
+            xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" > /dev/null
+            sleep 12
+            xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
+            echo "Captured release proof $2"
+          }
+          shoot_release "release-home" "proof-release-focus-home"
+          shoot_release "release-blocking" "proof-release-blocking"
+          shoot_release "release-morning" "proof-release-morning"
+          shoot_release "release-plus" "proof-release-still-plus"
+          shoot_release "release-locked-room" "proof-release-locked-room"
+          shoot_release "release-card" "proof-release-focus-card"
 
       - name: Upload screenshots
         if: always()

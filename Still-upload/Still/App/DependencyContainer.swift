@@ -146,7 +146,8 @@ final class DependencyContainer {
             audio: audio,
             blocking: blocking,
             liveActivity: liveActivity,
-            events: tracker
+            events: tracker,
+            purchases: self.purchases
         )
         breaks = BreakFlowController(clock: clock, calendar: calendar, usages: usages, notes: notes, events: tracker)
         taskController = TaskController(clock: clock, calendar: calendar, tasks: tasks)

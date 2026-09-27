@@ -2,7 +2,8 @@ import SwiftUI
 import UIKit
 
 /// How a physical Focus Card works, the exact links to write, and an in-app
-/// simulator that runs the same route as a real tag.
+/// simulator that runs the same route as a real tag. Set-up is free: it is a
+/// URL scheme and works with any compatible writable tag.
 struct FocusCardView: View {
     @Environment(AppState.self) private var appState
     @State private var copiedPresetID: FocusPresetID?
@@ -15,49 +16,34 @@ struct FocusCardView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
-                    VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
-                        HStack(alignment: .firstTextBaseline) {
-                            Text("Focus Card")
-                                .font(StillTypography.title)
-                                .foregroundStyle(StillTheme.textPrimary)
-                                .accessibilityAddTraits(.isHeader)
-                            Spacer()
-                            if appState.container.flags.brandedFocusCardPreview { PreviewTag() }
-                        }
-                        Text(FocusCardGuide.summary)
-                            .font(StillTypography.callout)
-                            .foregroundStyle(StillTheme.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-
-                    if appState.container.flags.brandedFocusCardPreview {
-                        BrandedFocusCardArtwork(presetName: appState.currentPreset.name)
-                            .aspectRatio(1.6, contentMode: .fit)
-                        Button("Get a card") {
-                            appState.router.go(to: .getFocusCard)
-                        }
-                        .buttonStyle(QuietSecondaryButtonStyle())
-                        Text("Design preview only. There is no ordering or payment in Still.")
-                            .font(StillTypography.footnote)
-                            .foregroundStyle(StillTheme.textSecondary)
-                    }
-
-                    if !appState.hasStillPlus {
-                        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-                            Label("Focus Card is a Still+ perk", systemImage: "lock.fill")
-                                .font(StillTypography.bodyEmphasis)
-                                .foregroundStyle(StillTheme.textPrimary)
-                            Text("Still+ supports optional physical card access and permanent extra rooms. Your regular focus timer and every session-earned room stay free.")
+                        VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text("Focus Card")
+                                    .font(StillTypography.title)
+                                    .foregroundStyle(StillTheme.textPrimary)
+                                    .accessibilityAddTraits(.isHeader)
+                                Spacer()
+                                if appState.container.flags.brandedFocusCardPreview { PreviewTag() }
+                            }
+                            Text(FocusCardGuide.summary)
                                 .font(StillTypography.callout)
                                 .foregroundStyle(StillTheme.textSecondary)
-                            Button("Explore Still+") { appState.router.go(to: .stillPlus) }
-                                .buttonStyle(QuietSecondaryButtonStyle())
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        .padding(StillTheme.Spacing.m)
-                        .stillGlass()
-                    } else {
-                    StillCard {
-                        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+
+                        if appState.container.flags.brandedFocusCardPreview {
+                            BrandedFocusCardArtwork(presetName: appState.currentPreset.name)
+                                .aspectRatio(1.6, contentMode: .fit)
+                            Button("Get a card") {
+                                appState.router.go(to: .getFocusCard)
+                            }
+                            .buttonStyle(QuietSecondaryButtonStyle())
+                            Text("Design preview only. There is no ordering or payment in Still.")
+                                .font(StillTypography.footnote)
+                                .foregroundStyle(StillTheme.textSecondary)
+                        }
+
+                        StillInsetList(padding: StillTheme.Spacing.s) {
                             ForEach(Array(FocusCardGuide.steps.enumerated()), id: \.offset) { entry in
                                 HStack(alignment: .firstTextBaseline, spacing: StillTheme.Spacing.s) {
                                     Text("\(entry.offset + 1)")
@@ -69,41 +55,44 @@ struct FocusCardView: View {
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                                 .accessibilityElement(children: .combine)
+                                .stillInsetRow()
+                                if entry.offset < FocusCardGuide.steps.count - 1 {
+                                    InsetRowDivider(leading: 32)
+                                }
                             }
                         }
-                    }
 
-                    VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-                        SectionHeader(title: "Links and simulator", detail: "Write a link to a tag, or tap Simulate to run the same route here.")
-                        ForEach(appState.presets) { preset in
-                            presetCard(preset)
+                        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+                            SectionHeader(title: "Links and simulator", detail: "Write a link to a tag, or tap Simulate to run the same route here.")
+                            ForEach(appState.presets) { preset in
+                                presetCard(preset)
+                            }
                         }
-                    }
 
-                    QuietNote(text: FocusCardGuide.hardwareNote)
+                        QuietNote(text: FocusCardGuide.hardwareNote)
 
-                    let blocking = appState.container.blocking
-                    StillCard(tint: StillTheme.surfaceSunken) {
-                        VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
-                            Text(BlockingCopy.title(for: blocking.capability, isShielding: blocking.isShielding))
-                                .font(StillTypography.bodyEmphasis)
-                                .foregroundStyle(StillTheme.textPrimary)
-                            Text(BlockingCopy.detail(for: blocking.capability))
-                                .font(StillTypography.footnote)
-                                .foregroundStyle(StillTheme.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
+                        let blocking = appState.container.blocking
+                        StillInsetList(padding: StillTheme.Spacing.s) {
+                            VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
+                                Text(BlockingCopy.title(for: blocking.capability, isShielding: blocking.isShielding))
+                                    .font(StillTypography.bodyEmphasis)
+                                    .foregroundStyle(StillTheme.textPrimary)
+                                Text(BlockingCopy.detail(for: blocking.capability))
+                                    .font(StillTypography.footnote)
+                                    .foregroundStyle(StillTheme.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .stillInsetRow()
                         }
-                    }
-                    .accessibilityElement(children: .combine)
-                    }
-                    Color.clear.frame(height: 1).id("focus-card-bottom")
+                        .accessibilityElement(children: .combine)
+                        Color.clear.frame(height: 1).id("focus-card-bottom")
                     }
                     .padding(.horizontal, StillTheme.Spacing.screen)
                     .padding(.vertical, StillTheme.Spacing.m)
                 }
                 .stillScrollableViewport()
                 .onAppear {
-                    #if DEBUG
+                    #if DEBUG || STILL_PROOF
                     guard DemoLaunch.shouldScrollToBottom("card") else { return }
                     DispatchQueue.main.async { proxy.scrollTo("focus-card-bottom", anchor: .bottom) }
                     #endif
@@ -117,7 +106,7 @@ struct FocusCardView: View {
     }
 
     private func presetCard(_ preset: FocusPreset) -> some View {
-        StillCard {
+        StillInsetList(padding: StillTheme.Spacing.s) {
             VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
                 HStack {
                     Text(preset.name)
@@ -172,6 +161,7 @@ struct FocusCardView: View {
                 }
                 #endif
             }
+            .stillInsetRow()
         }
     }
 }

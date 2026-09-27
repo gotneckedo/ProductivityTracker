@@ -1854,8 +1854,8 @@ final class FeatureFlagTests: XCTestCase {
         XCTAssertEqual(resolver.destination(for: .presets, currentTab: .focus), RouteDestination(tab: .me, stack: [.presets], sheet: nil, completionSessionID: nil))
         XCTAssertEqual(resolver.destination(for: .dayTimeline, currentTab: .breakShelf).sheet, .dayTimeline)
         XCTAssertEqual(resolver.destination(for: .dayTimeline, currentTab: .breakShelf).tab, .breakShelf)
-        XCTAssertEqual(resolver.destination(for: .habits, currentTab: .focus).tab, .today)
-        XCTAssertEqual(RouteResolver(flags: .v1).destination(for: .habits, currentTab: .focus).stack, [])
+        XCTAssertEqual(resolver.destination(for: .habits, currentTab: .focus).tab, .me)
+        XCTAssertEqual(RouteResolver(flags: .v1).destination(for: .habits, currentTab: .focus).stack, [.habits])
         XCTAssertEqual(resolver.destination(for: .doodleGallery, currentTab: .focus).stack, [.doodleGallery])
         XCTAssertEqual(resolver.destination(for: .calendarSettings, currentTab: .focus).stack, [.calendarSettings])
         XCTAssertEqual(resolver.destination(for: .getFocusCard, currentTab: .focus).stack, [.getFocusCard])
@@ -1866,6 +1866,13 @@ final class FeatureFlagTests: XCTestCase {
         router.go(to: .journal)
         XCTAssertEqual(router.selectedTab, .today)
         XCTAssertEqual(router.todayPath, [])
+    }
+
+    func testHabitsRemainDiscoverableAsAMeStack() {
+        let router = AppRouter(flags: .release)
+        router.go(to: .habits)
+        XCTAssertEqual(router.selectedTab, .me)
+        XCTAssertEqual(router.mePath, [.habits])
     }
 }
 
@@ -2701,6 +2708,42 @@ final class MorningStartAndWidgetTests: XCTestCase {
         XCTAssertTrue(purchases.purchasedProductIDs.contains(PurchaseProductCatalog.stillPlusMonthly))
         let restore = await purchases.restorePurchases()
         XCTAssertEqual(restore, .purchased)
+    }
+
+    func testEntitledExtraRoomResolvesIntoAnActiveSession() {
+        let state = PreviewSupport.appState(populated: true, completedSessions: 30, stillPlus: true)
+        var preset = state.currentPreset
+        preset.sceneID = .autumnWindow
+        preset.renderMode = .scene
+        state.savePreset(preset)
+        state.startFocus(source: .manual)
+        XCTAssertEqual(state.activeSession?.sceneID, .autumnWindow)
+    }
+
+    func testUnentitledExtraRoomFallsBackToTheStarterRoom() {
+        let state = PreviewSupport.appState(populated: true, completedSessions: 30, stillPlus: false)
+        var preset = state.currentPreset
+        preset.sceneID = .autumnWindow
+        preset.renderMode = .scene
+        state.savePreset(preset)
+        state.startFocus(source: .manual)
+        XCTAssertEqual(state.activeSession?.sceneID, .rainyBedroom)
+    }
+
+    func testEveryImplementedBreakActivityIsOnThePrimaryShelf() {
+        XCTAssertEqual(Set(ActivityCatalog.launchShelf.map(\.id)), Set(ActivityCatalog.available.map(\.id)))
+        XCTAssertEqual(ActivityCatalog.available.count, 10)
+    }
+
+    func testUnavailableAmbientLayersCannotBeAdvertisedAsBundledSoundscapes() {
+        let player = SilentAmbientAudioPlayer(
+            status: .ready,
+            availableSources: [.rain, .cafe, .fireplace, .waves]
+        )
+        XCTAssertTrue(player.isAssetAvailable(.rain))
+        XCTAssertFalse(player.isAssetAvailable(.forest))
+        XCTAssertEqual(SoundscapeCatalog.builtIns.map(\.name), ["Rainy Study", "Coffee Shop", "Fireside", "Ocean Evening", "Silent"])
+        XCTAssertFalse(PurchaseProductCatalog.stillPlusPreview.description.lowercased().contains("sound layers"))
     }
 
     func testEitherStillPlusPlanGrantsTheSameLocalEntitlement() async {

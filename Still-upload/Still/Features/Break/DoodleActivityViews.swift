@@ -28,11 +28,6 @@ struct PixelDoodleActivityView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
-            Text("Draw anything. It saves to your gallery in Me as you go.")
-                .font(StillTypography.callout)
-                .foregroundStyle(StillTheme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
             DoodleCanvas(doodle: doodle, showsGrid: true)
                 .aspectRatio(1, contentMode: .fit)
                 .frame(maxWidth: .infinity)
@@ -154,6 +149,7 @@ struct DoodleCanvas: View {
 struct DoodleGalleryView: View {
     @Environment(AppState.self) private var appState
     @State private var viewing: ActivityArtifact?
+    @State private var showsLoadError = false
 
     private let columns = [GridItem(.adaptive(minimum: 96), spacing: StillTheme.Spacing.m)]
 
@@ -166,9 +162,11 @@ struct DoodleGalleryView: View {
                             .font(StillTypography.title)
                             .foregroundStyle(StillTheme.textPrimary)
                             .accessibilityAddTraits(.isHeader)
-                        Text("Small drawings from your breaks. They stay on this device.")
-                            .font(StillTypography.callout)
-                            .foregroundStyle(StillTheme.textSecondary)
+                        if appState.doodles.isEmpty {
+                            Text("Small drawings from your breaks. They stay on this device.")
+                                .font(StillTypography.callout)
+                                .foregroundStyle(StillTheme.textSecondary)
+                        }
                     }
                     if appState.doodles.isEmpty {
                         StillCard {
@@ -203,6 +201,14 @@ struct DoodleGalleryView: View {
                             }
                         }
                     }
+                    #if DEBUG || STILL_PROOF
+                    if showsLoadError {
+                        QuietNote(
+                            text: "Doodles couldn't load right now. Your local data has not been deleted.",
+                            symbol: "exclamationmark.triangle"
+                        )
+                    }
+                    #endif
                 }
                 .padding(.horizontal, StillTheme.Spacing.screen)
                 .padding(.vertical, StillTheme.Spacing.m)
@@ -211,6 +217,11 @@ struct DoodleGalleryView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
+        .onAppear {
+            #if DEBUG || STILL_PROOF
+            showsLoadError = DemoLaunch.requestedScreen == "gallery-error"
+            #endif
+        }
         .sheet(item: $viewing) { artifact in
             DoodleDetailView(artifact: artifact) {
                 appState.deleteDoodle(artifact.id)

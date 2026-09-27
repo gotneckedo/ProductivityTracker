@@ -20,19 +20,16 @@ enum SoundscapeCatalog {
     static let builtIns: [SavedSoundscape] = [
         make("Rainy Study", [.rain: 0.70, .fireplace: 0.25]),
         make("Coffee Shop", [.cafe: 0.60, .rain: 0.20]),
-        make("Night Train", [.train: 0.62, .rain: 0.28]),
-        make("Forest Cabin", [.forest: 0.55, .fireplace: 0.25, .wind: 0.18]),
-        make("Library", [.library: 0.58, .rain: 0.10]),
-        make("Ocean Evening", [.waves: 0.62, .wind: 0.25]),
-        make("Deep Focus", [.brownNoise: 0.48, .rain: 0.12]),
+        make("Fireside", [.fireplace: 0.62]),
+        make("Ocean Evening", [.waves: 0.62]),
         make("Silent", [:])
     ]
 
     static func roomDefault(for sceneID: SceneID) -> SavedSoundscape {
-        if sceneID == .libraryLight { return builtIns[4] }
-        if sceneID == .trainWindow { return builtIns[2] }
+        if sceneID == .libraryLight { return builtIns[2] }
+        if sceneID == .trainWindow { return builtIns[0] }
         if sceneID == .nightCity { return builtIns[1] }
-        if sceneID == .autumnWindow || sceneID == .snowDay { return builtIns[3] }
+        if sceneID == .autumnWindow || sceneID == .snowDay { return builtIns[2] }
         return builtIns[0]
     }
 

@@ -45,8 +45,6 @@ struct FocusHomeView: View {
                         .padding(.bottom, 166)
                         .stillEntrance()
 
-                        header(scene: scene)
-
                         Button {
                             appState.router.go(to: .roomCollection)
                         } label: {
@@ -94,16 +92,6 @@ struct FocusHomeView: View {
         .toolbar(.hidden, for: .navigationBar)
     }
 
-    private func header(scene: SceneDefinition) -> some View {
-        VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
-            Text(Calendar.autoupdatingCurrent.component(.hour, from: .now) < 12 ? Copy.Home.morningGreeting : Copy.Home.readyGreeting)
-                .font(StillTypography.display)
-                .foregroundStyle(StillTheme.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityAddTraits(.isHeader)
-        }
-    }
-
     private func focusActionCard(preset: FocusPreset) -> some View {
         StillCard(padding: StillTheme.Spacing.m) {
             VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {
@@ -125,12 +113,16 @@ struct FocusHomeView: View {
                     HStack(spacing: StillTheme.Spacing.xs) {
                         optionPill(title: preset.name, symbol: "timer")
                         optionPill(title: preset.ambientMix.isSilent ? "Sound off" : preset.ambientMix.summaryLine, symbol: preset.ambientMix.isSilent ? "speaker.slash" : "speaker.wave.1")
-                        optionPill(title: preset.blockerIntent == .none ? "No blocking" : "Blocking", symbol: "shield")
+                        if appState.isShieldingApps {
+                            optionPill(title: "Blocking", symbol: "shield")
+                        }
                     }
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
                         optionPill(title: preset.name, symbol: "timer")
                         optionPill(title: preset.ambientMix.isSilent ? "Sound off" : preset.ambientMix.summaryLine, symbol: preset.ambientMix.isSilent ? "speaker.slash" : "speaker.wave.1")
-                        optionPill(title: preset.blockerIntent == .none ? "No blocking" : "Blocking", symbol: "shield")
+                        if appState.isShieldingApps {
+                            optionPill(title: "Blocking", symbol: "shield")
+                        }
                     }
                 }
             }
@@ -161,7 +153,7 @@ struct FocusHomeView: View {
     }
 
     private func cycleScene(from preset: FocusPreset, direction: Int) {
-        let available = SceneCatalog.all.filter { appState.isUnlocked($0) }
+        let available = SceneCatalog.completeCatalog.filter { appState.isUnlocked($0) }
         guard !available.isEmpty else { return }
         let currentIndex = available.firstIndex { $0.id == preset.sceneID } ?? 0
         let nextIndex = (currentIndex + direction + available.count) % available.count

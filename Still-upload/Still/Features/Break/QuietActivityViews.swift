@@ -35,30 +35,38 @@ struct ShortReadActivityView: View {
             ReadingItemView(item: item, finishTitle: "Finish reading", onFinish: onFinished,
                             onChooseAnother: { selectedID = nil })
         } else {
-            VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-                Text("Pick one. Each is a few minutes long, and each one ends.")
-                    .font(StillTypography.callout)
-                    .foregroundStyle(StillTheme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                ForEach(library.allItems()) { item in
-                    Button {
-                        selectedID = item.id
-                    } label: {
-                        StillCard {
-                            VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
-                                Text(item.title)
-                                    .font(StillTypography.bodyEmphasis)
-                                    .foregroundStyle(StillTheme.textPrimary)
-                                Text("\(item.readMinutes) min read · \(item.license.displayName)")
-                                    .font(StillTypography.footnote)
-                                    .foregroundStyle(StillTheme.textSecondary)
+            StillInsetList(padding: StillTheme.Spacing.s) {
+                VStack(spacing: 0) {
+                    ForEach(Array(library.allItems().enumerated()), id: \.element.id) { index, item in
+                        Button {
+                            selectedID = item.id
+                        } label: {
+                            HStack(spacing: StillTheme.Spacing.s) {
+                                Image(systemName: "doc.text")
+                                    .foregroundStyle(StillTheme.accent)
+                                    .frame(width: 28)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.title)
+                                        .font(StillTypography.bodyEmphasis)
+                                        .foregroundStyle(StillTheme.textPrimary)
+                                    Text("\(item.readMinutes) min read · \(item.license.displayName)")
+                                        .font(StillTypography.footnote)
+                                        .foregroundStyle(StillTheme.textSecondary)
+                                }
+                                Spacer(minLength: 0)
+                                Image(systemName: "chevron.right")
+                                    .font(StillTypography.caption.weight(.semibold))
+                                    .foregroundStyle(StillTheme.textTertiary)
                             }
+                            .stillInsetRow()
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Opens this reading.")
+                        if index < library.allItems().count - 1 { InsetRowDivider(leading: 44) }
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityHint("Opens this reading.")
+                    if !appState.books.isEmpty { InsetRowDivider(leading: 0) }
+                    bookRows
                 }
-                booksSection
             }
             .fileImporter(isPresented: $isImporting, allowedContentTypes: [.epub]) { result in
                 if case .success(let url) = result {
@@ -77,16 +85,22 @@ struct ShortReadActivityView: View {
         }
     }
 
-    private var booksSection: some View {
+    private var bookRows: some View {
         let bundledBooks = appState.books.filter { $0.origin == .bundled }
         let importedBooks = appState.books.filter { $0.origin == .imported }
-        return VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Books", detail: "One sitting is a few minutes. Your place is kept for next time.")
-                .padding(.top, StillTheme.Spacing.m)
+        return VStack(alignment: .leading, spacing: 0) {
+            Text("Books")
+                .font(StillTypography.bodyEmphasis)
+                .foregroundStyle(StillTheme.textPrimary)
+                .stillInsetRow()
             if bundledBooks.isEmpty {
-                QuietNote(text: "Bundled books are loading. If this stays empty, try reopening Still.", symbol: "book.closed")
+                Text("Bundled books are loading. If this stays empty, try reopening Still.")
+                    .font(StillTypography.footnote)
+                    .foregroundStyle(StillTheme.textSecondary)
+                    .stillInsetRow()
             }
-            ForEach(bundledBooks) { book in
+            ForEach(Array(bundledBooks.enumerated()), id: \.element.id) { index, book in
+                InsetRowDivider(leading: 44)
                 BookCard(
                     book: book,
                     progress: appState.readingProgress(bookID: book.id),
@@ -96,11 +110,13 @@ struct ShortReadActivityView: View {
                 )
             }
             if !importedBooks.isEmpty {
+                InsetRowDivider(leading: 0)
                 Text("From your files")
-                    .font(StillTypography.caption.weight(.semibold))
+                    .font(StillTypography.footnote.weight(.semibold))
                     .foregroundStyle(StillTheme.textSecondary)
-                    .padding(.top, StillTheme.Spacing.xs)
+                    .stillInsetRow()
                 ForEach(importedBooks) { book in
+                    InsetRowDivider(leading: 44)
                     BookCard(
                         book: book,
                         progress: appState.readingProgress(bookID: book.id),
@@ -110,17 +126,14 @@ struct ShortReadActivityView: View {
                     )
                 }
             }
+            InsetRowDivider(leading: 0)
             Button {
                 isImporting = true
             } label: {
                 Label("Add an EPUB from Files", systemImage: "plus")
             }
-            .buttonStyle(QuietSecondaryButtonStyle())
+            .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
             .accessibilityHint("Imports a DRM-free EPUB book. It stays on this device.")
-            Text("Public-domain books, like those from Project Gutenberg or Standard Ebooks, work well.")
-                .font(StillTypography.caption)
-                .foregroundStyle(StillTheme.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -144,35 +157,34 @@ private struct BookCard: View {
 
     var body: some View {
         Button(action: onOpen) {
-            StillCard {
-                HStack(alignment: .top, spacing: StillTheme.Spacing.s) {
-                    Image(systemName: "book.closed")
-                        .font(StillTypography.title3)
+            HStack(alignment: .top, spacing: StillTheme.Spacing.s) {
+                Image(systemName: "book.closed")
+                    .font(StillTypography.title3)
+                    .foregroundStyle(StillTheme.textSecondary)
+                    .frame(width: 32)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
+                    Text(book.title)
+                        .font(StillTypography.bodyEmphasis)
+                        .foregroundStyle(StillTheme.textPrimary)
+                        .lineLimit(2)
+                    Text(book.author)
+                        .font(StillTypography.footnote)
                         .foregroundStyle(StillTheme.textSecondary)
-                        .frame(width: 32)
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
-                        Text(book.title)
-                            .font(StillTypography.bodyEmphasis)
-                            .foregroundStyle(StillTheme.textPrimary)
-                            .lineLimit(2)
-                        Text(book.author)
-                            .font(StillTypography.footnote)
-                            .foregroundStyle(StillTheme.textSecondary)
-                        Text(book.license.displayName)
-                            .font(StillTypography.caption.weight(.semibold))
-                            .foregroundStyle(StillTheme.textSecondary)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(StillTheme.accentSoft.opacity(0.58), in: Capsule())
-                        Text(status)
-                            .font(StillTypography.caption)
-                            .foregroundStyle(StillTheme.textTertiary)
-                        PixelProgressRow(progress: fraction, count: 16)
-                            .padding(.top, 2)
-                    }
+                    Text(book.license.displayName)
+                        .font(StillTypography.caption.weight(.semibold))
+                        .foregroundStyle(StillTheme.textSecondary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(StillTheme.accentSoft.opacity(0.58), in: Capsule())
+                    Text(status)
+                        .font(StillTypography.caption)
+                        .foregroundStyle(StillTheme.textTertiary)
+                    PixelProgressRow(progress: fraction, count: 16)
+                        .padding(.top, 2)
                 }
             }
+            .stillInsetRow()
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)

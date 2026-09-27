@@ -7,7 +7,10 @@ struct SceneCollectionView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var purchaseMessage: String?
     @State private var stillPlusProducts: [SupporterProduct] = []
-    @State private var purchasedProductIDs: Set<String> = []
+
+    private var canPurchase: Bool {
+        !stillPlusProducts.isEmpty && !appState.hasStillPlus
+    }
 
     /// The collection stays inside the screen's horizontal padding. Flexible
     /// columns, rather than card widths, leave equal space on both edges on
@@ -57,10 +60,10 @@ struct SceneCollectionView: View {
                 }
                 .stillScrollableViewport()
                 .onAppear {
-                    #if DEBUG
+                    #if DEBUG || STILL_PROOF
                     if DemoLaunch.shouldScrollToBottom("scenes-all") {
                         DispatchQueue.main.async { proxy.scrollTo("scenes-bottom", anchor: .bottom) }
-                    } else if DemoLaunch.requestedScreen == "scenes-extra" {
+                    } else if DemoLaunch.requestedScreen == "scenes-extra" || DemoLaunch.requestedScreen == "release-locked-room" {
                         DispatchQueue.main.async { proxy.scrollTo("extra-rooms", anchor: .top) }
                     } else if DemoLaunch.shouldScrollToMidpoint("scenes") {
                         DispatchQueue.main.async { proxy.scrollTo("scenes-midpoint", anchor: .top) }
@@ -89,7 +92,7 @@ struct SceneCollectionView: View {
             }
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(SceneCatalog.extraRooms) { scene in
-                    let entitled = scene.entitlementKey == nil || appState.hasStillPlus
+                    let entitled = appState.isUnlocked(scene)
                     SceneCard(
                         scene: scene,
                         isUnlocked: entitled,
@@ -97,11 +100,13 @@ struct SceneCollectionView: View {
                         remaining: 0,
                         lockedText: "Still+ room"
                     ) {
-                        guard entitled else { return }
                         var edited = preset
                         edited.sceneID = scene.id
                         edited.renderMode = .scene
                         appState.savePreset(edited)
+                    }
+                    onLocked: {
+                        appState.router.go(to: .stillPlus)
                     }
                 }
             }
@@ -119,16 +124,22 @@ struct SceneCollectionView: View {
                     Text("Still+ is active on this device.")
                         .font(StillTypography.footnote)
                         .foregroundStyle(StillTheme.textSecondary)
-                } else if let product = stillPlusProducts.first {
-                    Button("Start Still+ · \(product.displayPrice)") {
-                        runPurchase { await appState.container.purchases.purchase(productID: product.id) }
+                } else if canPurchase {
+                    ForEach(stillPlusProducts) { product in
+                        Button("Start Still+ · \(product.displayPrice)") {
+                            runPurchase { await appState.container.purchases.purchase(productID: product.id) }
+                        }
+                        .buttonStyle(QuietPrimaryButtonStyle())
                     }
-                    .buttonStyle(QuietPrimaryButtonStyle())
+                    Button("Restore purchases") {
+                        runPurchase { await appState.container.purchases.restorePurchases() }
+                    }
+                    .buttonStyle(QuietSecondaryButtonStyle())
+                } else {
+                    Text("Still+ is not available in this build yet.")
+                        .font(StillTypography.footnote)
+                        .foregroundStyle(StillTheme.textSecondary)
                 }
-                Button("Restore purchases") {
-                    runPurchase { await appState.container.purchases.restorePurchases() }
-                }
-                .buttonStyle(QuietSecondaryButtonStyle())
                 if let purchaseMessage {
                     Text(purchaseMessage)
                         .font(StillTypography.footnote)
@@ -160,7 +171,6 @@ struct SceneCollectionView: View {
     @MainActor
     private func refreshPurchaseState() {
         stillPlusProducts = appState.container.purchases.products
-        purchasedProductIDs = appState.container.purchases.purchasedProductIDs
     }
 }
 
@@ -171,6 +181,7 @@ private struct SceneCard: View {
     let remaining: Int
     var lockedText: String? = nil
     let onSelect: () -> Void
+    var onLocked: (() -> Void)? = nil
 
     var body: some View {
         Group {
@@ -178,14 +189,16 @@ private struct SceneCard: View {
                 Button(action: onSelect) { cardContent }
                     .buttonStyle(.plain)
             } else {
-                cardContent
+                Button(action: { onLocked?() }) { cardContent }
+                    .buttonStyle(.plain)
+                    .disabled(onLocked == nil)
             }
         }
         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(scene.name)
         .accessibilityValue(isUnlocked ? (isSelected ? "Selected. \(scene.summary)" : scene.summary) : unlockText)
-        .accessibilityAddTraits(isUnlocked ? (isSelected ? [.isButton, .isSelected] : .isButton) : [])
+        .accessibilityAddTraits(isUnlocked ? (isSelected ? [.isButton, .isSelected] : .isButton) : (onLocked == nil ? [] : .isButton))
     }
 
     private var cardContent: some View {

@@ -25,7 +25,7 @@ enum PurchaseProductCatalog {
     static let stillPlusPreview = SupporterProduct(
         id: stillPlusMonthly,
         displayName: "Still+ Monthly",
-        description: "Permanent extra rooms, alternate cat coats, additional sound layers, and future subscriber tools. Focus, tasks, breaks, local history, and every session-earned room stay free.",
+        description: "Permanent extra rooms, alternate cat coats, and future subscriber tools. Focus, tasks, breaks, local history, and every session-earned room stay free.",
         displayPrice: "$2.99/month"
     )
 

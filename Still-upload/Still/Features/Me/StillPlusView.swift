@@ -1,11 +1,16 @@
 import SwiftUI
 
-/// StoreKit-backed subscription surface. It never suggests that focus, tasks,
-/// privacy, or session-earned rooms are paywalled.
+/// StoreKit-backed subscription surface. Until the products are actually
+/// supplied by StoreKit, this stays informational rather than offering a
+/// purchase or restore action that cannot succeed.
 struct StillPlusView: View {
     @Environment(AppState.self) private var appState
     @State private var products: [SupporterProduct] = []
     @State private var message: String?
+
+    private var canPurchase: Bool {
+        !products.isEmpty && !appState.hasStillPlus
+    }
 
     var body: some View {
         StillScreen {
@@ -24,9 +29,10 @@ struct StillPlusView: View {
                             .foregroundStyle(StillTheme.textSecondary)
                     }
 
-                    benefit("wave.3.right", "Focus Card access", "Set up a physical NFC card for a favorite focus preset.")
+                    benefit("creditcard", "Branded Still Card", "If a physical Still Card becomes available, it will be a subscriber benefit. Any compatible writable NFC tag can be set up free today.")
                     benefit("sparkles", "More rooms", "Three permanent original room variations.")
-                    benefit("paintpalette", "Future subscriber tools", "New optional tools, without ads, streak pressure, or a feed.")
+                    benefit("paintpalette", "Alternate cat coats", "Cosmetic coat choices for your room companion.")
+                    benefit("wand.and.stars", "Future subscriber tools", "New optional tools, without ads, streak pressure, or a feed.")
 
                     if appState.hasStillPlus {
                         Label("Your Still+ StoreKit entitlement is active on this device.", systemImage: "checkmark.circle.fill")
@@ -34,28 +40,25 @@ struct StillPlusView: View {
                             .foregroundStyle(StillTheme.accent)
                             .padding(StillTheme.Spacing.m)
                             .stillGlass()
-                    } else if let product = products.first {
-                        Button("Start Still+ · \(product.displayPrice)") {
-                            purchase(product)
-                        }
-                        .buttonStyle(QuietPrimaryButtonStyle())
-                        Text("Renews monthly unless cancelled in your Apple Account. StoreKit handles payment; Still does not see your payment details.")
-                            .font(StillTypography.footnote)
-                            .foregroundStyle(StillTheme.textSecondary)
+                    } else if canPurchase {
+                        purchaseControls
                     } else {
-                        QuietNote(text: "Still+ products are not available yet. Add the subscription in App Store Connect before offering it outside the local StoreKit test configuration.")
+                        QuietNote(
+                            text: "Still+ is not available in this build yet. It will return after its App Store subscription products are set up.",
+                            symbol: "clock"
+                        )
                     }
 
-                    Button("Restore purchases") { restore() }
-                        .buttonStyle(QuietSecondaryButtonStyle())
                     if let message {
                         Text(message)
                             .font(StillTypography.footnote)
                             .foregroundStyle(StillTheme.textSecondary)
                     }
-                    Text("You can manage or cancel a subscription in Apple Account settings. No cancellation penalty, no lost focus history.")
-                        .font(StillTypography.footnote)
-                        .foregroundStyle(StillTheme.textTertiary)
+                    if canPurchase || appState.hasStillPlus {
+                        Text("You can manage or cancel a subscription in Apple Account settings. No cancellation penalty, no lost focus history.")
+                            .font(StillTypography.footnote)
+                            .foregroundStyle(StillTheme.textTertiary)
+                    }
                 }
                 .padding(StillTheme.Spacing.screen)
             }
@@ -66,6 +69,22 @@ struct StillPlusView: View {
         .task {
             await appState.container.purchases.loadProducts()
             products = appState.container.purchases.products
+        }
+    }
+
+    private var purchaseControls: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            ForEach(products) { product in
+                Button("Start Still+ · \(product.displayPrice)") {
+                    purchase(product)
+                }
+                .buttonStyle(QuietPrimaryButtonStyle())
+            }
+            Button("Restore purchases") { restore() }
+                .buttonStyle(QuietSecondaryButtonStyle())
+            Text("Renews unless cancelled in your Apple Account. StoreKit handles payment; Still does not see your payment details.")
+                .font(StillTypography.footnote)
+                .foregroundStyle(StillTheme.textSecondary)
         }
     }
 

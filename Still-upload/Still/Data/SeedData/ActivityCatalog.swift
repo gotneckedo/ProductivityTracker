@@ -49,12 +49,10 @@ enum ActivityCatalog {
         all.filter { $0.implementationState == .available }
     }
 
-    /// The launch shelf is intentionally small. Other local tools remain
-    /// reachable from reflection or existing saved records, but Still does not
-    /// promote an endlessly expanding arcade as a way to avoid returning to life.
+    /// Compatibility alias retained for callers from the earlier curated shelf.
+    /// Every implemented finite activity is now discoverable from Break.
     static var launchShelf: [BreakActivity] {
-        let ids: Set<BreakActivityID> = [.sudoku, .picross, .shortRead, .pixelDoodle, .guidedStretch, .boxBreathing, .doNothing]
-        return available.filter { ids.contains($0.id) }
+        available
     }
 
     static func activity(_ id: BreakActivityID) -> BreakActivity? {

@@ -62,7 +62,7 @@ struct MorningStartView: View {
                                             .font(StillTypography.body)
                                         if appState.container.flags.wakeUpPreview { PreviewTag() }
                                     }
-                                    SelectionPill(options: WakeUpStopMethod.allCases, selection: $wakeUp.stopWith) { $0.displayName }
+                                    SelectionPill(options: stopMethodOptions, selection: $wakeUp.stopWith) { $0.displayName }
                                     Text(stopMethodDetail)
                                         .font(StillTypography.footnote)
                                         .foregroundStyle(StillTheme.textSecondary)
@@ -104,6 +104,12 @@ struct MorningStartView: View {
         .onAppear {
             wakeUp = WakeUpPlan(schedule: appState.preferences.morningStart,
                                 stopWith: appState.preferences.wakeUpStopMethod)
+            // A card hand-off is a DEBUG/CI simulation only. A user-installable
+            // build presents the genuine notification option, whose stop method
+            // is the normal system button.
+            if !appState.container.flags.wakeUpPreview {
+                wakeUp.stopWith = .button
+            }
             hasLoaded = true
         }
         .onChange(of: wakeUp) { _, newValue in
@@ -139,6 +145,10 @@ struct MorningStartView: View {
         case .focusCard:
             return "After Still opens, the queued session and morning checklist wait for a card tap. The system alarm can still be dismissed with its own controls."
         }
+    }
+
+    private var stopMethodOptions: [WakeUpStopMethod] {
+        appState.container.flags.wakeUpPreview ? WakeUpStopMethod.allCases : [.button]
     }
 
     private var timeBinding: Binding<Date> {

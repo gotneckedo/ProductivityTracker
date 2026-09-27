@@ -26,10 +26,6 @@ struct SudokuActivityView: View {
         ActivityGlassCard(activityID: .sudoku) {
             VStack(spacing: StillTheme.Spacing.l) {
                 if let game {
-                    Text(game.isSolved ? "Solved. Every row, column, and box holds 1 to 6." : "Fill each row, column, and box with 1 to 6.")
-                        .font(StillTypography.callout)
-                        .foregroundStyle(StillTheme.textSecondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     grid(game)
                     if game.isSolved {
                         Button("Start over") { reset() }
@@ -242,10 +238,6 @@ struct PicrossActivityView: View {
                 VStack(spacing: 0) {
                     Spacer(minLength: 0)
                     VStack(spacing: StillTheme.Spacing.l) {
-                        Text(game.isSolved ? "Solved: \(game.puzzle.title)." : "Fill squares so each row and column matches its numbers.")
-                            .font(StillTypography.callout)
-                            .foregroundStyle(StillTheme.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
                         if !game.isSolved {
                             SelectionPill(options: [PicrossTool.fill, PicrossTool.cross], selection: $tool) { option in
                                 option == .fill ? "Fill" : "Mark empty"
@@ -378,7 +370,7 @@ struct WordSearchActivityView: View {
     @Environment(\.stillDayPhase) private var phase
     @Environment(\.colorScheme) private var colorScheme
     @State private var game: WordSearchGame?
-    @State private var message = "Tap the first letter of a word, then its last letter."
+    @State private var message = ""
 
     private var resolvedPhase: StillDayPhase {
         phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
@@ -387,10 +379,12 @@ struct WordSearchActivityView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
             if let game {
-                Text(game.isSolved ? "All six found." : message)
-                    .font(StillTypography.callout)
-                    .foregroundStyle(StillTheme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                if game.isSolved || !message.isEmpty {
+                    Text(game.isSolved ? "All six found." : message)
+                        .font(StillTypography.callout)
+                        .foregroundStyle(StillTheme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
                 grid(game)
                 wordList(game)
                 if game.isSolved {
@@ -489,7 +483,7 @@ struct WordSearchActivityView: View {
         guard let puzzle = game?.puzzle else { return }
         try? appState.container.puzzleProgress.clear(puzzleID: puzzle.id)
         game = WordSearchGame(puzzle: puzzle)
-        message = "Tap the first letter of a word, then its last letter."
+        message = ""
     }
 }
 

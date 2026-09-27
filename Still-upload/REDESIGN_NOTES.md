@@ -2,9 +2,9 @@
 
 **Branch:** `redesign`  
 **Pull request:** [#1 — Redesign Still with a room-first focus flow](https://github.com/gotneckedo/ProductivityTracker/pull/1)  
-**Latest verified UI head:** `a6979f7`
-**Latest local validation:** `swift test` — **221 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).
-**Latest GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 36253225295](https://github.com/gotneckedo/ProductivityTracker/actions/runs/36253225295) completed successfully on `a6979f7`; its `still-screenshots` artifact contains and was visually reviewed across **59** simulator captures.
+**Latest verified UI head:** `036bfb0`
+**Latest local validation:** `swift test` — **222 tests passed, 0 failures** (Swift 6.1 on Ubuntu 24.04).
+**Latest GitHub Actions:** **Passed.** [iOS build, tests & screenshots — run 36291223612](https://github.com/gotneckedo/ProductivityTracker/actions/runs/36291223612) completed successfully on `036bfb0`; its `still-screenshots` artifact contains and was visually reviewed across **72** simulator captures.
 
 ## Master Plan decisions — product direction, not implementation proof
 
@@ -20,45 +20,43 @@ do **not** claim that the corresponding feature has shipped or passed CI.
 | **Extra rooms** | Keep the three existing extra rooms permanently available through Still+. Remove the word **Seasonal** everywhere: there is no rotation, expiration, countdown, or limited-time framing. |
 | **Card alarm boundary** | User-installable builds, including TestFlight, show setup and information only: no armable alarm and no simulated ringing. DEBUG/CI builds may show the complete mock ring/card-tap flow for design evidence. A Preview tag never turns an alarm that cannot fire into a shippable capability. |
 | **Planning price** | Plan for **$2.99/month** and **$24.99/year**, subject to final physical-card economics. Enroll in Apple’s Small Business Program before App Store Connect setup. |
-| **Light theme hierarchy** | **Added to the active Wave 1 correction plan.** Light gradients must be materially quieter than the current saturated fields, and page field, glass controls, inset lists, and matte activity canvases must read as separate values. Dark mode remains the visual reference. No light-theme correction is called verified until the replacement CI captures are reviewed. |
+| **Light theme hierarchy** | Light gradients are materially quieter than the saturated predecessor; page field, raised glass controls, inset lists, and matte activity canvases are distinct values. The final `proof-light-theme.png` capture was reviewed on 27 September 2026. |
 
 ### Master Plan debate calls
 
 - **A13 — study anchor:** accepted for Wave 3 as one optional pinned study anchor. It will remain silent when unmet, create no streak, and never produce a catch-up prompt; this preserves the useful “return point” without turning it into a daily obligation.
 - **F9 — settle-in fade:** accepted with the Master Plan condition: any 30-second sound fade happens **during the first 30 seconds of a started session**, never before Start, so Still never delays the first action.
 
-## Master Plan Wave 1 — perspective prerequisite verified
+## Master Plan Wave 1 — final visual verification
 
-### Supplied 512px room-art replacement — implementation pending CI review
+The implementation and proof point for this checkpoint is the `still-screenshots`
+artifact from [run 36291223612](https://github.com/gotneckedo/ProductivityTracker/actions/runs/36291223612)
+at `036bfb0`. Its ZIP was integrity-checked locally and all named captures below
+were manually reviewed. Earlier generated-room proofs remain historical only.
 
 On 26 September 2026, the user supplied eight transparent **512×512** room
-PNGs plus one 5×4 collectible sheet and declared them AI-generated originals
-made for Still from written prompts, not reference-product derivatives. The
-new package replaces the temporary generated room bases and objects in the
-sprite-first renderer without downscaling or repainting the art. The room view
-now uses a square art contract, and cat, hotspot, collectible, and lamp-mote
-anchors are re-derived per supplied scene rather than carrying forward the old
-160×132 coordinates. All 20 objects are extracted from disconnected opaque
-alpha components rather than fixed grid cells.
+PNGs plus one 5×4 collectible sheet, declared as AI-generated originals made
+for Still from written prompts and not reference-product derivatives. The
+renderer uses those assets unchanged on a square, nearest-neighbor sprite seam;
+the code renderer remains only as a missing-asset fallback. The supplied
+collectible sheet is sliced by opaque alpha-bounded component rather than a
+fixed-cell crop. Cat, hotspot, lamp, floor, and collectible anchors are now
+per-room data, not coordinates inherited from the temporary 160×132 artwork.
 
-**Status: implementation only — not yet verified.** The next CI artifact must
-show full-size Rainy Bedroom, Library Light, Train Window, Night City, Autumn
-Window, Snow Day, Spring Rain, and the reserved Sleep room, along with Focus
-idle/running, completion, and the supplied collectible sheet. No completion
-claim for this replacement is made until those named captures are reviewed.
-
-The original perspective-room correction at `a7d7f58` was reviewed again
-through the complete current build at `a6979f7`. The latter adds deterministic
-CI routes for every currently selectable room; it does not claim an alarm-room
-flow, which belongs to the later alarm wave.
-
-| Requirement | Proving capture(s) | Review result |
+| Wave 1 requirement | Proving capture(s) | Reviewed result |
 |---|---|---|
-| **Rainy Bedroom perspective** | `03-focus-room.png` | A distinct back wall, right side wall, converging floorboards, bed, desk, lamp, shelf, and plant read as one inhabitable room rather than flat geometry. |
-| **Four earned core rooms** | `03-focus-room.png`, `54-room-library.png`, `55-room-train.png`, `56-room-city.png` | Rainy Bedroom, Library Light, Train Window, and Night City all keep the same readable two-wall/floor shell while changing the window, built-in shelf, bed, lighting, and palette composition. |
-| **Three permanent Still+ room cosmetics** | `57-room-autumn.png`, `58-room-snow.png`, `59-room-spring.png` | Autumn Window, Snow Day, and Spring Rain retain the established perspective shell while presenting distinct exterior/window and furnishing color treatments. DEBUG-only in-memory entitlement unlocks these for screenshot review; this is not a production purchase claim. |
+| **All eight full-size supplied rooms** | `05-focus-room.png`, `58-room-library.png`, `59-room-train.png`, `60-room-city.png`, `61-room-autumn.png`, `62-room-snow.png`, `63-room-spring.png`, `64-room-sleep.png` | Rainy Bedroom, Library Light, Train Window, Night City, Autumn Window, Snow Day, Spring Rain, and the reserved Sleep room all show readable two-wall/floor perspective, coherent furniture planes, and distinct palette/composition. The three extra rooms are shown with DEBUG-only in-memory Still+ entitlement for review; this is not a production-purchase claim. |
+| **Clean room surface and accessible targets** | `proof-room-art-unoccluded.png` | Persistent visual object labels are absent, preserving the room art. Desk, Bookshelf, Wall calendar, Plant, and Window retain native 44pt VoiceOver-labeled targets in code; the screenshot intentionally proves the unoccluded visual layer rather than replacing accessibility validation. |
+| **Placed collectible anchors and scale** | `proof-room-collectible-anchors.png` | The pencil cup sits on the desk, radio on the shelf, trailing plant at the window, and rug on the floor plane. The initial oversized pencil cup/rug arrangement was rejected; this final capture reflects the corrective commit `036bfb0`. |
+| **Focus idle, active, and transition composition** | `05-focus-room.png`, `08-active.png`, `09-complete.png` | The idle room, running Focus surface, and calm completion screen each retain an art-first hierarchy without copy overlapping the room. |
+| **Supplied collectible review sheet** | `06-sprite-contact-sheet.png`, `33-sprite-contact-sheet-bottom.png` | The authored room, object, cat, and utility asset review surfaces are present from top to bottom. |
+| **Focus helper-copy removal** | `proof-focus-helper-clean.png` | The rejected explanatory sentence “A task is optional. Adding one can make the session feel clear.” is absent from Focus. |
+| **Bottom clearance above floating navigation** | `proof-today-bottom-clear.png`, `proof-tasks-bottom-clear.png`, `proof-sudoku-bottom-clear.png`, `proof-me-bottom-clear.png` | Each requested final scroll state leaves its last content visible above navigation or, for Tasks, inside its modal’s own safe viewport. |
+| **Light theme value hierarchy** | `proof-light-theme.png` | A deterministic 9 AM fixture now resolves to a warm off-white page with visibly raised surfaces and darker readable type; it no longer accidentally captures the night phase. |
 
-**Accepted boundary:** the bundled `still-room-alarmsleep.png` source asset is not yet presented as an armable alarm experience. It requires its own state-machine, DEBUG-only mock-flow, and CI proof in the later alarm wave; no release alarm behavior is implied here.
+**Accepted Wave 1 boundary:** `64-room-sleep.png` is an art-review screen only. It explicitly does not arm or simulate an alarm. A later DEBUG-only alarm mock needs a separate state machine and proof; no release alarm behavior is implied here.
+
+**Next checkpoint:** Wave 2 begins with touch responsiveness, the affordance layer, and undo for destructive actions. It is not implemented or claimed verified in this note yet.
 
 ## Phase 2 — verified sprite-first room checkpoint (historical generated-art evidence)
 
@@ -70,8 +68,8 @@ The accepted artifact is `still-screenshots` from [run 36242555096](https://gith
 |---|---|---|---|
 | **Historical generated 32-color package** | `Tools/generate_still_sprites.py` deterministically created the temporary room bases and objects at this checkpoint, alongside break/empty-state/card assets, bird, and four six-frame cat coats. | `04-sprite-contact-sheet.png`, `29-sprite-contact-sheet-bottom.png` | **Historical only.** The room and collectible portion was superseded on 26 September 2026 by the supplied 512px package recorded above. The fallback seam, cat art, and non-room utility sprites remain relevant. |
 | **Sprite-first Focus room** | `SceneDefinition.spriteAssetName`, `RoomObject.spriteAssetName`, and `SpriteFirstRoomSurface` select authored PNG rooms and object assets with pixel interpolation, retaining a code-drawn fallback for missing assets. Starter furniture is visible from the first room. | `03-focus-room.png` | Rainy Bedroom renders as a crisp pixel room with starter bed, desk, lamp, shelf, plant, window, and cat—without an empty-room reward state. |
-| **Accessible room object targets** | Desk, Bookshelf, Calendar, Plant, and Window retain 44pt targets, VoiceOver labels/hints, and app routes. Persistent visual labels have been removed because they obscured the authored room art; the replacement needs fresh CI proof. | Historical `03-focus-room.png` only | **Not currently accepted as proof.** The historical capture showed labels over the Rainy Bedroom art while the other room captures did not show the same treatment. The next screenshot artifact must verify the native, non-overlay targets and unoccluded art before this row can be closed. |
-| **Core room collection and seasonal seam** | The scene catalog binds the original art to Rainy Bedroom, Library Light, Train Window, Night City, and seasonal rooms; free core rooms remain distinct while seasonal Still+ cosmetics use the honest locked state. | `34-scenes-all.png`, `35-scenes-seasonal.png` | Four core room thumbnails are fully inside the two-column layout with visibly distinct window/light variants. Seasonal cards are visibly locked and described as Still+ cosmetics rather than session-earned digital access. |
+| **Accessible room object targets** | Desk, Bookshelf, Calendar, Plant, and Window retain 44pt targets, VoiceOver labels/hints, and app routes. Persistent visual labels are removed because they obscured the authored room art. | `proof-room-art-unoccluded.png` from run `36291223612` | **Superseded by the final Wave 1 proof.** The visual layer is clean while the native accessibility targets remain in code. |
+| **Core room collection and extra-room seam** | The scene catalog binds the original art to Rainy Bedroom, Library Light, Train Window, Night City, and permanent extra rooms; free core rooms remain distinct while Still+ rooms use the honest locked state. | `38-scenes-all.png`, `39-scenes-extra.png` from run `36291223612` | Four core room thumbnails are fully inside the two-column layout, and the permanent extra-room cards carry no rotation or expiry framing. |
 
 **Known Phase 3 difference:** the accepted Phase 2 Focus evidence still uses the existing action card beneath the room. Phase 3 explicitly replaces that composition with a full-bleed room and floating controls; this Phase 2 proof makes no Phase 3 visual claim.
 
@@ -79,7 +77,7 @@ The accepted artifact is `still-screenshots` from [run 36242555096](https://gith
 
 The post-review correction pass explicitly registers the bundled Instrument Serif and Outfit files at launch, retaining the `UIAppFonts` entries as a second registration path. Captures now show Instrument Serif in display headlines, timers, and large statistics rather than a system-sans fallback. Shared glass surfaces clip their material, fill, border, and shadow to one rounded contour; Home, active focus, Journal, Me, and Short Read no longer retain an outer rectangular fill.
 
-The original room renderer now floats over the phase background with a warm halo, lamp bloom, shadow, motes, two wall planes, and reduced-motion-aware motion. It is also the renderer used in Scene thumbnails. A shared viewport contract is present, but the existing captures do **not** prove adequate bottom clearance on every required screen; Today, Tasks, Me, and Sudoku must be reviewed from fresh bottom-scroll captures. The active-focus screen now has one subject-or-Focus overline, a thin glowing progress line, one sound-state glyph, and a full-width Study Plan card.
+The original room renderer now floats over the phase background with a warm halo, lamp bloom, shadow, motes, two wall planes, and reduced-motion-aware motion. It is also the renderer used in Scene thumbnails. The final Wave 1 captures prove clearance for Today, Tasks, Me, and Sudoku in `proof-today-bottom-clear.png`, `proof-tasks-bottom-clear.png`, `proof-me-bottom-clear.png`, and `proof-sudoku-bottom-clear.png`. The active-focus screen now has one subject-or-Focus overline, a thin glowing progress line, one sound-state glyph, and a full-width Study Plan card.
 
 Sudoku presents six separated 2×3 boxes and keeps a keypad number available until all six placements exist. Short Read explicitly lists and opens the four bundled public-domain books. Wake up exposes time, days, preset, and Stop with Button/Focus Card controls without a Calendar settings detour; Box Breathing shows remaining time only once. Me begins with the personal glass card, and preview Focus Card acquisition is secondary glass. Student language is updated to US wording, including **studying**, **sessions**, and **focus days**.
 
@@ -102,7 +100,7 @@ The pre-Phase 2 layout checkpoint was accepted only after review of [iOS build, 
 | Requirement | Proving capture(s) | Verified result |
 |---|---|---|
 | **Top material fade and safe status area** | `27-break-midpoint.png`, `28-journal-midpoint.png`, `29-me-midpoint.png`, `30-scenes-midpoint.png` | Break, Journal, Me, and pushed Scenes all keep scrolling content below a single phase-aware status chrome; labels are not readable behind the status clock. |
-| **Bottom clearance above the floating tab bar** | Historical captures only: `24-break-bottom.png`, `25-journal-bottom.png`, `26-me-bottom.png`, `33-scenes-all-bottom.png`, `34-read-bottom.png`, `35-sudoku-bottom.png`, `36-card-bottom.png` | **Historical proof rejected for current acceptance.** The later review identified overlap concerns on Sudoku, Me, Today, and Tasks. Today and Tasks were also absent from this historical bottom-capture set. The replacement CI matrix must capture and visually verify the bottom state for all four before a completion claim is restored. |
+| **Bottom clearance above the floating tab bar** | Final Wave 1 proof: `proof-today-bottom-clear.png`, `proof-tasks-bottom-clear.png`, `proof-me-bottom-clear.png`, `proof-sudoku-bottom-clear.png` from run `36291223612` | **Verified.** The previously rejected historical set is retained only as historical context; all four disputed screens now show the final content above navigation or their modal safe viewport. |
 | **Live focus end time** | `04-active.png` | The active 18-minute session visibly reports **Ends 9:59 AM**, matching the deterministic 9:41 AM capture clock and the remaining duration. |
 | **Centered, responsive Picross with spaced clues** | `09-picross.png`, `10-picross-320.png`, `45-picross-dark.png` | The standard and narrow layouts keep the complete board and all clues visible, centered in the activity viewport, with readable contrast in dark mode. |
 
@@ -123,7 +121,7 @@ The shared `StillScreen` now owns the status material/fade, `StillScrollViewport
 | **P9a — Room collection** | **Real.** Added a local, code-drawn collection of 20 original room objects, unlock rules, earned ownership, per-scene placement, unlock acknowledgement, and a room collection screen. It uses local focus, reading, doodle, and break history only. |
 | **P9b — Wake up** | **Real fallback plus DEBUG preview.** iOS 17+ uses local notifications. The iOS 26 AlarmKit hand-off is represented by a `WakeUpScheduling` protocol boundary and DEBUG-only preview scheduler; production AlarmKit needs Apple’s capability and physical-device validation. |
 | **P9c — Public-domain books** | **Real.** Bundled four verified Standard Ebooks-compatible public-domain EPUB editions, with parser and provenance tests. The reader parses them locally and does not contact a service. |
-| **P9d — Seasonal scenes and Supporter** | **Real StoreKit boundary with local test configuration.** Three supporter seasonal scenes, StoreKit 2 product/restore wiring, and `StillProducts.storekit` support local Xcode testing. The purchase cannot be live until App Store Connect, signing, product review, and physical-device testing are complete. |
+| **P9d — Extra rooms and Supporter** | **Real StoreKit boundary with local test configuration.** Three permanent extra rooms, StoreKit 2 product/restore wiring, and `StillProducts.storekit` support local Xcode testing. The purchase cannot be live until App Store Connect, signing, product review, and physical-device testing are complete. |
 | **P9e — Student wording** | **Real.** Centralized student-facing language in `Copy.swift`; it is used throughout Focus, Tasks, Break, completion, notifications, and room collection. |
 | **P9f — Google Calendar** | **Real Apple Calendar path plus DEBUG-only Google sample.** EventKit reads calendars already configured on iPhone. The visible Google sample adapter is clearly tagged **Preview**, makes no network call, and is off in V1/current/release. A production Google OAuth adapter remains intentionally out of scope. |
 | **P9g — Branded Focus Card** | **Real deep-link/NFC foundations plus stand-in offering.** `still://` links, parser, NFC simulator, and optional CoreNFC writer boundary remain real. The artwork and “Get a card” route use a `PlaceholderFocusCardOffering` with a **Preview** tag, no price, cart, or fulfillment call; universal-link host is deliberately a placeholder. |
@@ -131,7 +129,7 @@ The shared `StillScreen` now owns the status material/fade, `StillScrollViewport
 
 ## What is partial or requires later validation
 
-The Swift package suite is green locally, and the final iPhone Simulator build, test target, widget extension build, Live Activity-linked app target, and 38-screen screenshot capture passed in GitHub Actions. Accessibility labels, Dynamic Type-aware SwiftUI layouts, 44pt controls, and Reduce Motion support are implemented in code; however, VoiceOver and visual review on physical iPhone hardware remain release-validation tasks.
+The Swift package suite is green locally, and the final iPhone Simulator build, test target, widget extension build, Live Activity-linked app target, and 72-screen screenshot capture passed in GitHub Actions. Accessibility labels, Dynamic Type-aware SwiftUI layouts, 44pt controls, and Reduce Motion support are implemented in code; however, VoiceOver and visual review on physical iPhone hardware remain release-validation tasks.
 
 Family Controls shielding is deliberately **off** in `FeatureFlags.v1`, `current`, and `release`. The app contains truthful UI, a schedule state machine, and a mock/preview path, but Apple’s Family Controls Distribution entitlement, DeviceActivity monitor extension, and hardware verification are still required before shipping actual blocking. Core NFC writing similarly needs the paid-team capability and hardware test. App Group sharing for the widget and Live Activity needs paid-account provisioning verification. The Supporter product and alternate Home Screen icon assets need final App Store/App Icon review before a public release.
 

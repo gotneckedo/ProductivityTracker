@@ -260,7 +260,10 @@ private struct SceneCard: View {
     private var unlockText: String {
         if let lockedText { return lockedText }
         let needed = scene.unlockRule.requiredSessions
-        return "Opens at \(Copy.Count.session(needed)) · \(Copy.Count.session(remaining)) to go"
+        // The room is a fixed, earned milestone—not a countdown, streak, or
+        // pressure loop. Keep the requirement visible without narrating the
+        // person's remaining work back to them.
+        return "Opens after \(Copy.Count.session(needed))"
     }
 }
 

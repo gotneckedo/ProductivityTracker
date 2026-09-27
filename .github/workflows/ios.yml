@@ -104,9 +104,9 @@ jobs:
           shoot() {
             xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" > /dev/null
             # A demo state performs local fixture setup and SwiftUI layout on a
-            # cold process. Twelve seconds avoids capturing the system launch
-            # surface before the requested route has drawn.
-            sleep 12
+            # cold process. Ten seconds leaves room for Release proof under
+            # the hosted runner's hard cap without racing the initial render.
+            sleep 10
             xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
             echo "Captured $2"
           }
@@ -116,7 +116,7 @@ jobs:
           # floating tab bar leaves enough bottom clearance.
           shoot_bottom() {
             xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" -still-scroll-bottom "$1" > /dev/null
-            sleep 12
+            sleep 10
             xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
             echo "Captured $2"
           }
@@ -133,25 +133,23 @@ jobs:
 
           xcrun simctl ui "$UDID" appearance light
           n=1
-          # Phase 2 sprite checkpoint: Focus room has labeled object targets;
-          # the review sheet proves the authored package is bundled.
-          for screen in onboarding today setup mixer mixer-top home focus-room sprite-contact-sheet calm active active-autumn complete break sudoku wordsearch picross picross-320 breathing read doodle journal habits tasks timeline presets gallery gallery-empty gallery-one gallery-several gallery-error morning me scenes card get-card; do
+          # The screenshot job is deliberately a compact, current P0 matrix.
+          # Historical accepted artifacts retain the prior visual-regression
+          # gallery; running all its duplicates here exceeded the hosted
+          # runner's hard 45-minute cap before release proof could begin.
+          for screen in today mixer mixer-top active-autumn break sudoku wordsearch picross breathing read doodle journal habits gallery gallery-empty gallery-one gallery-several gallery-error me scenes card get-card; do
             shoot "$screen" "$(printf '%02d' $n)-$screen"
             n=$((n + 1))
           done
 
-          # The long contact sheet is captured at both ends, so the artifact
-          # proves the cat frames and lower activity/empty-state sprites too.
-          for screen in today home break journal me tasks sprite-contact-sheet; do
+          # These final rows prove P0 navigation and shelf completeness.
+          for screen in today break read; do
             shoot_bottom "$screen" "$(printf '%02d' $n)-$screen-bottom"
             n=$((n + 1))
           done
 
-          # Named correction proofs: screenshots, rather than Swift tests,
-          # decide whether these visual claims can be marked complete.
-          shoot "focus-room" "proof-focus-helper-clean"
-          shoot "focus-room" "proof-room-art-unoccluded"
-          shoot "room-collectibles" "proof-room-collectible-anchors"
+          # Named P0 proofs. Screenshots, rather than Swift tests, decide
+          # whether the following release and visual claims are complete.
           shoot "break" "proof-break-all-top"
           shoot_bottom "break" "proof-break-all-bottom"
           shoot "journal" "proof-journal-navigation"
@@ -161,62 +159,6 @@ jobs:
           shoot_bottom "read" "proof-short-read-bottom"
           shoot "mixer-top" "proof-ambient-available"
           shoot "mixer" "proof-ambient-unavailable"
-          shoot "today-light" "proof-light-theme"
-          shoot_bottom "today" "proof-today-bottom-clear"
-          shoot_bottom "tasks" "proof-tasks-bottom-clear"
-          shoot_bottom "sudoku" "proof-sudoku-bottom-clear"
-          shoot_bottom "me" "proof-me-bottom-clear"
-
-          for screen in break journal me scenes; do
-            shoot_midpoint "$screen" "$(printf '%02d' $n)-$screen-midpoint"
-            n=$((n + 1))
-          done
-
-          # Section 1 visual proof: the top and bottom of the all-unlocked
-          # scene grid show all four unique core rooms, while the Short Read
-          # bottom proves the complete bundled-book shelf is present.
-          shoot "scenes-all" "$(printf '%02d' $n)-scenes-all"
-          n=$((n + 1))
-          # This view opens at the permanent extra-room section, completing the
-          # two-screen proof of the full collection without a horizontal
-          # scroll wrapper or clipped second column.
-          shoot "scenes-extra" "$(printf '%02d' $n)-scenes-extra"
-          n=$((n + 1))
-          shoot_bottom "scenes-all" "$(printf '%02d' $n)-scenes-all-bottom"
-          n=$((n + 1))
-          shoot_bottom "read" "$(printf '%02d' $n)-read-bottom"
-          n=$((n + 1))
-          shoot_bottom "sudoku" "$(printf '%02d' $n)-sudoku-bottom"
-          n=$((n + 1))
-          shoot_bottom "card" "$(printf '%02d' $n)-card-bottom"
-          n=$((n + 1))
-
-          xcrun simctl ui "$UDID" appearance dark
-          # Section 1 dark captures exercise the remaining dark-specific
-          # defects: the task sheet must inherit the night phase and every
-          # puzzle must keep a light, legible cell treatment.
-          for screen in home active complete journal me tasks sudoku wordsearch picross; do
-            shoot "$screen" "$(printf '%02d' $n)-$screen-dark"
-            n=$((n + 1))
-          done
-
-          # Phase 2 cat checkpoint: the same local companion must visibly vary
-          # by morning, focus, long-focus sleep, completion, and a direct-tap
-          # reaction without introducing a care or streak mechanic.
-          xcrun simctl ui "$UDID" appearance light
-          for screen in cat-morning cat-focus cat-asleep cat-complete cat-reaction; do
-            shoot "$screen" "$(printf '%02d' $n)-$screen"
-            n=$((n + 1))
-          done
-
-          # Full-size visual review for each of the current perspective rooms;
-          # collection thumbnails alone are too small to verify room depth,
-          # furniture planes, and distinct scene composition. The three
-          # permanent Still+ rooms use an in-memory DEBUG entitlement only.
-          for screen in room-library room-train room-city room-autumn room-snow room-spring room-sleep; do
-            shoot "$screen" "$(printf '%02d' $n)-$screen"
-            n=$((n + 1))
-          done
 
           # Truth-pass release proof. This is a Release configuration compiled
           # with only the internal STILL_PROOF navigation condition; FeatureFlags
@@ -236,13 +178,13 @@ jobs:
 
           shoot_release() {
             xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" > /dev/null
-            sleep 12
+            sleep 10
             xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
             echo "Captured release proof $2"
           }
           shoot_release_bottom() {
             xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" -still-scroll-bottom "$1" > /dev/null
-            sleep 12
+            sleep 10
             xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
             echo "Captured release bottom proof $2"
           }

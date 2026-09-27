@@ -161,7 +161,6 @@ jobs:
           shoot_bottom "read" "proof-short-read-bottom"
           shoot "mixer-top" "proof-ambient-available"
           shoot "mixer" "proof-ambient-unavailable"
-          shoot_bottom "release-morning" "proof-release-morning-delivery-note"
           shoot "today-light" "proof-light-theme"
           shoot_bottom "today" "proof-today-bottom-clear"
           shoot_bottom "tasks" "proof-tasks-bottom-clear"
@@ -241,9 +240,16 @@ jobs:
             xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
             echo "Captured release proof $2"
           }
+          shoot_release_bottom() {
+            xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" -still-scroll-bottom "$1" > /dev/null
+            sleep 12
+            xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
+            echo "Captured release bottom proof $2"
+          }
           shoot_release "release-home" "proof-release-focus-home"
           shoot_release "release-blocking" "proof-release-blocking"
           shoot_release "release-morning" "proof-release-morning"
+          shoot_release_bottom "release-morning" "proof-release-morning-delivery-note"
           shoot_release "release-plus" "proof-release-still-plus"
           shoot_release "release-locked-room" "proof-release-locked-room"
           shoot_release "release-card" "proof-release-focus-card"

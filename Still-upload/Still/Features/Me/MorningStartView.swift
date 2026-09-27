@@ -12,8 +12,9 @@ struct MorningStartView: View {
 
     var body: some View {
         StillScreen {
-            ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                     HStack(alignment: .firstTextBaseline) {
                         VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
                             Text(appState.container.flags.wakeUpPreview ? "Wake up" : "Morning Start")
@@ -81,6 +82,7 @@ struct MorningStartView: View {
                     }
 
                     deliveryNote
+                        .id("morning-delivery-note")
 
                     if appState.container.flags.wakeUpPreview {
                         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
@@ -94,10 +96,21 @@ struct MorningStartView: View {
                         }
                     }
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.vertical, StillTheme.Spacing.m)
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.vertical, StillTheme.Spacing.m)
+                }
+                .stillScrollableViewport()
+                .onAppear {
+                    #if DEBUG || STILL_PROOF
+                    guard DemoLaunch.shouldScrollToBottom("release-morning") else { return }
+                    DispatchQueue.main.async {
+                        withAnimation(.none) {
+                            proxy.scrollTo("morning-delivery-note", anchor: .bottom)
+                        }
+                    }
+                    #endif
+                }
             }
-            .stillScrollableViewport()
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)

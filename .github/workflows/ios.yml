@@ -313,7 +313,9 @@ jobs:
           # capture-full-gallery.sh writes directly to GITHUB_WORKSPACE so the
           # gallery is independent of the nested Xcode project location.
           path: ${{ github.workspace }}/full-gallery/
-          if-no-files-found: warn
+          # A warning would allow the job to look green while silently losing
+          # the very regression evidence this job exists to preserve.
+          if-no-files-found: error
 
       - name: Upload full gallery build log
         if: always()

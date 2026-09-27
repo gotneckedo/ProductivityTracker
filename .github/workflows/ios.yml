@@ -151,6 +151,7 @@ jobs:
           # decide whether these visual claims can be marked complete.
           shoot "focus-room" "proof-focus-helper-clean"
           shoot "focus-room" "proof-room-art-unoccluded"
+          shoot "room-collectibles" "proof-room-collectible-anchors"
           shoot "today-light" "proof-light-theme"
           shoot_bottom "today" "proof-today-bottom-clear"
           shoot_bottom "tasks" "proof-tasks-bottom-clear"

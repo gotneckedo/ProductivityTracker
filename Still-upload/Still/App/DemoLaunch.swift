@@ -7,7 +7,7 @@ import Foundation
 ///   xcrun simctl launch booted com.cocomedia.still -still-demo home
 ///
 /// Screens: onboarding, today, today-light, setup, home, focus-room, room-library, room-train, room-city,
-/// room-autumn, room-snow, room-spring, room-sleep, sprite-contact-sheet,
+/// room-autumn, room-snow, room-spring, room-sleep, room-collectibles, sprite-contact-sheet,
 /// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, complete, break, sudoku, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, timeline, doodle, gallery, morning,
@@ -79,6 +79,8 @@ enum DemoLaunch {
             // this direct review route verifies its bundled art without implying
             // an armable production alarm.
             return routed(.spriteContactSheet)
+        case "room-collectibles":
+            return roomWithPlacedCollectibles()
         case "cat-morning":
             return focusRoomState(hour: 9)
         case "cat-reaction":
@@ -185,6 +187,27 @@ enum DemoLaunch {
             clockStart: screenshotDate(hour: hour, minute: 0)
         )
         state.router.go(to: .today)
+        return state
+    }
+
+    private static func roomWithPlacedCollectibles() -> AppState {
+        // Use only the early, naturally earned objects so this review fixture
+        // proves actual sprite anchors without a fake entitlement or inventory.
+        let state = PreviewSupport.appState(
+            populated: true,
+            completedSessions: 30,
+            clockStart: screenshotDate(hour: 14, minute: 0)
+        )
+        var preset = state.currentPreset
+        preset.sceneID = .rainyBedroom
+        state.savePreset(preset)
+        state.setCatName("Mochi")
+        state.router.go(to: .focusHome)
+        state.placeRoomObject(.pencilCup, in: .rainyBedroom, slot: .desk)
+        state.placeRoomObject(.radio, in: .rainyBedroom, slot: .shelf)
+        state.placeRoomObject(.wovenRug, in: .rainyBedroom, slot: .floorCorner)
+        state.placeRoomObject(.trailingPlant, in: .rainyBedroom, slot: .windowsill)
+        state.notice = nil
         return state
     }
 

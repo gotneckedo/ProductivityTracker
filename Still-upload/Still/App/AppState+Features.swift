@@ -128,6 +128,19 @@ extension AppState {
         reload()
     }
 
+    var hapticsEnabled: Bool { preferences.hapticsEnabled }
+    var interactionSoundsEnabled: Bool { preferences.interactionSoundsEnabled }
+
+    func setHapticsEnabled(_ enabled: Bool) {
+        container.preferences.setHapticsEnabled(enabled)
+        reload()
+    }
+
+    func setInteractionSoundsEnabled(_ enabled: Bool) {
+        container.preferences.setInteractionSoundsEnabled(enabled)
+        reload()
+    }
+
     @discardableResult
     func createPreset(named name: String, basedOn base: FocusPreset) -> FocusPreset? {
         let preset = container.preferences.createPreset(named: name, basedOn: base)

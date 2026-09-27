@@ -5,7 +5,9 @@ import SwiftUI
 struct SessionCompleteView: View {
     let sessionID: UUID
     @Environment(AppState.self) private var appState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var taskMarkedDone = false
+    @State private var unlockIsVisible = false
 
     var body: some View {
         let session = appState.session(sessionID)
@@ -38,7 +40,7 @@ struct SessionCompleteView: View {
                                     } label: {
                                         CompletionActivityCard(activity: activity)
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(StillRowButtonStyle())
                                     if rank < suggestions.activities.count - 1 {
                                         InsetRowDivider(leading: 42, phase: .dusk)
                                     }
@@ -61,6 +63,9 @@ struct SessionCompleteView: View {
                 .padding(.vertical, StillTheme.Spacing.xl)
             }
             .stillScrollableViewport(reservingFloatingTabBar: false)
+        }
+        .onAppear {
+            StillInteractionFeedback.fire(.focusCompleted, preferences: appState.preferences)
         }
     }
 
@@ -154,7 +159,11 @@ struct SessionCompleteView: View {
             .padding(StillTheme.Spacing.m)
             .stillGlass(radius: StillTheme.Radius.medium, phase: .dusk)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(StillRowButtonStyle(feedback: .roomObjectEarned))
+        .scaleEffect(unlockIsVisible || reduceMotion ? 1 : 0.01)
+        .opacity(unlockIsVisible ? 1 : 0)
+        .animation(reduceMotion ? .easeOut(duration: 0.16) : .spring(response: 0.34, dampingFraction: 0.62), value: unlockIsVisible)
+        .onAppear { unlockIsVisible = true }
         .accessibilityLabel("\(Copy.Completion.newRoomThing): \(object.name). \(Copy.Completion.placeNewThing).")
     }
 
@@ -190,6 +199,7 @@ struct SessionCompleteView: View {
                 Button("Mark done") {
                     appState.setTaskCompleted(task.id, true)
                     taskMarkedDone = true
+                    StillInteractionFeedback.fire(.taskMarkedDone, preferences: appState.preferences)
                 }
                 .buttonStyle(QuietSecondaryButtonStyle())
             }

@@ -106,7 +106,7 @@ struct FocusHomeView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                 }
-                .buttonStyle(QuietPrimaryButtonStyle())
+                .buttonStyle(QuietPrimaryButtonStyle(feedback: .focusStarted))
                 .accessibilityHint("Starts \(DurationFormatter.short(preset.timer.focusDuration)) of focus.")
 
                 ViewThatFits(in: .horizontal) {
@@ -161,6 +161,7 @@ struct FocusHomeView: View {
         edited.sceneID = available[nextIndex].id
         edited.renderMode = .scene
         appState.savePreset(edited)
+        StillInteractionFeedback.fire(.roomChanged, preferences: appState.preferences)
     }
 
     private var initialCatReaction: CatReaction {

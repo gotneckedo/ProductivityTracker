@@ -171,6 +171,9 @@ struct HabitsSection: View {
                     ForEach(appState.habitDays) { day in
                         HabitRow(day: day) {
                             appState.toggleHabit(day.habit.id)
+                            if !day.isDoneToday {
+                                StillInteractionFeedback.fire(.taskMarkedDone, preferences: appState.preferences)
+                            }
                         }
                         .contextMenu {
                             Button {
@@ -245,6 +248,8 @@ private struct HabitRow: View {
                     }
                 }
                 .frame(width: 38, height: 38)
+                .contentTransition(.symbolEffect(.replace))
+                .symbolEffect(.bounce, value: day.isDoneToday)
                 .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(day.habit.title)
@@ -259,6 +264,8 @@ private struct HabitRow: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .offset(y: day.isDoneToday ? 2 : 0)
+        .animation(.spring(response: 0.24, dampingFraction: 0.72), value: day.isDoneToday)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(day.habit.title)
         .accessibilityValue(day.isDoneToday ? "Done today" : "Not yet today")

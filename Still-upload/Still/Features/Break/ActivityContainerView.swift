@@ -117,6 +117,7 @@ struct ActivityContainerView: View {
 
     private func finish(_ result: ActivityOutcome) {
         guard outcome == nil else { return }
+        StillInteractionFeedback.fire(.breakEnded, preferences: appState.preferences)
         withAnimation(.easeOut(duration: StillMotion.standard)) {
             outcome = result
         }

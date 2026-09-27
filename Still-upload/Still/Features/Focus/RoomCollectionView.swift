@@ -67,7 +67,7 @@ struct RoomCollectionView: View {
                 HStack(spacing: StillTheme.Spacing.xs) {
                     ForEach(SceneCatalog.completeCatalog.filter(appState.isUnlocked)) { room in
                         Button(room.name) { selectedSceneID = room.id }
-                            .buttonStyle(RoomCollectionPill(selected: selectedSceneID == room.id))
+                    .buttonStyle(RoomCollectionPill(selected: selectedSceneID == room.id))
                             .accessibilityAddTraits(selectedSceneID == room.id ? .isSelected : [])
                     }
                 }
@@ -145,6 +145,9 @@ struct RoomCollectionView: View {
                 Button(placedHere ? Copy.Collection.placed : Copy.Collection.place) {
                     selectedSlot = object.slot
                     appState.placeRoomObject(object.id, in: selectedSceneID, slot: object.slot)
+                    if !placedHere {
+                        StillInteractionFeedback.fire(.roomObjectEarned, preferences: appState.preferences)
+                    }
                 }
                 .buttonStyle(QuietSecondaryButtonStyle())
                 .disabled(placedHere)
@@ -182,6 +185,7 @@ private struct RoomCollectionPill: ButtonStyle {
             .background(.white.opacity(selected ? 0.52 : 0.18), in: Capsule())
             .overlay(Capsule().strokeBorder(.white.opacity(selected ? 0.82 : 0.4), lineWidth: StillTheme.Stroke.hairline))
             .opacity(configuration.isPressed ? 0.75 : 1)
+            .stillPressResponse(configuration.isPressed, feedback: .rowPressed)
     }
 }
 

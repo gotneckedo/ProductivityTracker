@@ -160,9 +160,15 @@ struct UserPreferences: Codable, Equatable {
     /// Optional, device-local companion name. It appears only in Cat settings
     /// and in a rare completed-session acknowledgement.
     var catName: String? = nil
+    /// Tactile responses are local and can be turned off independently of
+    /// motion. They default on because they are a direct control affordance.
+    var hapticsEnabled: Bool = true
+    /// Tiny interface sounds default off. Ambient sound remains controlled by
+    /// the selected Focus mix, not by this accessibility preference.
+    var interactionSoundsEnabled: Bool = false
     var schemaVersion: Int = UserPreferences.currentSchemaVersion
 
-    static let currentSchemaVersion = 5
+    static let currentSchemaVersion = 6
 
     init() {}
 
@@ -170,7 +176,8 @@ struct UserPreferences: Codable, Equatable {
         case hasCompletedOnboarding, onboardingGoal, breakAppeal, appAccentPalette, defaultPresetID, selectedTaskID
         case animationIntensity, hasRequestedNotificationPermission, notificationPermissionGranted
         case pendingCompletionSessionID, acknowledgedUnlockedSceneCount, morningStart, wakeUpStopMethod
-        case showsCalendarEvents, showsGoogleCalendarEvents, savedSoundscapes, catCoat, catName, schemaVersion
+        case showsCalendarEvents, showsGoogleCalendarEvents, savedSoundscapes, catCoat, catName
+        case hapticsEnabled, interactionSoundsEnabled, schemaVersion
     }
 
     init(from decoder: Decoder) throws {
@@ -194,6 +201,8 @@ struct UserPreferences: Codable, Equatable {
         savedSoundscapes = (try? c.decodeIfPresent([SavedSoundscape].self, forKey: .savedSoundscapes)) ?? []
         catCoat = (try? c.decodeIfPresent(CatCoat.self, forKey: .catCoat)) ?? .ginger
         catName = CatName.normalized(try? c.decodeIfPresent(String.self, forKey: .catName))
+        hapticsEnabled = try c.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? defaults.hapticsEnabled
+        interactionSoundsEnabled = try c.decodeIfPresent(Bool.self, forKey: .interactionSoundsEnabled) ?? defaults.interactionSoundsEnabled
         schemaVersion = try c.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
         self = migrated()
     }
@@ -216,6 +225,10 @@ struct UserPreferences: Codable, Equatable {
         }
         if result.schemaVersion < 5 {
             result.catName = CatName.normalized(result.catName)
+        }
+        if result.schemaVersion < 6 {
+            result.hapticsEnabled = true
+            result.interactionSoundsEnabled = false
         }
         result.catName = CatName.normalized(result.catName)
         result.schemaVersion = Self.currentSchemaVersion

@@ -9,7 +9,7 @@ import Foundation
 ///
 /// Screens: onboarding, today, today-light, setup, home, focus-room, room-library, room-train, room-city,
 /// room-autumn, room-snow, room-spring, room-sleep, room-collectibles, sprite-contact-sheet,
-/// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, complete, break, sudoku, wordsearch,
+/// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, active-final-minute, complete, break, sudoku, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, timeline, doodle, gallery, morning, mixer-available,
 /// calendar-settings, get-card.
@@ -133,6 +133,8 @@ enum DemoLaunch {
             // match CI's fixed 9:41 status-bar clock. An 18-minute remaining
             // face must therefore truthfully show 9:59 AM.
             return activeState()
+        case "active-final-minute":
+            return activeCatState(elapsed: 24 * 60)
         case "complete":
             // bootstrap() reopens the pending completion screen.
             return PreviewSupport.completedSession().state
@@ -172,6 +174,13 @@ enum DemoLaunch {
             return routed(.presets)
         case "tasks":
             return routed(.tasks)
+        case "tasks-complete":
+            let state = PreviewSupport.appState(populated: true)
+            if let task = state.todaysTasks.first {
+                state.setTaskCompleted(task.id, true)
+            }
+            state.router.go(to: .tasks)
+            return state
         case "timeline":
             return routed(.dayTimeline)
         case "doodle":

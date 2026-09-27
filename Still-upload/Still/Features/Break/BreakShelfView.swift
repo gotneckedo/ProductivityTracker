@@ -79,10 +79,12 @@ struct BreakShelfView: View {
                 HStack(spacing: StillTheme.Spacing.xs) {
                     ShelfFilter(title: Copy.BreakShelf.all, isSelected: selectedCategory == nil) {
                         selectedCategory = nil
+                        StillInteractionFeedback.fire(.roomChanged, preferences: appState.preferences)
                     }
                     ForEach(ActivityCategory.allCases, id: \.self) { category in
                         ShelfFilter(title: category.displayName, isSelected: selectedCategory == category) {
                             selectedCategory = category
+                            StillInteractionFeedback.fire(.roomChanged, preferences: appState.preferences)
                         }
                     }
                 }
@@ -106,7 +108,7 @@ struct BreakShelfView: View {
                                     isDoneToday: appState.activityStatus(for: activity.id).kind == .completed
                                 )
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(StillRowButtonStyle())
                             if index < activities.count - 1 {
                                 InsetRowDivider(leading: 58)
                             }
@@ -142,7 +144,7 @@ private struct ShelfFilter: View {
             .background(isSelected ? StillTheme.accentSoft.opacity(0.62) : .clear, in: Capsule())
             .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(StillRowButtonStyle())
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

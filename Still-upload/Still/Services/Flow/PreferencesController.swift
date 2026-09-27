@@ -96,6 +96,14 @@ final class PreferencesController {
         update { $0.catName = CatName.normalized(raw) }
     }
 
+    func setHapticsEnabled(_ enabled: Bool) {
+        update { $0.hapticsEnabled = enabled }
+    }
+
+    func setInteractionSoundsEnabled(_ enabled: Bool) {
+        update { $0.interactionSoundsEnabled = enabled }
+    }
+
     func saveSoundscape(_ soundscape: SavedSoundscape) {
         update { prefs in
             let normalized = SavedSoundscape(id: soundscape.id, name: soundscape.name, mix: soundscape.mix.normalized())

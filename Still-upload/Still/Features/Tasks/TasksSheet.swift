@@ -39,7 +39,12 @@ struct TasksSheet: View {
                                                 detailLine: detailLine(for: task),
                                                 isSelected: appState.preferences.selectedTaskID == task.id && !task.isCompleted,
                                                 onSelect: { toggleSelection(task) },
-                                                onToggleDone: { appState.setTaskCompleted(task.id, !task.isCompleted) },
+                                                onToggleDone: {
+                                                    appState.setTaskCompleted(task.id, !task.isCompleted)
+                                                    if !task.isCompleted {
+                                                        StillInteractionFeedback.fire(.taskMarkedDone, preferences: appState.preferences)
+                                                    }
+                                                },
                                                 onToggleStep: { step in appState.toggleTaskStep(taskID: task.id, stepID: step.id) },
                                                 onDetails: { detailTaskID = task.id },
                                                 onDelete: { appState.deleteTask(task.id) },
@@ -146,8 +151,10 @@ private struct TaskFocusCard: View {
                         .font(StillTypography.title3)
                         .foregroundStyle(task.isCompleted ? StillTheme.accent : StillTheme.textTertiary)
                         .frame(width: StillTheme.minimumTapSize, height: StillTheme.minimumTapSize)
+                        .contentTransition(.symbolEffect(.replace))
+                        .symbolEffect(.bounce, value: task.isCompleted)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(StillRowButtonStyle())
                 .accessibilityLabel(task.isCompleted ? "Mark not done" : "Mark done")
 
                 Button(action: onSelect) {
@@ -169,7 +176,7 @@ private struct TaskFocusCard: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(StillRowButtonStyle())
                 .disabled(task.isCompleted)
                 Spacer(minLength: 0)
                 Menu {
@@ -203,13 +210,15 @@ private struct TaskFocusCard: View {
                             }
                             .frame(minHeight: 28)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(StillRowButtonStyle())
                     }
                 }
                 .padding(.leading, StillTheme.minimumTapSize + StillTheme.Spacing.s)
             }
         }
         .stillInsetRow(verticalPadding: StillTheme.Spacing.s)
+        .offset(y: task.isCompleted ? 2 : 0)
+        .animation(.spring(response: 0.24, dampingFraction: 0.72), value: task.isCompleted)
         .accessibilityElement(children: .contain)
     }
 

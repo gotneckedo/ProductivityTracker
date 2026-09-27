@@ -11,8 +11,10 @@ struct SudokuActivityView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.stillDayPhase) private var phase
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var game: SudokuGame?
     @State private var history = SudokuMoveHistory()
+    @State private var gridShakeOffset: CGFloat = 0
 
     private var resolvedPhase: StillDayPhase {
         phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
@@ -38,6 +40,7 @@ struct SudokuActivityView: View {
                 }
             }
         }
+        .offset(x: gridShakeOffset)
         .onAppear(perform: load)
     }
 
@@ -191,12 +194,28 @@ struct SudokuActivityView: View {
     private func update(recordingMove: Bool = false, _ change: (inout SudokuGame) -> Void) {
         guard var current = game else { return }
         let previous = current
+        let hadConflict = !previous.conflictingIndices.isEmpty
         let wasSolved = current.isSolved
         change(&current)
         if recordingMove && current != previous { history.record(previous) }
         game = current
         try? appState.container.puzzleProgress.save(current, puzzleID: current.puzzle.id, at: Date())
+        if !hadConflict, !current.conflictingIndices.isEmpty {
+            invalidEntryResponse()
+        }
         if current.isSolved && !wasSolved { onSolved() }
+    }
+
+    private func invalidEntryResponse() {
+        StillInteractionFeedback.fire(.invalidPuzzleEntry, preferences: appState.preferences)
+        guard !reduceMotion else { return }
+        withAnimation(.linear(duration: 0.06).repeatCount(4, autoreverses: true)) {
+            gridShakeOffset = 3
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(260))
+            gridShakeOffset = 0
+        }
     }
 
     private func undo() {

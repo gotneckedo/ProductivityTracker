@@ -299,10 +299,43 @@ struct ActivityGlassCard<Content: View>: View {
 
 // MARK: - Buttons
 
+/// The common response for a direct touch. It uses a short scale for ordinary
+/// motion and a short opacity change when Reduce Motion is on. Semantic actions
+/// can request stronger feedback separately after their state transition.
+private struct StillPressResponse: ViewModifier {
+    let isPressed: Bool
+    var feedback: InteractionFeedbackKind?
+    @Environment(AppState.self) private var appState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var wasPressed = false
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(reduceMotion || !isPressed ? 1 : 0.97)
+            .opacity(reduceMotion && isPressed ? 0.86 : 1)
+            .animation(StillMotion.ease(reduceMotion, duration: 0.12), value: isPressed)
+            .onChange(of: isPressed) { _, pressed in
+                if pressed, !wasPressed, let feedback {
+                    StillInteractionFeedback.fire(feedback, preferences: appState.preferences)
+                }
+                wasPressed = pressed
+            }
+    }
+}
+
+private extension View {
+    func stillPressResponse(_ isPressed: Bool, feedback: InteractionFeedbackKind? = .rowPressed) -> some View {
+        modifier(StillPressResponse(isPressed: isPressed, feedback: feedback))
+    }
+}
+
 /// The one prominent action on a screen.
 struct QuietPrimaryButtonStyle: ButtonStyle {
     var fill: Color? = nil
     var foreground: Color = StillTheme.onAccent
+    /// Prominent actions declare their semantic feedback at the call site so a
+    /// focus start does not receive both a generic row tick and a medium start.
+    var feedback: InteractionFeedbackKind? = nil
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
@@ -324,6 +357,7 @@ struct QuietPrimaryButtonStyle: ButtonStyle {
             .shadow(color: fill == nil ? Color(hex: 0xFFBA78, opacity: 0.45) : .clear, radius: 34, x: 0, y: 10)
             .opacity(configuration.isPressed ? 0.82 : 1)
             .contentShape(Capsule())
+            .stillPressResponse(configuration.isPressed, feedback: feedback)
     }
 }
 
@@ -331,6 +365,7 @@ struct QuietPrimaryButtonStyle: ButtonStyle {
 struct QuietSecondaryButtonStyle: ButtonStyle {
     var foreground: Color? = nil
     var border: Color? = nil
+    var feedback: InteractionFeedbackKind? = .rowPressed
     @Environment(\.stillDayPhase) private var phase
     @Environment(\.colorScheme) private var colorScheme
 
@@ -348,12 +383,14 @@ struct QuietSecondaryButtonStyle: ButtonStyle {
             .overlay(Capsule(style: .continuous).strokeBorder(border ?? resolved.glassBorder, lineWidth: StillTheme.Stroke.hairline))
             .opacity(configuration.isPressed ? 0.7 : 1)
             .contentShape(Capsule())
+            .stillPressResponse(configuration.isPressed, feedback: feedback)
     }
 }
 
 /// Plain text action, e.g. "End session".
 struct QuietTextButtonStyle: ButtonStyle {
     var foreground: Color? = nil
+    var feedback: InteractionFeedbackKind? = .rowPressed
     @Environment(\.stillDayPhase) private var phase
     @Environment(\.colorScheme) private var colorScheme
 
@@ -366,6 +403,19 @@ struct QuietTextButtonStyle: ButtonStyle {
             .padding(.horizontal, StillTheme.Spacing.xs)
             .opacity(configuration.isPressed ? 0.6 : 1)
             .contentShape(Rectangle())
+            .stillPressResponse(configuration.isPressed, feedback: feedback)
+    }
+}
+
+/// A plain-looking navigation or list row that still acknowledges direct touch.
+/// Use this instead of `.plain` for app-owned rows and tappable cards.
+struct StillRowButtonStyle: ButtonStyle {
+    var feedback: InteractionFeedbackKind? = .rowPressed
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .contentShape(Rectangle())
+            .stillPressResponse(configuration.isPressed, feedback: feedback)
     }
 }
 
@@ -475,6 +525,7 @@ struct SessionTimerFace: View {
     let isPaused: Bool
     let accessibilityText: String
     var surface: Surface = .paper
+    var isFinalMinute = false
 
     @ScaledMetric(relativeTo: .largeTitle) private var timerSize: CGFloat = 76
 
@@ -505,9 +556,10 @@ struct SessionTimerFace: View {
             if let progress {
                 GlowProgressLine(
                     progress: progress,
-                    filled: surface == .scene ? StillDayPhase.focus.accent : StillTheme.accent,
+                    filled: isFinalMinute ? StillTheme.warm : (surface == .scene ? StillDayPhase.focus.accent : StillTheme.accent),
                     empty: surface == .scene ? StillTheme.Palette.sceneText.opacity(0.22) : StillTheme.border
                 )
+                .animation(.easeInOut(duration: 2), value: isFinalMinute)
             }
         }
         .accessibilityElement(children: .ignore)

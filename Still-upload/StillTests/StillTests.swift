@@ -1696,7 +1696,30 @@ final class CopyCountTests: XCTestCase {
         let legacy = try RecordCoding.decoder().decode(UserPreferences.self, from: Data(#"{"schemaVersion":3}"#.utf8))
         XCTAssertEqual(legacy.catCoat, .ginger)
         XCTAssertNil(legacy.catName)
+        XCTAssertTrue(legacy.hapticsEnabled)
+        XCTAssertFalse(legacy.interactionSoundsEnabled)
         XCTAssertEqual(legacy.schemaVersion, UserPreferences.currentSchemaVersion)
+    }
+
+    func testInteractionFeedbackPolicySeparatesTactileAndOptionalSoundEvents() {
+        XCTAssertEqual(InteractionFeedbackKind.rowPressed.haptic, .light)
+        XCTAssertEqual(InteractionFeedbackKind.focusStarted.haptic, .medium)
+        XCTAssertEqual(InteractionFeedbackKind.soundscapeToggled.haptic, .selection)
+        XCTAssertEqual(InteractionFeedbackKind.invalidPuzzleEntry.haptic, .error)
+        XCTAssertTrue(InteractionFeedbackKind.focusCompleted.emitsSound)
+        XCTAssertFalse(InteractionFeedbackKind.taskMarkedDone.emitsSound)
+        XCTAssertFalse(InteractionFeedbackKind.roomChanged.emitsSound)
+    }
+
+    func testFeedbackPreferencesRoundTripIndependently() throws {
+        var preferences = UserPreferences()
+        preferences.hapticsEnabled = false
+        preferences.interactionSoundsEnabled = true
+        let data = try RecordCoding.encoder().encode(preferences)
+        let decoded = try RecordCoding.decoder().decode(UserPreferences.self, from: data)
+        XCTAssertFalse(decoded.hapticsEnabled)
+        XCTAssertTrue(decoded.interactionSoundsEnabled)
+        XCTAssertEqual(decoded.schemaVersion, UserPreferences.currentSchemaVersion)
     }
 }
 

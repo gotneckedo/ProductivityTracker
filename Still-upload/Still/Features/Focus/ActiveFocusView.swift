@@ -19,6 +19,7 @@ struct ActiveFocusView: View {
         }
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
+        .stillEntrance()
         .task {
             while !Task.isCancelled {
                 await MainActor.run { appState.tick() }
@@ -126,6 +127,7 @@ struct ActiveFocusView: View {
                                 time: timeText(snapshot),
                                 caption: caption(snapshot),
                                 progress: snapshot.phaseProgress,
+                                isFinalMinute: snapshot.phaseKind == .focus && (snapshot.remainingInPhase ?? .infinity) <= 60,
                                 isPaused: snapshot.isPaused,
                                 accessibilityText: spokenState(snapshot),
                                 surface: .scene

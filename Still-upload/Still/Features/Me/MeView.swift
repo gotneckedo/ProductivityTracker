@@ -270,7 +270,7 @@ struct MeView: View {
             )
             .stillInsetRow()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(StillRowButtonStyle())
     }
 }
 

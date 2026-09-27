@@ -34,7 +34,9 @@ struct RoomHeroView: View {
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(AppState.self) private var appState
     @State private var isFloating = false
+    @State private var roomTargetZoom: CGFloat = 1
     @State private var catTapTracker = CatTapTracker()
     @State private var catReaction: CatReaction = .none
 
@@ -70,6 +72,7 @@ struct RoomHeroView: View {
             )
             .aspectRatio(Self.artworkAspectRatio, contentMode: .fit)
             .offset(y: reduceMotion ? 0 : (isFloating ? -3 : 2))
+            .scaleEffect(roomTargetZoom)
 
             GeometryReader { proxy in
                 let side = max(20, min(proxy.size.width * 0.20, proxy.size.height * 0.28))
@@ -78,7 +81,7 @@ struct RoomHeroView: View {
                         catSprite(side: side)
                             .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(StillRowButtonStyle(feedback: nil))
                     .frame(width: max(44, side), height: max(44, side))
                     .position(catPosition(in: proxy.size))
                     .offset(y: reduceMotion ? 0 : (isFloating ? -3 : 2))
@@ -92,8 +95,8 @@ struct RoomHeroView: View {
                 }
             }
 
-            if let onRoomTarget {
-                RoomHotspotOverlay(sceneID: sceneID, action: onRoomTarget)
+            if onRoomTarget != nil {
+                RoomHotspotOverlay(sceneID: sceneID, action: handleRoomTarget)
             }
 
             if showsControls {
@@ -155,11 +158,27 @@ struct RoomHeroView: View {
     private func reactToCat() {
         let reaction = catTapTracker.registerTap(at: .now)
         catReaction = reaction
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        StillInteractionFeedback.fire(.catTapped, preferences: appState.preferences)
         guard !reduceMotion else { return }
         Task { @MainActor in
             try? await Task.sleep(for: .seconds(reaction == .rare ? 1.6 : 1.2))
             catReaction = .none
+        }
+    }
+
+    private func handleRoomTarget(_ hotspot: RoomHotspot) {
+        guard let onRoomTarget else { return }
+        StillInteractionFeedback.fire(.roomObjectTapped, preferences: appState.preferences)
+        withAnimation(StillMotion.ease(reduceMotion, duration: 0.12)) {
+            roomTargetZoom = reduceMotion ? 1 : 1.08
+        }
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(reduceMotion ? 80 : 120))
+            onRoomTarget(hotspot)
+            StillInteractionFeedback.fire(.roomObjectOpened, preferences: appState.preferences)
+            withAnimation(StillMotion.ease(reduceMotion, duration: 0.16)) {
+                roomTargetZoom = 1
+            }
         }
     }
 
@@ -174,7 +193,7 @@ struct RoomHeroView: View {
                     .background(.ultraThinMaterial, in: Circle())
                     .overlay(Circle().strokeBorder(resolvedPhase.glassBorder, lineWidth: StillTheme.Stroke.hairline))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(StillRowButtonStyle(feedback: .roomChanged))
             .accessibilityLabel(label)
         }
     }

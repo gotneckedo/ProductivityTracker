@@ -34,6 +34,12 @@ The P0 release-truth and visual-P0 changes are accepted only to the scope proved
 
 **Decision recorded:** room unlocks communicate one fixed milestone (“Opens after 12 sessions”) rather than a changing “sessions to go” counter. This preserves the earned-room model without importing countdown pressure.
 
+## Block C — touch response (implementation awaiting CI evidence)
+
+**Decision recorded:** the shared press response supplies the light touch-down cue for ordinary rows; semantic actions fire their own one-shot feedback after a state transition so starting focus or finishing a break never double-pulses. Haptics default on, interface sounds default off, and both remain local device preferences.
+
+Item 19 is implemented locally but remains **unproven** until the next compact CI artifact is reviewed. The static proof routes are deliberately named `proof-interaction-final-minute.png`, `proof-interaction-complete.png`, `proof-interaction-room.png`, `proof-interaction-task.png`, and `proof-interaction-puzzle.png`; temporal animation and physical haptics require item 22’s simulator recordings and real-device validation.
+
 ## Master Plan decisions — product direction, not implementation proof
 
 These decisions were supplied by CoCo on 26 September 2026 in response to

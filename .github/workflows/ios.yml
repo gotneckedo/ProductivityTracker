@@ -174,6 +174,13 @@ jobs:
           shoot "scenes" "proof-scenes-locked-core"
           shoot "mixer-available" "proof-ambient-available"
           shoot "mixer" "proof-ambient-unavailable"
+          # Block C static evidence. Motion and haptics are recorded in the
+          # next queue item; these named frames pin the visual end states.
+          shoot "active-final-minute" "proof-interaction-final-minute"
+          shoot "complete" "proof-interaction-complete"
+          shoot "room-collectibles" "proof-interaction-room"
+          shoot "tasks-complete" "proof-interaction-task"
+          shoot "sudoku" "proof-interaction-puzzle"
 
           # Truth-pass release proof. This is a Release configuration compiled
           # with only the internal STILL_PROOF navigation condition; FeatureFlags

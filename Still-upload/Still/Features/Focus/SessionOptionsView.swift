@@ -154,6 +154,7 @@ struct SessionOptionsView: View {
                             SceneChoice(scene: scene, isSelected: scene.id == preset.sceneID) {
                                 draft?.sceneID = scene.id
                                 draft?.renderMode = .scene
+                                StillInteractionFeedback.fire(.roomChanged, preferences: appState.preferences)
                             }
                         }
                     }
@@ -281,6 +282,7 @@ struct AmbientMixEditor: View {
     @Binding var mix: AmbientMix
     let status: AmbientAudioStatus
     let isAvailable: (AmbientSourceID) -> Bool
+    @Environment(AppState.self) private var appState
 
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
@@ -292,6 +294,9 @@ struct AmbientMixEditor: View {
             Toggle("Ambient sound", isOn: $mix.isEnabled)
                 .font(StillTypography.body)
                 .stillInsetRow()
+                .onChange(of: mix.isEnabled) { _, _ in
+                    StillInteractionFeedback.fire(.soundscapeToggled, preferences: appState.preferences)
+                }
             if mix.isEnabled {
                 InsetRowDivider()
                 levelRow(title: "Volume", value: Binding(get: { mix.masterVolume }, set: { mix.setMasterVolume($0) }), note: nil)
@@ -353,7 +358,7 @@ private struct SoundscapeChip: View {
             .background(StillTheme.accentSoft.opacity(0.32), in: Capsule())
             .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(StillRowButtonStyle(feedback: .soundscapeToggled))
         .accessibilityLabel(isCustom ? "Custom soundscape: \(name)" : "Soundscape: \(name)")
     }
 }

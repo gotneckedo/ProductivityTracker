@@ -166,6 +166,10 @@ struct DoodleGalleryView: View {
                             Text("Small drawings from your breaks. They stay on this device.")
                                 .font(StillTypography.callout)
                                 .foregroundStyle(StillTheme.textSecondary)
+                        } else {
+                            Text(doodleSummary)
+                                .font(StillTypography.footnote)
+                                .foregroundStyle(StillTheme.textSecondary)
                         }
                     }
                     if appState.doodles.isEmpty {
@@ -228,6 +232,11 @@ struct DoodleGalleryView: View {
                 viewing = nil
             }
         }
+    }
+
+    private var doodleSummary: String {
+        let count = appState.doodles.count
+        return count == 1 ? "1 saved doodle" : "\(count) saved doodles"
     }
 }
 

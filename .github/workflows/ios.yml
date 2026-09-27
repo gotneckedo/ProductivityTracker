@@ -135,7 +135,7 @@ jobs:
           n=1
           # Phase 2 sprite checkpoint: Focus room has labeled object targets;
           # the review sheet proves the authored package is bundled.
-          for screen in onboarding today setup mixer home focus-room sprite-contact-sheet calm active active-autumn complete break sudoku wordsearch picross picross-320 breathing read doodle journal habits tasks timeline presets gallery gallery-empty gallery-one gallery-several gallery-error morning me scenes card get-card; do
+          for screen in onboarding today setup mixer mixer-top home focus-room sprite-contact-sheet calm active active-autumn complete break sudoku wordsearch picross picross-320 breathing read doodle journal habits tasks timeline presets gallery gallery-empty gallery-one gallery-several gallery-error morning me scenes card get-card; do
             shoot "$screen" "$(printf '%02d' $n)-$screen"
             n=$((n + 1))
           done
@@ -159,7 +159,9 @@ jobs:
           shoot_bottom "today" "proof-today-reflection-link"
           shoot "read" "proof-short-read-top"
           shoot_bottom "read" "proof-short-read-bottom"
-          shoot "mixer" "proof-ambient-availability"
+          shoot "mixer-top" "proof-ambient-available"
+          shoot "mixer" "proof-ambient-unavailable"
+          shoot_bottom "release-morning" "proof-release-morning-delivery-note"
           shoot "today-light" "proof-light-theme"
           shoot_bottom "today" "proof-today-bottom-clear"
           shoot_bottom "tasks" "proof-tasks-bottom-clear"

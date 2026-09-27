@@ -52,7 +52,9 @@ enum DemoLaunch {
         case "release-plus":
             return releaseRouted(.stillPlus)
         case "release-locked-room":
-            return releaseRouted(.sceneCollection)
+            // Mirrors the destination of tapping a locked room. The screen is
+            // intentionally informational while no StoreKit product exists.
+            return releaseRouted(.stillPlus)
         case "release-card":
             return releaseRouted(.nfcSetup)
         case "onboarding":
@@ -67,6 +69,10 @@ enum DemoLaunch {
         case "setup":
             return routed(.focusConfiguration)
         case "mixer":
+            let state = releaseProofState()
+            state.router.go(to: .focusConfiguration)
+            return state
+        case "mixer-top":
             let state = releaseProofState()
             state.router.go(to: .focusConfiguration)
             return state

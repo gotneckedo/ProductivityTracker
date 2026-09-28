@@ -30,6 +30,22 @@ enum SubjectColor: String, Codable, CaseIterable, Hashable, Identifiable {
         }
     }
 
+    /// The palette's original soft tones remain for capsules and chart fills.
+    /// Subject names render in this paired, opaque color so a small overline
+    /// stays AA-readable against Still's light page and glass surfaces.
+    var textHex: UInt32 {
+        switch self {
+        case .sage: return 0x3F7A62
+        case .sky: return 0x3F6E9E
+        case .lavender: return 0x6D5B99
+        case .peach: return 0x9E593F
+        case .rose: return 0x9C4A5A
+        case .butter: return 0x8E6712
+        case .mint: return 0x23745F
+        case .slate: return 0x4F5E7A
+        }
+    }
+
     /// Stable across launches and platforms (unlike Swift's randomized Hasher).
     static func migratedColor(for name: String) -> SubjectColor {
         let value = name.lowercased().unicodeScalars.enumerated().reduce(0) { partial, element in

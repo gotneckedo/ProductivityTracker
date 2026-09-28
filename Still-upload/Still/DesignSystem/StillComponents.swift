@@ -756,6 +756,9 @@ struct SettingRow: View {
     let symbol: String
     let title: String
     var value: String?
+    /// An unset preference is meaningful information, not disabled decoration.
+    /// It receives primary ink so “Not set” remains AA-readable on glass.
+    var emphasizesValue: Bool = false
     var showsChevron: Bool = true
     var iconTint: Color = StillTheme.accent
     var iconBackground: Color = StillTheme.accentSoft
@@ -780,8 +783,8 @@ struct SettingRow: View {
             Spacer(minLength: StillTheme.Spacing.xs)
             if let value {
                 Text(value)
-                    .font(StillTypography.callout)
-                    .foregroundStyle(StillTheme.secondaryText(for: resolved))
+                    .font(StillTypography.callout.weight(emphasizesValue ? .medium : .regular))
+                    .foregroundStyle(emphasizesValue ? StillTheme.primaryText(for: resolved) : StillTheme.secondaryText(for: resolved))
                     .lineLimit(1)
             }
             if showsChevron {

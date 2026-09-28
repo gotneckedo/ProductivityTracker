@@ -89,8 +89,8 @@ enum StillDayPhase: String, CaseIterable, Hashable, Codable {
 
     var accent: Color {
         switch self {
-        case .night, .focus: return Color(hex: 0x8FDCC0)
-        case .morning, .afternoon, .dusk: return Color(hex: 0x3E8F74)
+        case .night, .focus: return Color(hex: StillAccessibleColorToken.darkAccent)
+        case .morning, .afternoon, .dusk: return Color(hex: StillAccessibleColorToken.lightAccent)
         }
     }
 
@@ -141,7 +141,10 @@ enum StillTheme {
         static let paperSunken = Color.white.opacity(0.42)
         static let ink = Color.dynamic(light: 0x2E2530, dark: 0xF5EEF8)
         static let inkSecondary = Color.dynamic(light: 0x4F4651, dark: 0xD9D0DE)
-        static let inkTertiary = Color.dynamic(light: 0x786D78, dark: 0xB9ADBF)
+        static let inkTertiary = Color.dynamic(
+            light: StillAccessibleColorToken.lightTertiary,
+            dark: StillAccessibleColorToken.darkTertiary
+        )
         static let hairline = Color.dynamic(light: 0xFFFFFF, dark: 0x6A607A).opacity(0.72)
 
         static let sage = Color(hex: 0x3E8F74)
@@ -173,17 +176,29 @@ enum StillTheme {
     static let border = Palette.hairline
 
     /// Primary action fill. Paired with `onAccent` text.
-    static let accent = Color.dynamic(light: 0x3E8F74, dark: 0x8FDCC0)
+    static let accent = Color.dynamic(
+        light: StillAccessibleColorToken.lightAccent,
+        dark: StillAccessibleColorToken.darkAccent
+    )
     static let accentSoft = Palette.sageSoft
     static let onAccent = Color(hex: 0x3A2A22)
     /// Gentle attention (e.g. a Sudoku conflict). Never alarm red.
-    static let attention = Palette.rose
+    static let attention = Color.dynamic(
+        light: StillAccessibleColorToken.lightAttention,
+        dark: StillAccessibleColorToken.darkAttention
+    )
     static let attentionSoft = Palette.roseSoft
     static let highlight = Palette.butter
     static let highlightSoft = Palette.butterSoft
-    static let calm = Palette.dustyBlue
+    static let calm = Color.dynamic(
+        light: StillAccessibleColorToken.lightCalm,
+        dark: StillAccessibleColorToken.darkCalm
+    )
     static let calmSoft = Palette.dustyBlueSoft
-    static let warm = Palette.peach
+    static let warm = Color.dynamic(
+        light: StillAccessibleColorToken.lightWarm,
+        dark: StillAccessibleColorToken.darkWarm
+    )
     static let warmSoft = Palette.peachSoft
     static let litButtonTop = Color(hex: 0xFFF7EA)
     static let litButtonBottom = Color(hex: 0xF7DDBB)
@@ -193,8 +208,10 @@ enum StillTheme {
 
     static func tertiaryText(for phase: StillDayPhase) -> Color {
         switch phase {
-        case .night, .focus: return phase.ink.opacity(0.54)
-        case .morning, .afternoon, .dusk: return phase.ink.opacity(0.58)
+        case .night, .focus:
+            return Color(hex: StillAccessibleColorToken.darkTertiary)
+        case .morning, .afternoon, .dusk:
+            return Color(hex: StillAccessibleColorToken.lightTertiary)
         }
     }
 

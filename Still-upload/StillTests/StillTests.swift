@@ -3103,3 +3103,70 @@ final class AlternateAppIconTests: XCTestCase {
         XCTAssertEqual(try? result?.get(), .unavailable)
     }
 }
+
+final class AccessibilityContrastTests: XCTestCase {
+    func testSemanticTextTokensMeetAAOnTheirDocumentedFields() {
+        let lightPairs: [(name: String, foreground: UInt32, background: UInt32)] = [
+            ("primary light text", StillAccessibleColorToken.lightInk, StillAccessibleColorToken.lightPaper),
+            ("secondary light text", StillAccessibleColorToken.lightSecondary, StillAccessibleColorToken.lightPaper),
+            ("tertiary light text", StillAccessibleColorToken.lightTertiary, StillAccessibleColorToken.lightRaisedSurface),
+            ("accent action text", StillAccessibleColorToken.lightAccent, StillAccessibleColorToken.lightPaper),
+            ("calm semantic text", StillAccessibleColorToken.lightCalm, StillAccessibleColorToken.lightPaper),
+            ("warm semantic text", StillAccessibleColorToken.lightWarm, StillAccessibleColorToken.lightPaper),
+            ("attention semantic text", StillAccessibleColorToken.lightAttention, StillAccessibleColorToken.lightPaper),
+            ("locked scene copy", StillAccessibleColorToken.lightInk, StillAccessibleColorToken.lockedSceneSurface),
+            ("unset preference value", StillAccessibleColorToken.lightInk, StillAccessibleColorToken.lightRaisedSurface),
+            ("Sudoku keypad digit", StillAccessibleColorToken.lightInk, StillAccessibleColorToken.lightRaisedSurface)
+        ]
+        for pair in lightPairs {
+            XCTAssertTrue(
+                AccessibilityContrast.meetsNormalTextAA(foreground: pair.foreground, background: pair.background),
+                "\(pair.name) is \(AccessibilityContrast.ratio(foreground: pair.foreground, background: pair.background)):1"
+            )
+        }
+
+        let darkPairs: [(name: String, foreground: UInt32)] = [
+            ("primary dark text", StillAccessibleColorToken.darkInk),
+            ("secondary dark text", StillAccessibleColorToken.darkSecondary),
+            ("tertiary dark text", StillAccessibleColorToken.darkTertiary),
+            ("accent dark text", StillAccessibleColorToken.darkAccent),
+            ("calm dark text", StillAccessibleColorToken.darkCalm),
+            ("warm dark text", StillAccessibleColorToken.darkWarm),
+            ("attention dark text", StillAccessibleColorToken.darkAttention)
+        ]
+        for pair in darkPairs {
+            XCTAssertTrue(
+                AccessibilityContrast.meetsNormalTextAA(foreground: pair.foreground, background: StillAccessibleColorToken.darkFocusField),
+                "\(pair.name) is \(AccessibilityContrast.ratio(foreground: pair.foreground, background: StillAccessibleColorToken.darkFocusField)):1"
+            )
+        }
+    }
+
+    func testEverySubjectHasAnAAReadableTextVariant() {
+        for color in SubjectColor.allCases {
+            XCTAssertTrue(
+                AccessibilityContrast.meetsNormalTextAA(
+                    foreground: color.textHex,
+                    background: StillAccessibleColorToken.lightPaper
+                ),
+                "\(color.displayName) subject label is not AA-readable"
+            )
+        }
+    }
+
+    func testContrastRatioIsSymmetricAndUsesTheAATextThreshold() {
+        let ratio = AccessibilityContrast.ratio(
+            foreground: StillAccessibleColorToken.lightAccent,
+            background: StillAccessibleColorToken.lightPaper
+        )
+        XCTAssertEqual(
+            ratio,
+            AccessibilityContrast.ratio(
+                foreground: StillAccessibleColorToken.lightPaper,
+                background: StillAccessibleColorToken.lightAccent
+            ),
+            accuracy: 0.000_001
+        )
+        XCTAssertGreaterThanOrEqual(ratio, AccessibilityContrast.normalTextMinimum)
+    }
+}

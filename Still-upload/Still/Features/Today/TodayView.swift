@@ -104,7 +104,7 @@ struct TodayView: View {
                                 if let subject = task.subject {
                                     Text(subject.name.uppercased())
                                         .font(StillTypography.caption)
-                                        .foregroundStyle(Color(hex: subject.color.hex))
+                                        .foregroundStyle(Color(hex: subject.color.textHex))
                                 }
                                 Text(task.title)
                                     .font(StillTypography.title)

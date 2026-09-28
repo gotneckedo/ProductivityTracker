@@ -230,9 +230,21 @@ struct MeView: View {
             SectionHeader(title: "Your preferences")
             GlassControlGroup(padding: StillTheme.Spacing.s, radius: StillTheme.Radius.medium) {
                 VStack(spacing: 0) {
-                    settingLink(symbol: "scope", title: "Focus goal", value: appState.preferences.onboardingGoal?.title ?? "Not set", route: .onboardingGoalPreference)
+                    settingLink(
+                        symbol: "scope",
+                        title: "Focus goal",
+                        value: appState.preferences.onboardingGoal?.title ?? "Not set",
+                        emphasizesValue: appState.preferences.onboardingGoal == nil,
+                        route: .onboardingGoalPreference
+                    )
                     InsetRowDivider(leading: 52)
-                    settingLink(symbol: "cup.and.saucer", title: "Break preference", value: appState.preferences.breakAppeal?.title ?? "Not set", route: .onboardingBreakPreference)
+                    settingLink(
+                        symbol: "cup.and.saucer",
+                        title: "Break preference",
+                        value: appState.preferences.breakAppeal?.title ?? "Not set",
+                        emphasizesValue: appState.preferences.breakAppeal == nil,
+                        route: .onboardingBreakPreference
+                    )
                     InsetRowDivider(leading: 52)
                     settingLink(symbol: "paintpalette", title: "Look & app icon", value: appState.preferences.appAccentPalette.title, route: .onboardingLookPreference)
                 }
@@ -266,6 +278,7 @@ struct MeView: View {
         symbol: String,
         title: String,
         value: String? = nil,
+        emphasizesValue: Bool = false,
         iconTint: Color = StillTheme.accent,
         iconBackground: Color = StillTheme.accentSoft,
         route: AppRoute
@@ -277,6 +290,7 @@ struct MeView: View {
                 symbol: symbol,
                 title: title,
                 value: value,
+                emphasizesValue: emphasizesValue,
                 iconTint: iconTint,
                 iconBackground: iconBackground
             )

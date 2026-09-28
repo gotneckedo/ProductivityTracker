@@ -47,31 +47,46 @@ struct SudokuActivityView: View {
     private func grid(_ game: SudokuGame) -> some View {
         let puzzle = game.puzzle
         let conflicts = game.conflictingIndices
-        return VStack(spacing: 10) {
-            ForEach(0..<(puzzle.size / puzzle.boxRows), id: \.self) { boxRow in
-                HStack(spacing: 10) {
-                    ForEach(0..<(puzzle.size / puzzle.boxColumns), id: \.self) { boxColumn in
-                        VStack(spacing: 3) {
-                            ForEach(0..<puzzle.boxRows, id: \.self) { rowOffset in
-                                HStack(spacing: 3) {
-                                    ForEach(0..<puzzle.boxColumns, id: \.self) { columnOffset in
-                                        let row = boxRow * puzzle.boxRows + rowOffset
-                                        let column = boxColumn * puzzle.boxColumns + columnOffset
-                                        let index = row * puzzle.size + column
-                                        cell(game: game, index: index, isConflict: conflicts.contains(index))
+        let cellSide = CGFloat(AccessibilityTouchTarget.minimumSide)
+        let cellGap: CGFloat = 3
+        let boxGap: CGFloat = 10
+        let boxPadding: CGFloat = 3
+        let boardWidth = CGFloat(AccessibilityTouchTarget.sudokuGridSpan(
+            size: puzzle.size,
+            boxColumns: puzzle.boxColumns,
+            cellGap: cellGap,
+            boxGap: boxGap,
+            boxPadding: boxPadding
+        ))
+        return ScrollView(.horizontal, showsIndicators: false) {
+            VStack(spacing: boxGap) {
+                ForEach(0..<(puzzle.size / puzzle.boxRows), id: \.self) { boxRow in
+                    HStack(spacing: boxGap) {
+                        ForEach(0..<(puzzle.size / puzzle.boxColumns), id: \.self) { boxColumn in
+                            VStack(spacing: cellGap) {
+                                ForEach(0..<puzzle.boxRows, id: \.self) { rowOffset in
+                                    HStack(spacing: cellGap) {
+                                        ForEach(0..<puzzle.boxColumns, id: \.self) { columnOffset in
+                                            let row = boxRow * puzzle.boxRows + rowOffset
+                                            let column = boxColumn * puzzle.boxColumns + columnOffset
+                                            let index = row * puzzle.size + column
+                                            cell(game: game, index: index, isConflict: conflicts.contains(index))
+                                                .frame(width: cellSide, height: cellSide)
+                                        }
                                     }
                                 }
                             }
                         }
-                        .padding(3)
+                        .padding(boxPadding)
                         .background(resolvedPhase.glassFill.opacity(0.34), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
                         .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).strokeBorder(resolvedPhase.glassBorder.opacity(0.72), lineWidth: StillTheme.Stroke.hairline))
                     }
                 }
             }
+            .frame(width: boardWidth)
         }
-        .frame(maxWidth: 380)
         .frame(maxWidth: .infinity)
+        .accessibilityLabel("Sudoku board")
     }
 
     private func cell(game: SudokuGame, index: Int, isConflict: Bool) -> some View {
@@ -240,9 +255,9 @@ struct PicrossActivityView: View {
         phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
     }
 
-    /// CI renders this at the available width of a 320-point content region,
-    /// making the narrow-phone layout a visual regression target without
-    /// changing the production board width on larger phones.
+    /// CI renders this at the available width of a 320-point content region.
+    /// The board keeps every direct cell at 44pt; a narrow container scrolls
+    /// horizontally instead of silently shrinking touch targets.
     private var narrowProofWidth: CGFloat? {
         #if DEBUG
         return DemoLaunch.requestedScreen == "picross-320" ? 280 : nil
@@ -286,13 +301,15 @@ struct PicrossActivityView: View {
         let size = game.puzzle.size
         let columnClues = game.puzzle.columnClues
         let rowClues = game.puzzle.rowClues
-        return GeometryReader { proxy in
-            // The clue column and every board cell derive from the actual
-            // available width. On a 320-point iPhone this produces roughly
-            // 45-point cells, so the puzzle remains fully visible without
-            // horizontal scrolling or clipped clue labels.
-            let clueWidth = min(52, max(38, proxy.size.width * 0.18))
-            let cellWidth = max(1, (proxy.size.width - clueWidth - 4 * CGFloat(size)) / CGFloat(size))
+        let cellSide = CGFloat(AccessibilityTouchTarget.minimumSide)
+        let gap: CGFloat = 4
+        let clueWidth: CGFloat = 38
+        let boardWidth = CGFloat(AccessibilityTouchTarget.picrossGridSpan(
+            size: size,
+            clueColumn: clueWidth,
+            gap: gap
+        ))
+        return ScrollView(.horizontal, showsIndicators: false) {
             VStack(spacing: 4) {
                 HStack(alignment: .bottom, spacing: 4) {
                     Color.clear.frame(width: clueWidth, height: 40)
@@ -304,7 +321,7 @@ struct PicrossActivityView: View {
                         }
                         .font(StillTypography.footnote.monospacedDigit())
                         .foregroundStyle(game.isColumnSatisfied(column) ? StillTheme.textTertiary : StillTheme.textPrimary)
-                        .frame(width: cellWidth, height: 40, alignment: .bottom)
+                        .frame(width: cellSide, height: 40, alignment: .bottom)
                         .accessibilityLabel("Column \(column + 1) clue \(columnClues[column].map { String($0) }.joined(separator: " "))")
                     }
                 }
@@ -318,19 +335,19 @@ struct PicrossActivityView: View {
                         }
                         .font(StillTypography.footnote.monospacedDigit())
                         .foregroundStyle(game.isRowSatisfied(row) ? StillTheme.textTertiary : StillTheme.textPrimary)
-                            .frame(width: clueWidth, height: cellWidth, alignment: .trailing)
+                            .frame(width: clueWidth, height: cellSide, alignment: .trailing)
                             .accessibilityLabel("Row \(row + 1) clue \(rowClues[row].map { String($0) }.joined(separator: " "))")
                         ForEach(0..<size, id: \.self) { column in
                             cell(game: game, index: row * size + column, row: row, column: column)
-                                .frame(width: cellWidth, height: cellWidth)
+                                .frame(width: cellSide, height: cellSide)
                         }
                     }
                 }
             }
-            .frame(width: proxy.size.width, alignment: .leading)
+            .frame(width: boardWidth, alignment: .leading)
         }
-        .aspectRatio(1.02, contentMode: .fit)
         .frame(maxWidth: .infinity)
+        .accessibilityLabel("Picross board")
     }
 
     private func cell(game: PicrossGame, index: Int, row: Int, column: Int) -> some View {
@@ -417,17 +434,24 @@ struct WordSearchActivityView: View {
 
     private func grid(_ game: WordSearchGame) -> some View {
         let puzzle = game.puzzle
-        return VStack(spacing: 4) {
-            ForEach(0..<puzzle.size, id: \.self) { row in
-                HStack(spacing: 4) {
-                    ForEach(0..<puzzle.size, id: \.self) { column in
-                        letterCell(game: game, point: GridPoint(row: row, column: column))
+        let cellSide = CGFloat(AccessibilityTouchTarget.minimumSide)
+        let gap: CGFloat = 4
+        let boardWidth = CGFloat(AccessibilityTouchTarget.squareGridSpan(columns: puzzle.size, gap: gap))
+        return ScrollView(.horizontal, showsIndicators: false) {
+            VStack(spacing: gap) {
+                ForEach(0..<puzzle.size, id: \.self) { row in
+                    HStack(spacing: gap) {
+                        ForEach(0..<puzzle.size, id: \.self) { column in
+                            letterCell(game: game, point: GridPoint(row: row, column: column))
+                                .frame(width: cellSide, height: cellSide)
+                        }
                     }
                 }
             }
+            .frame(width: boardWidth)
         }
-        .frame(maxWidth: 380)
         .frame(maxWidth: .infinity)
+        .accessibilityLabel("Word search board")
     }
 
     private func letterCell(game: WordSearchGame, point: GridPoint) -> some View {

@@ -646,7 +646,7 @@ struct SelectionPill<Value: Hashable>: View {
                         .foregroundStyle(isSelected ? StillTheme.primaryText(for: resolved) : StillTheme.secondaryText(for: resolved))
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
-                        .frame(maxWidth: .infinity, minHeight: 38)
+                        .frame(maxWidth: .infinity, minHeight: StillTheme.minimumTapSize)
                         .background(
                             Capsule(style: .continuous)
                                 .fill(isSelected ? resolved.glassFill : Color.clear)

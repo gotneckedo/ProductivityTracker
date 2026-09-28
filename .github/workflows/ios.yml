@@ -211,6 +211,10 @@ jobs:
           shoot "ax3-focus" "proof-ax3-focus"
           shoot "ax3-break" "proof-ax3-break"
           shoot "ax3-me" "proof-ax3-me"
+          # Item 34: the Focus route exposes the production RoomHero arrow
+          # controls only for this CI review. Puzzle keypads remain in the
+          # numbered compact captures (06-sudoku, 07-wordsearch, 08-picross).
+          shoot "touch-targets" "proof-touch-targets-room"
           # Item 33: the intentionally incomplete preference fixture verifies
           # that actionable “Not set” values are readable rather than treated
           # as disabled gray text on the glass control group.

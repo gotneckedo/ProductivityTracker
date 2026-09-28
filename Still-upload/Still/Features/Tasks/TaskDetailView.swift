@@ -136,7 +136,7 @@ struct TaskDetailView: View {
                             Button { appState.toggleTaskStep(taskID: taskID, stepID: step.id) } label: {
                                 Image(systemName: step.isCompleted ? "checkmark.circle.fill" : "circle")
                                     .foregroundStyle(step.isCompleted ? StillTheme.accent : StillTheme.textTertiary)
-                                    .frame(width: 28, height: 28)
+                                    .frame(width: StillTheme.minimumTapSize, height: StillTheme.minimumTapSize)
                             }
                             .buttonStyle(.plain)
                             Text(step.title)

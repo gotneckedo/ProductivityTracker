@@ -13,7 +13,7 @@ import Foundation
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, undo-task, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback, context-previews,
 /// scenes-edit, scenes-locked-core, break-edit, today-routine, history-full, history-empty, history-search, short-read-search, today-refreshed, break-reshuffled, me-preferences,
-/// calendar-settings, get-card.
+/// calendar-settings, get-card, touch-targets.
 enum DemoLaunch {
     static let argument = "-still-demo"
     static let scrollBottomArgument = "-still-scroll-bottom"
@@ -119,6 +119,8 @@ enum DemoLaunch {
             return preferenceContrastState()
         case "context-previews":
             return routed(.contextPreviewReview)
+        case "touch-targets":
+            return focusRoomState(hour: 14, sceneID: .libraryLight)
         case "home":
             return PreviewSupport.appState(populated: true)
         case "focus-room", "ax3-focus":

@@ -3170,3 +3170,43 @@ final class AccessibilityContrastTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(ratio, AccessibilityContrast.normalTextMinimum)
     }
 }
+
+final class AccessibilityTouchTargetTests: XCTestCase {
+    func testMinimumTargetMatchesAppleComfortableTouchSize() {
+        XCTAssertEqual(AccessibilityTouchTarget.minimumSide, 44)
+        XCTAssertTrue(AccessibilityTouchTarget.meetsMinimum(width: 44, height: 44))
+        XCTAssertFalse(AccessibilityTouchTarget.meetsMinimum(width: 43.99, height: 44))
+        XCTAssertFalse(AccessibilityTouchTarget.meetsMinimum(width: 44, height: 43.99))
+    }
+
+    func testPuzzleGeometryNeverShrinksDirectCellsBelowMinimum() {
+        let sudoku = AccessibilityTouchTarget.sudokuGridSpan(
+            size: 6,
+            boxColumns: 3,
+            cellGap: 3,
+            boxGap: 10,
+            boxPadding: 3
+        )
+        let wordSearch = AccessibilityTouchTarget.squareGridSpan(columns: 6, gap: 4)
+        let picross = AccessibilityTouchTarget.picrossGridSpan(size: 5, clueColumn: 38, gap: 4)
+
+        XCTAssertEqual(sudoku, 298, accuracy: 0.001)
+        XCTAssertEqual(wordSearch, 284, accuracy: 0.001)
+        XCTAssertEqual(picross, 278, accuracy: 0.001)
+        XCTAssertGreaterThanOrEqual(AccessibilityTouchTarget.minimumSide, 44)
+    }
+
+    func testInvalidGridGeometryDoesNotProduceAUsableTarget() {
+        XCTAssertEqual(AccessibilityTouchTarget.squareGridSpan(columns: 0, gap: 4), 0)
+        XCTAssertEqual(
+            AccessibilityTouchTarget.sudokuGridSpan(
+                size: 6,
+                boxColumns: 4,
+                cellGap: 3,
+                boxGap: 10,
+                boxPadding: 3
+            ),
+            0
+        )
+    }
+}

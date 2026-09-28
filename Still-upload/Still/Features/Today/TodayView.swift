@@ -344,6 +344,8 @@ struct TodayView: View {
                         Image(systemName: option.symbolName)
                             .frame(width: 30, height: 30)
                             .background(mood == option ? StillTheme.accent.opacity(0.28) : .clear, in: Circle())
+                            .frame(minWidth: StillTheme.minimumTapSize, minHeight: StillTheme.minimumTapSize)
+                            .contentShape(Circle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(option.displayName)

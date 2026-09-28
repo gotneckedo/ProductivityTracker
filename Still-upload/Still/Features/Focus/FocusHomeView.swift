@@ -6,6 +6,18 @@ import SwiftUI
 struct FocusHomeView: View {
     @Environment(AppState.self) private var appState
 
+    /// Room arrows normally stay out of the art-first home composition; the
+    /// dedicated CI route exposes the same 44pt controls for visual review.
+    /// This is not a production feature flag or a substitute for the Scene
+    /// collection picker.
+    private var showsRoomControlProof: Bool {
+        #if DEBUG || STILL_PROOF
+        DemoLaunch.requestedScreen == "touch-targets"
+        #else
+        false
+        #endif
+    }
+
     var body: some View {
         let preset = appState.currentPreset
         let scene = displayScene(for: preset)
@@ -31,7 +43,7 @@ struct FocusHomeView: View {
                                 // Object targets remain 44pt and fully named for VoiceOver,
                                 // but no persistent labels sit on top of the authored room art.
                                 onRoomTarget: open,
-                                showsControls: false
+                                showsControls: showsRoomControlProof
                             )
                             .aspectRatio(RoomHeroView.artworkAspectRatio, contentMode: .fit)
 

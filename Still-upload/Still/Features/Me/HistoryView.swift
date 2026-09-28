@@ -50,59 +50,7 @@ struct HistoryView: View {
 
     var body: some View {
         StillScreen {
-            if records.isEmpty {
-                EmptyState(
-                    symbol: "clock.arrow.circlepath",
-                    title: "Nothing saved yet",
-                    message: "Completed focus sessions and one-line journal entries will appear here."
-                )
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.top, StillTheme.Spacing.xxl)
-            } else {
-                VStack(spacing: 0) {
-                    filterBar
-                    if filteredRecords.isEmpty {
-                        EmptyState(
-                            symbol: "magnifyingglass",
-                            title: "No local matches",
-                            message: "Try a session, journal, or a different search word."
-                        )
-                        .padding(.horizontal, StillTheme.Spacing.screen)
-                        .padding(.top, StillTheme.Spacing.xxl)
-                    } else {
-                        ScrollView {
-                            LazyVStack(alignment: .leading, spacing: StillTheme.Spacing.l, pinnedViews: [.sectionHeaders]) {
-                                monthCalendar
-                                ForEach(dayGroups) { group in
-                                    Section {
-                                        StillInsetList(padding: StillTheme.Spacing.s) {
-                                            VStack(spacing: 0) {
-                                                ForEach(Array(group.records.enumerated()), id: \.element.id) { index, record in
-                                                    HistoryRow(record: record)
-                                                    if index < group.records.count - 1 {
-                                                        InsetRowDivider(leading: 44)
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    } header: {
-                                        Text(group.day.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
-                                            .font(StillTypography.caption.weight(.semibold))
-                                            .foregroundStyle(StillTheme.textSecondary)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .padding(.vertical, StillTheme.Spacing.xs)
-                                            .background(StillTheme.pageBackground.opacity(0.96))
-                                    }
-                                }
-                                Color.clear.frame(height: 1).id("history-bottom")
-                            }
-                            .padding(.horizontal, StillTheme.Spacing.screen)
-                            .padding(.vertical, StillTheme.Spacing.m)
-                        }
-                        .stillScrollableViewport()
-                    }
-                }
-            }
+            historyContent
         }
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.inline)
@@ -117,6 +65,76 @@ struct HistoryView: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Local history")
+    }
+
+    @ViewBuilder
+    private var historyContent: some View {
+        if records.isEmpty {
+            EmptyState(
+                symbol: "clock.arrow.circlepath",
+                title: "Nothing saved yet",
+                message: "Completed focus sessions and one-line journal entries will appear here."
+            )
+            .padding(.horizontal, StillTheme.Spacing.screen)
+            .padding(.top, StillTheme.Spacing.xxl)
+        } else {
+            VStack(spacing: 0) {
+                filterBar
+                populatedHistoryContent
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var populatedHistoryContent: some View {
+        if filteredRecords.isEmpty {
+            EmptyState(
+                symbol: "magnifyingglass",
+                title: "No local matches",
+                message: "Try a session, journal, or a different search word."
+            )
+            .padding(.horizontal, StillTheme.Spacing.screen)
+            .padding(.top, StillTheme.Spacing.xxl)
+        } else {
+            historyList
+        }
+    }
+
+    private var historyList: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: StillTheme.Spacing.l, pinnedViews: [.sectionHeaders]) {
+                monthCalendar
+                ForEach(dayGroups) { group in
+                    historySection(group)
+                }
+                Color.clear.frame(height: 1).id("history-bottom")
+            }
+            .padding(.horizontal, StillTheme.Spacing.screen)
+            .padding(.vertical, StillTheme.Spacing.m)
+        }
+        .stillScrollableViewport()
+    }
+
+    private func historySection(_ group: HistoryDayGroup) -> some View {
+        Section {
+            StillInsetList(padding: StillTheme.Spacing.s) {
+                VStack(spacing: 0) {
+                    ForEach(Array(group.records.enumerated()), id: \.element.id) { index, record in
+                        HistoryRow(record: record)
+                        if index < group.records.count - 1 {
+                            InsetRowDivider(leading: 44)
+                        }
+                    }
+                }
+            }
+        } header: {
+            Text(group.day.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))
+                .font(StillTypography.caption.weight(.semibold))
+                .foregroundStyle(StillTheme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, StillTheme.Spacing.xs)
+                .background(StillTheme.pageBackground.opacity(0.96))
+        }
     }
 
     private var filterBar: some View {

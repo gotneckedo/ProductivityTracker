@@ -25,6 +25,10 @@ struct TodayView: View {
         StillDayPhase.automatic(date: appState.container.clock.now, colorScheme: colorScheme)
     }
 
+    private var usesAccessibilityLayout: Bool {
+        dynamicTypeSize.isAccessibilitySize || DemoLaunch.forcesAccessibilityTextSize
+    }
+
     var body: some View {
         StillScreen(phase: screenPhase) {
             ScrollViewReader { proxy in
@@ -139,7 +143,7 @@ struct TodayView: View {
 
     private var nextActionChoices: some View {
         Group {
-            if dynamicTypeSize.isAccessibilitySize {
+            if usesAccessibilityLayout {
                 EmptyView()
             } else {
                 HStack(spacing: StillTheme.Spacing.s) {
@@ -155,7 +159,7 @@ struct TodayView: View {
 
     private func primaryActionRow(title: String, action: @escaping () -> Void) -> some View {
         HStack(spacing: StillTheme.Spacing.s) {
-            if dynamicTypeSize.isAccessibilitySize {
+            if usesAccessibilityLayout {
                 Menu {
                     Button("I don't know what to do") { appState.router.go(to: .nextStep) }
                     Button("Customize focus") { appState.router.go(to: .focusConfiguration) }

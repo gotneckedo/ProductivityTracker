@@ -34,6 +34,10 @@ struct BreakShelfView: View {
         Array(visibleActivities.dropFirst(pickedActivities.count))
     }
 
+    private var usesAccessibilityLayout: Bool {
+        dynamicTypeSize.isAccessibilitySize || DemoLaunch.forcesAccessibilityTextSize
+    }
+
     var body: some View {
         StillScreen {
             ScrollViewReader { proxy in
@@ -115,7 +119,7 @@ struct BreakShelfView: View {
 
     private var categoryControls: some View {
         GlassControlGroup(padding: StillTheme.Spacing.xs, radius: StillTheme.Radius.medium) {
-            if dynamicTypeSize.isAccessibilitySize {
+            if usesAccessibilityLayout {
                 Menu {
                     Button(Copy.BreakShelf.all) { selectCategory(nil) }
                     ForEach(ActivityCategory.allCases, id: \.self) { category in

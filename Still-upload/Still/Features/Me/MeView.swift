@@ -401,8 +401,12 @@ private struct FocusRangePicker: View {
     @Binding var selection: FocusStatsRange
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
+    private var usesAccessibilityLayout: Bool {
+        dynamicTypeSize.isAccessibilitySize || DemoLaunch.forcesAccessibilityTextSize
+    }
+
     var body: some View {
-        if dynamicTypeSize.isAccessibilitySize {
+        if usesAccessibilityLayout {
             Menu {
                 ForEach(FocusStatsRange.allCases, id: \.self) { range in
                     Button(range.displayName) { selection = range }

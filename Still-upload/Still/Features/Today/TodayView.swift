@@ -112,11 +112,10 @@ struct TodayView: View {
                                 .font(StillTypography.bodyEmphasis.monospacedDigit())
                                 .foregroundStyle(StillTheme.textSecondary)
                         }
-                        Button("Start next task") {
+                        primaryActionRow(title: "Start next task") {
                             appState.selectTask(task.id)
                             appState.startFocus(source: .manual)
                         }
-                        .buttonStyle(QuietPrimaryButtonStyle())
                         nextActionChoices
                     }
                 }
@@ -128,8 +127,9 @@ struct TodayView: View {
                     Text("A small focus round can make room for the next thing.")
                         .font(StillTypography.callout)
                         .foregroundStyle(StillTheme.textSecondary)
-                    Button("Start a 25 min focus") { appState.startFocus(source: .manual) }
-                        .buttonStyle(QuietPrimaryButtonStyle())
+                    primaryActionRow(title: "Start a 25 min focus") {
+                        appState.startFocus(source: .manual)
+                    }
                     nextActionChoices
                 }
                 .modifier(NextActionSurface())
@@ -140,23 +140,7 @@ struct TodayView: View {
     private var nextActionChoices: some View {
         Group {
             if dynamicTypeSize.isAccessibilitySize {
-                Menu {
-                    Button("I don't know what to do") { appState.router.go(to: .nextStep) }
-                    Button("Customize focus") { appState.router.go(to: .focusConfiguration) }
-                } label: {
-                    HStack(spacing: StillTheme.Spacing.xs) {
-                        Text("More choices")
-                        Spacer(minLength: 0)
-                        Image(systemName: "ellipsis.circle")
-                    }
-                    .font(StillTypography.bodyEmphasis)
-                    .foregroundStyle(StillTheme.accent)
-                    .frame(maxWidth: .infinity, minHeight: StillTheme.minimumTapSize)
-                    .padding(.horizontal, StillTheme.Spacing.s)
-                }
-                .background(StillTheme.surfaceSunken, in: Capsule())
-                .accessibilityLabel("Focus alternatives")
-                .accessibilityHint("Includes a next-step guide and focus customization.")
+                EmptyView()
             } else {
                 HStack(spacing: StillTheme.Spacing.s) {
                     Button("I don't know what to do") { appState.router.go(to: .nextStep) }
@@ -165,6 +149,28 @@ struct TodayView: View {
                         .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    private func primaryActionRow(title: String, action: @escaping () -> Void) -> some View {
+        HStack(spacing: StillTheme.Spacing.s) {
+            Button(title, action: action)
+                .buttonStyle(QuietPrimaryButtonStyle())
+                .frame(maxWidth: .infinity)
+            if dynamicTypeSize.isAccessibilitySize {
+                Menu {
+                    Button("I don't know what to do") { appState.router.go(to: .nextStep) }
+                    Button("Customize focus") { appState.router.go(to: .focusConfiguration) }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(StillTypography.title3.weight(.semibold))
+                        .foregroundStyle(StillTheme.accent)
+                        .frame(width: StillTheme.minimumTapSize, height: StillTheme.minimumTapSize)
+                        .background(StillTheme.surfaceSunken, in: Circle())
+                }
+                .accessibilityLabel("Focus alternatives")
+                .accessibilityHint("Includes a next-step guide and focus customization.")
             }
         }
     }

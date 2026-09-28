@@ -399,23 +399,46 @@ private struct StatsSection: View {
 
 private struct FocusRangePicker: View {
     @Binding var selection: FocusStatsRange
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(FocusStatsRange.allCases, id: \.self) { range in
-                Button(range.displayName) { selection = range }
-                    .font(StillTypography.caption.weight(.semibold))
-                    .foregroundStyle(selection == range ? StillTheme.textPrimary : StillTheme.textSecondary)
-                    .frame(maxWidth: .infinity, minHeight: StillTheme.minimumTapSize)
-                    .background(selection == range ? Color.white.opacity(0.54) : .clear, in: Capsule())
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(selection == range ? .isSelected : [])
+        if dynamicTypeSize.isAccessibilitySize {
+            Menu {
+                ForEach(FocusStatsRange.allCases, id: \.self) { range in
+                    Button(range.displayName) { selection = range }
+                }
+            } label: {
+                HStack(spacing: StillTheme.Spacing.xs) {
+                    Text("Range")
+                    Spacer(minLength: 0)
+                    Text(selection.displayName)
+                    Image(systemName: "chevron.up.chevron.down")
+                }
+                .font(StillTypography.bodyEmphasis)
+                .foregroundStyle(StillTheme.textPrimary)
+                .frame(maxWidth: .infinity, minHeight: StillTheme.minimumTapSize)
+                .padding(.horizontal, StillTheme.Spacing.s)
             }
+            .background(StillTheme.surfaceSunken, in: Capsule())
+            .accessibilityLabel("Statistics range")
+            .accessibilityValue(selection.displayName)
+        } else {
+            HStack(spacing: 4) {
+                ForEach(FocusStatsRange.allCases, id: \.self) { range in
+                    Button(range.displayName) { selection = range }
+                        .font(StillTypography.caption.weight(.semibold))
+                        .foregroundStyle(selection == range ? StillTheme.textPrimary : StillTheme.textSecondary)
+                        .frame(maxWidth: .infinity, minHeight: StillTheme.minimumTapSize)
+                        .background(selection == range ? Color.white.opacity(0.54) : .clear, in: Capsule())
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(selection == range ? .isSelected : [])
+                }
+            }
+            .padding(4)
+            .background(StillTheme.surfaceSunken, in: Capsule())
+            .accessibilityElement(children: .contain)
+            .accessibilityLabel("Statistics range")
         }
-        .padding(4)
-        .background(StillTheme.surfaceSunken, in: Capsule())
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Statistics range")
     }
 }
 

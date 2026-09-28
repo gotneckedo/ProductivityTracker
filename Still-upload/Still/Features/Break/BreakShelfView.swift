@@ -4,6 +4,7 @@ import SwiftUI
 /// lists rather than a feed of independently floating recommendation cards.
 struct BreakShelfView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var selectedCategory: ActivityCategory?
     @State private var isEditingShelf = false
     @State private var draftOrder: [BreakActivityID] = []
@@ -114,21 +115,46 @@ struct BreakShelfView: View {
 
     private var categoryControls: some View {
         GlassControlGroup(padding: StillTheme.Spacing.xs, radius: StillTheme.Radius.medium) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: StillTheme.Spacing.xs) {
-                    ShelfFilter(title: Copy.BreakShelf.all, isSelected: selectedCategory == nil) {
-                        selectedCategory = nil
-                        StillInteractionFeedback.fire(.roomChanged, preferences: appState.preferences)
-                    }
+            if dynamicTypeSize.isAccessibilitySize {
+                Menu {
+                    Button(Copy.BreakShelf.all) { selectCategory(nil) }
                     ForEach(ActivityCategory.allCases, id: \.self) { category in
-                        ShelfFilter(title: category.displayName, isSelected: selectedCategory == category) {
-                            selectedCategory = category
-                            StillInteractionFeedback.fire(.roomChanged, preferences: appState.preferences)
+                        Button(category.displayName) { selectCategory(category) }
+                    }
+                } label: {
+                    HStack(spacing: StillTheme.Spacing.xs) {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                        Text(selectedCategory?.displayName ?? Copy.BreakShelf.all)
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.up.chevron.down")
+                    }
+                    .font(StillTypography.bodyEmphasis)
+                    .foregroundStyle(StillTheme.textPrimary)
+                    .frame(maxWidth: .infinity, minHeight: StillTheme.minimumTapSize)
+                    .padding(.horizontal, StillTheme.Spacing.s)
+                }
+                .accessibilityLabel("Break category")
+                .accessibilityValue(selectedCategory?.displayName ?? Copy.BreakShelf.all)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: StillTheme.Spacing.xs) {
+                        ShelfFilter(title: Copy.BreakShelf.all, isSelected: selectedCategory == nil) {
+                            selectCategory(nil)
+                        }
+                        ForEach(ActivityCategory.allCases, id: \.self) { category in
+                            ShelfFilter(title: category.displayName, isSelected: selectedCategory == category) {
+                                selectCategory(category)
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    private func selectCategory(_ category: ActivityCategory?) {
+        selectedCategory = category
+        StillInteractionFeedback.fire(.roomChanged, preferences: appState.preferences)
     }
 
     private var shelfEditor: some View {

@@ -90,6 +90,14 @@ struct MainTabView: View {
 private struct FloatingTabBar: View {
     let tabs: [AppTab]
     @Binding var selection: AppTab
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// Four long tab names do not form a usable label row at accessibility
+    /// sizes. The system still exposes each title to VoiceOver; visually the
+    /// bar becomes a familiar icon rail and keeps its 44-point hit targets.
+    private var usesIconOnlyLayout: Bool {
+        dynamicTypeSize.isAccessibilitySize
+    }
 
     var body: some View {
         HStack(spacing: 2) {
@@ -101,14 +109,17 @@ private struct FloatingTabBar: View {
                     VStack(spacing: 3) {
                         Image(systemName: tab.systemImage)
                             .font(StillTypography.callout.weight(.semibold))
-                        Text(tab.title)
-                            .font(StillTypography.caption)
+                        if !usesIconOnlyLayout {
+                            Text(tab.title)
+                                .font(StillTypography.caption)
+                        }
                     }
                     .foregroundStyle(isSelected ? StillTheme.textPrimary : StillTheme.textSecondary)
                     .frame(maxWidth: .infinity, minHeight: 54)
                     .background(isSelected ? Color.white.opacity(0.54) : .clear, in: Capsule())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(tab.title)
                 .accessibilityAddTraits(isSelected ? .isSelected : [])
             }
         }

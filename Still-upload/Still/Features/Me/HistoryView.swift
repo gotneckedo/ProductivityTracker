@@ -4,6 +4,8 @@ import SwiftUI
 /// simply marks days that contain something saved on this device.
 struct HistoryView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.stillDayPhase) private var phase
+    @Environment(\.colorScheme) private var colorScheme
     @State private var query = ""
     @State private var filter: HistoryFilter = .all
     @State private var month = Date()
@@ -48,12 +50,18 @@ struct HistoryView: View {
             .sorted { $0.day > $1.day }
     }
 
+    private var resolvedPhase: StillDayPhase {
+        phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
+    }
+
     var body: some View {
         StillScreen {
             historyContent
         }
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .toolbarColorScheme(resolvedPhase == .night || resolvedPhase == .focus ? .dark : .light, for: .navigationBar)
         .searchable(text: $query, prompt: "Search local history")
         .onAppear {
             month = appState.container.clock.now
@@ -133,7 +141,7 @@ struct HistoryView: View {
                 .foregroundStyle(StillTheme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, StillTheme.Spacing.xs)
-                .background(StillTheme.background.opacity(0.96))
+                .background(resolvedPhase.plainGroupFill.opacity(0.96))
         }
     }
 
@@ -155,7 +163,7 @@ struct HistoryView: View {
         }
         .padding(.horizontal, StillTheme.Spacing.screen)
         .padding(.vertical, StillTheme.Spacing.xs)
-        .background(StillTheme.background.opacity(0.98))
+        .background(resolvedPhase.plainGroupFill.opacity(0.98))
     }
 
     private var monthCalendar: some View {

@@ -596,7 +596,7 @@ struct SessionTimerFace: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(caption)
         .accessibilityValue(accessibilityText)
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityHint("Move VoiceOver focus here to hear the current timer value.")
     }
 }
 

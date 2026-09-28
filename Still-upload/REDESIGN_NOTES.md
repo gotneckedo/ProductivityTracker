@@ -60,6 +60,8 @@ Item 20 uses iOS **Reduce Motion** as the production authority. `proof-reduce-mo
 
 **Item 31 implementation, pending CI visual review:** all core type tokens already use relative custom-font styles; the app now has CI-only AX3 routes that inject `.accessibility3` through the same SwiftUI environment iOS uses. The four named screenshots, rather than a source-only audit, will decide acceptance.
 
+**Item 32 partial implementation:** the timer is no longer marked as continuously updating for VoiceOver; it announces its value when focused. Room objects, cat, and Sudoku controls have explicit labels and hints. The exhaustive custom-control audit is still pending and is not claimed complete.
+
 ## Master Plan decisions — product direction, not implementation proof
 
 These decisions were supplied by CoCo on 26 September 2026 in response to

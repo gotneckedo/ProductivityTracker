@@ -6,7 +6,7 @@ enum PreviewSupport {
         onboarded: Bool = true,
         goal: OnboardingGoal = .focusBetter,
         populated: Bool = false,
-        completedSessions: Int = 9,
+        completedSessions: Int = 30,
         renderMode: RenderMode? = nil,
         activeSession: Bool = false,
         activeSessionElapsed: TimeInterval = 7 * 60,

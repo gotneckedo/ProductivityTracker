@@ -600,7 +600,7 @@ final class AppFlowTests: XCTestCase {
 
     func testPreviewStatesBuild() {
         XCTAssertNotNil(PreviewSupport.appState(activeSession: true).activeSession)
-        XCTAssertEqual(PreviewSupport.appState(populated: true).stats.completedSessions, 9)
+        XCTAssertEqual(PreviewSupport.appState(populated: true).stats.completedSessions, 30)
         let completed = PreviewSupport.completedSession()
         XCTAssertEqual(completed.state.suggestions(for: completed.sessionID).activities.count, 3)
     }

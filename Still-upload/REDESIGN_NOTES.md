@@ -56,6 +56,8 @@ Item 20 uses iOS **Reduce Motion** as the production authority. `proof-reduce-mo
 
 **Decision recorded — item 27:** pull-to-refresh never fetches network data. Today reloads local records and recalculates its time phase; Break rotates only automatically ranked suggestions, while a person’s saved shelf order stays fixed.
 
+**Decision recorded — items 28–30:** History is calendar-led but non-judgmental: dots mean a saved local record, never a streak or a score. The CI default fixture contains 30 completed sessions spread across recent days; the dedicated `history-empty` route remains deliberately unseeded.
+
 ## Master Plan decisions — product direction, not implementation proof
 
 These decisions were supplied by CoCo on 26 September 2026 in response to

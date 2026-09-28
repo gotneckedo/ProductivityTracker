@@ -199,6 +199,8 @@ jobs:
           shoot "today-routine" "proof-edit-today-routine"
           shoot "history-search" "proof-search-history"
           shoot "short-read-search" "proof-search-short-read"
+          shoot "history-full" "proof-history-full"
+          shoot "history-empty" "proof-history-empty"
           shoot "today-refreshed" "proof-pull-today"
           shoot "break-reshuffled" "proof-pull-break"
 

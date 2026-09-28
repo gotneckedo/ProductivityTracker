@@ -1721,6 +1721,34 @@ final class CopyCountTests: XCTestCase {
         XCTAssertTrue(decoded.interactionSoundsEnabled)
         XCTAssertEqual(decoded.schemaVersion, UserPreferences.currentSchemaVersion)
     }
+
+    func testSceneShelfAndRoutinePreferencesRoundTripWithoutDuplicates() throws {
+        let sharedID = UUID()
+        var preferences = UserPreferences()
+        preferences.sceneOrder = [.trainWindow, .rainyBedroom, .trainWindow]
+        preferences.breakActivityOrder = [.shortRead, .sudoku, .shortRead]
+        preferences.hiddenBreakActivityIDs = [.pixelDoodle, .pixelDoodle]
+        preferences.todayRoutineItems = [
+            TodayRoutineItem(id: sharedID, title: "Fill a water glass"),
+            TodayRoutineItem(id: sharedID, title: "Duplicate should be removed"),
+            TodayRoutineItem(title: "Open the notes")
+        ]
+
+        let data = try RecordCoding.encoder().encode(preferences)
+        let decoded = try RecordCoding.decoder().decode(UserPreferences.self, from: data)
+
+        XCTAssertEqual(decoded.sceneOrder, [.trainWindow, .rainyBedroom])
+        XCTAssertEqual(decoded.breakActivityOrder, [.shortRead, .sudoku])
+        XCTAssertEqual(decoded.hiddenBreakActivityIDs, [.pixelDoodle])
+        XCTAssertEqual(decoded.todayRoutineItems.map(\.title), ["Fill a water glass", "Open the notes"])
+        XCTAssertEqual(decoded.schemaVersion, UserPreferences.currentSchemaVersion)
+    }
+
+    func testTodayRoutineNormalizesTitleAndRejectsBlankInput() {
+        XCTAssertEqual(TodayRoutineItem.normalized("  Choose\n one page  "), "Choose one page")
+        XCTAssertNil(TodayRoutineItem.normalized(" \n \t "))
+        XCTAssertEqual(TodayRoutineItem(title: "  Open notes ").title, "Open notes")
+    }
 }
 
 final class CatCompanionTests: XCTestCase {

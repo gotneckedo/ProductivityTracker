@@ -7,6 +7,8 @@ struct TodayView: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var reflection = ""
     @State private var mood: JournalMood? = nil
+    @State private var routineItems: [TodayRoutineItem] = []
+    @State private var newRoutineTitle = ""
 
     private var nextTask: TaskItem? {
         appState.selectedTask ?? appState.todaysTasks.first(where: { !$0.isCompleted })
@@ -30,6 +32,7 @@ struct TodayView: View {
                         nextAction
                         afterSection
                         dayContext
+                        routineSection.id("today-routine")
                         reflectionCard
                         roomMoment
                         Color.clear.frame(height: 1).id("today-bottom")
@@ -40,8 +43,11 @@ struct TodayView: View {
                 .stillScrollableViewport()
                 .onAppear {
                     #if DEBUG
-                    guard DemoLaunch.shouldScrollToBottom("today") else { return }
-                    DispatchQueue.main.async { proxy.scrollTo("today-bottom", anchor: .bottom) }
+                    if DemoLaunch.requestedScreen == "today-routine" {
+                        DispatchQueue.main.async { proxy.scrollTo("today-routine", anchor: .top) }
+                    } else if DemoLaunch.shouldScrollToBottom("today") {
+                        DispatchQueue.main.async { proxy.scrollTo("today-bottom", anchor: .bottom) }
+                    }
                     #endif
                 }
             }
@@ -50,6 +56,7 @@ struct TodayView: View {
         .onAppear {
             reflection = appState.journalToday?.text ?? ""
             mood = appState.journalToday?.mood
+            routineItems = appState.todayRoutineItems
         }
     }
 
@@ -167,6 +174,107 @@ struct TodayView: View {
             Button("See your day") { appState.router.go(to: .dayTimeline) }
                 .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
         }
+    }
+
+    private var routineSection: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            SectionHeader(
+                title: "Small routine",
+                detail: routineItems.isEmpty ? "Optional prompts for the shape of your day." : "Move, change, or remove any prompt."
+            )
+            MatteActivityCanvas(tint: StillTheme.accentSoft.opacity(0.72)) {
+                VStack(spacing: 0) {
+                    ForEach(Array(routineItems.enumerated()), id: \.element.id) { index, item in
+                        HStack(spacing: StillTheme.Spacing.s) {
+                            Image(systemName: "line.3.horizontal")
+                                .foregroundStyle(StillTheme.textTertiary)
+                                .accessibilityHidden(true)
+                            TextField("A small prompt", text: routineBinding(for: item.id))
+                                .font(StillTypography.callout)
+                                .foregroundStyle(StillTheme.textPrimary)
+                                .onSubmit(commitRoutine)
+                            Spacer(minLength: 0)
+                            Button { moveRoutine(item.id, by: -1) } label: { Image(systemName: "chevron.up") }
+                                .buttonStyle(StillRowButtonStyle())
+                                .disabled(index == 0)
+                                .accessibilityLabel("Move \(item.title) earlier")
+                            Button { moveRoutine(item.id, by: 1) } label: { Image(systemName: "chevron.down") }
+                                .buttonStyle(StillRowButtonStyle())
+                                .disabled(index == routineItems.count - 1)
+                                .accessibilityLabel("Move \(item.title) later")
+                            Button { removeRoutine(item.id) } label: { Image(systemName: "minus.circle") }
+                                .buttonStyle(StillRowButtonStyle())
+                                .accessibilityLabel("Remove \(item.title)")
+                        }
+                        .stillInsetRow(verticalPadding: StillTheme.Spacing.xs)
+                        if index < routineItems.count - 1 { InsetRowDivider(leading: 32) }
+                    }
+                    if canAddRoutine {
+                        if !routineItems.isEmpty { InsetRowDivider(leading: 32) }
+                        HStack(spacing: StillTheme.Spacing.s) {
+                            Image(systemName: "plus")
+                                .foregroundStyle(StillTheme.accent)
+                                .frame(width: 18)
+                            TextField("Add a prompt", text: $newRoutineTitle)
+                                .font(StillTypography.callout)
+                                .onSubmit(addRoutine)
+                            Button("Add", action: addRoutine)
+                                .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
+                                .disabled(TodayRoutineItem.normalized(newRoutineTitle) == nil)
+                        }
+                        .stillInsetRow(verticalPadding: StillTheme.Spacing.xs)
+                    } else {
+                        InsetRowDivider(leading: 32)
+                        Text("Three prompts keep Today quiet in this build.")
+                            .font(StillTypography.caption)
+                            .foregroundStyle(StillTheme.textSecondary)
+                            .stillInsetRow(verticalPadding: StillTheme.Spacing.xs)
+                    }
+                }
+                .padding(.horizontal, StillTheme.Spacing.s)
+                .padding(.vertical, StillTheme.Spacing.xs)
+            }
+        }
+    }
+
+    private var canAddRoutine: Bool { appState.canAddTodayRoutineItem }
+
+    private func routineBinding(for id: UUID) -> Binding<String> {
+        Binding(
+            get: { routineItems.first(where: { $0.id == id })?.title ?? "" },
+            set: { value in
+                guard let index = routineItems.firstIndex(where: { $0.id == id }) else { return }
+                routineItems[index].title = String(value.prefix(TodayRoutineItem.maximumTitleLength))
+            }
+        )
+    }
+
+    private func commitRoutine() {
+        routineItems = routineItems.compactMap { item in
+            guard let title = TodayRoutineItem.normalized(item.title) else { return nil }
+            return TodayRoutineItem(id: item.id, title: title)
+        }
+        appState.setTodayRoutineItems(routineItems)
+    }
+
+    private func addRoutine() {
+        guard canAddRoutine, let title = TodayRoutineItem.normalized(newRoutineTitle) else { return }
+        routineItems.append(TodayRoutineItem(title: title))
+        newRoutineTitle = ""
+        commitRoutine()
+    }
+
+    private func removeRoutine(_ id: UUID) {
+        routineItems.removeAll { $0.id == id }
+        commitRoutine()
+    }
+
+    private func moveRoutine(_ id: UUID, by delta: Int) {
+        guard let index = routineItems.firstIndex(where: { $0.id == id }) else { return }
+        let destination = index + delta
+        guard routineItems.indices.contains(destination) else { return }
+        routineItems.swapAt(index, destination)
+        commitRoutine()
     }
 
     private var reflectionCard: some View {

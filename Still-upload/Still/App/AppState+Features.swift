@@ -157,6 +157,60 @@ extension AppState {
         reload()
     }
 
+    var orderedScenes: [SceneDefinition] {
+        ordered(SceneCatalog.all, by: preferences.sceneOrder, id: \.id)
+    }
+
+    var orderedExtraRooms: [SceneDefinition] {
+        ordered(SceneCatalog.extraRooms, by: preferences.sceneOrder, id: \.id)
+    }
+
+    func setSceneOrder(_ ids: [SceneID]) {
+        container.preferences.setSceneOrder(ids)
+        reload()
+    }
+
+    func setDefaultScene(_ sceneID: SceneID) {
+        var preset = currentPreset
+        preset.sceneID = sceneID
+        preset.renderMode = .scene
+        savePreset(preset)
+    }
+
+    var breakShelfHiddenIDs: Set<BreakActivityID> {
+        Set(preferences.hiddenBreakActivityIDs)
+    }
+
+    var breakShelfCustomOrder: [BreakActivityID] {
+        preferences.breakActivityOrder
+    }
+
+    func setBreakShelf(order: [BreakActivityID], hidden: Set<BreakActivityID>) {
+        container.preferences.setBreakShelf(order: order, hidden: Array(hidden))
+        reload()
+    }
+
+    var todayRoutineItems: [TodayRoutineItem] { preferences.todayRoutineItems }
+
+    var canAddTodayRoutineItem: Bool {
+        hasStillPlus || todayRoutineItems.count < 3
+    }
+
+    func setTodayRoutineItems(_ items: [TodayRoutineItem]) {
+        container.preferences.setTodayRoutineItems(items)
+        reload()
+    }
+
+    private func ordered<T, ID: Hashable>(_ values: [T], by order: [ID], id: (T) -> ID) -> [T] {
+        guard !order.isEmpty else { return values }
+        let positions = Dictionary(uniqueKeysWithValues: order.enumerated().map { ($0.element, $0.offset) })
+        return values.sorted {
+            let lhs = positions[id($0)] ?? Int.max
+            let rhs = positions[id($1)] ?? Int.max
+            return lhs == rhs ? false : lhs < rhs
+        }
+    }
+
     @discardableResult
     func createPreset(named name: String, basedOn base: FocusPreset) -> FocusPreset? {
         let preset = container.preferences.createPreset(named: name, basedOn: base)

@@ -50,6 +50,8 @@ Item 20 uses iOS **Reduce Motion** as the production authority. `proof-reduce-mo
 
 **Item 24 scope:** task rows, room targets, Break activities, Scene cards, soundscape layers, and statistic tiles now expose native long-press context menus with an object-specific preview. `proof-long-press-previews.png` is the required CI review catalogue for the six preview treatments; the actual native press menu remains an iOS system interaction, not a custom simulated sheet.
 
+**Decision recorded — item 25:** scene order/default, Break shelf order/hidden state, and Today routine prompts live only in `UserPreferences`; no behavioral record or streak is created. Hidden Break activities remain in edit mode with an explicit restore action. Free builds hold up to three Today prompts, and the UI does not present an in-product purchase CTA when the additional-capacity entitlement is unavailable.
+
 ## Master Plan decisions — product direction, not implementation proof
 
 These decisions were supplied by CoCo on 26 September 2026 in response to

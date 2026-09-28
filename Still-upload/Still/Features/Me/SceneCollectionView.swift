@@ -7,6 +7,8 @@ struct SceneCollectionView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var purchaseMessage: String?
     @State private var stillPlusProducts: [SupporterProduct] = []
+    @State private var isEditingScenes = false
+    @State private var draftSceneOrder: [SceneID] = []
 
     private var canPurchase: Bool {
         !stillPlusProducts.isEmpty && !appState.hasStillPlus
@@ -27,15 +29,13 @@ struct SceneCollectionView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
-                    VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
-                        Text("Scenes")
-                            .font(StillTypography.display)
-                            .foregroundStyle(StillTheme.textPrimary)
-                            .accessibilityAddTraits(.isHeader)
-                    }
+                    sceneHeader
 
+                    if isEditingScenes {
+                        sceneEditor
+                    } else {
                     LazyVGrid(columns: columns, spacing: 12) {
-                        ForEach(SceneCatalog.all) { scene in
+                        ForEach(appState.orderedScenes) { scene in
                             SceneCard(
                                 scene: scene,
                                 isUnlocked: appState.isUnlocked(scene),
@@ -48,9 +48,12 @@ struct SceneCollectionView: View {
                             }
                         }
                     }
+                    }
                     Color.clear.frame(height: 1).id("scenes-midpoint")
 
-                    extraRoomsSection(preset: preset)
+                    if !isEditingScenes {
+                        extraRoomsSection(preset: preset)
+                    }
                     stillPlusSection
                     Color.clear.frame(height: 1).id("scenes-bottom")
                     }
@@ -76,6 +79,14 @@ struct SceneCollectionView: View {
         .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
         .onAppear { appState.acknowledgeUnlockedScenes() }
+        .onAppear {
+            resetDraftOrder()
+            #if DEBUG || STILL_PROOF
+            if DemoLaunch.requestedScreen == "scenes-edit" {
+                isEditingScenes = true
+            }
+            #endif
+        }
         .task {
             await appState.container.purchases.loadProducts()
             refreshPurchaseState()
@@ -110,6 +121,89 @@ struct SceneCollectionView: View {
             }
         }
         .id("extra-rooms")
+    }
+
+    private var sceneHeader: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text("Scenes")
+                .font(StillTypography.display)
+                .foregroundStyle(StillTheme.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+            Spacer()
+            Button(isEditingScenes ? "Done" : "Edit") {
+                if isEditingScenes {
+                    appState.setSceneOrder(draftSceneOrder)
+                } else {
+                    resetDraftOrder()
+                }
+                isEditingScenes.toggle()
+            }
+            .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
+        }
+    }
+
+    private var sceneEditor: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            SectionHeader(title: "Arrange rooms", detail: "Choose the room Focus opens with, then set the order you want to see.")
+            MatteActivityCanvas(tint: StillTheme.calmSoft, radius: StillTheme.Radius.large) {
+                VStack(spacing: 0) {
+                    ForEach(Array(editableScenes.enumerated()), id: \.element.id) { index, scene in
+                        HStack(spacing: StillTheme.Spacing.s) {
+                            RoomHeroView(
+                                sceneName: scene.name,
+                                sceneID: scene.id,
+                                allowsCatInteraction: false,
+                                phase: .afternoon,
+                                showsControls: false
+                            )
+                            .frame(width: 52, height: 52)
+                            .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.small, style: .continuous))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(scene.name).font(StillTypography.bodyEmphasis).foregroundStyle(StillTheme.textPrimary)
+                                Text(appState.currentPreset.sceneID == scene.id ? "Default room" : (appState.isUnlocked(scene) ? scene.summary : "Locked room"))
+                                    .font(StillTypography.caption).foregroundStyle(StillTheme.textSecondary)
+                            }
+                            Spacer(minLength: 0)
+                            Button { appState.setDefaultScene(scene.id) } label: {
+                                Image(systemName: appState.currentPreset.sceneID == scene.id ? "checkmark.circle.fill" : "circle")
+                            }
+                            .buttonStyle(StillRowButtonStyle())
+                            .disabled(!appState.isUnlocked(scene))
+                            .accessibilityLabel("Set \(scene.name) as default room")
+                            Button { move(scene.id, by: -1) } label: { Image(systemName: "chevron.up") }
+                                .buttonStyle(StillRowButtonStyle())
+                                .disabled(index == 0)
+                                .accessibilityLabel("Move \(scene.name) earlier")
+                            Button { move(scene.id, by: 1) } label: { Image(systemName: "chevron.down") }
+                                .buttonStyle(StillRowButtonStyle())
+                                .disabled(index == editableScenes.count - 1)
+                                .accessibilityLabel("Move \(scene.name) later")
+                        }
+                        .stillInsetRow(verticalPadding: StillTheme.Spacing.xs)
+                        if index < editableScenes.count - 1 { InsetRowDivider(leading: 68) }
+                    }
+                }
+            }
+        }
+    }
+
+    private var editableScenes: [SceneDefinition] {
+        let catalog = SceneCatalog.completeCatalog
+        let byID = Dictionary(uniqueKeysWithValues: catalog.map { ($0.id, $0) })
+        return draftSceneOrder.compactMap { byID[$0] }
+    }
+
+    private func resetDraftOrder() {
+        let catalog = SceneCatalog.completeCatalog.map(\.id)
+        let current = appState.preferences.sceneOrder
+        draftSceneOrder = current.isEmpty ? catalog : current + catalog.filter { !current.contains($0) }
+    }
+
+    private func move(_ id: SceneID, by delta: Int) {
+        guard let index = draftSceneOrder.firstIndex(of: id) else { return }
+        let destination = index + delta
+        guard draftSceneOrder.indices.contains(destination) else { return }
+        draftSceneOrder.swapAt(index, destination)
     }
 
     private var stillPlusSection: some View {

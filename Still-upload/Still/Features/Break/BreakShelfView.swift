@@ -5,6 +5,9 @@ import SwiftUI
 struct BreakShelfView: View {
     @Environment(AppState.self) private var appState
     @State private var selectedCategory: ActivityCategory?
+    @State private var isEditingShelf = false
+    @State private var draftOrder: [BreakActivityID] = []
+    @State private var draftHidden: Set<BreakActivityID> = []
 
     private var visibleActivities: [BreakActivity] {
         let ranked = BreakShelfRanking().ranked(
@@ -15,7 +18,9 @@ struct BreakShelfView: View {
             usages: appState.usages,
             personalization: appState.personalization
         )
-        return selectedCategory.map { category in ranked.filter { $0.category == category } } ?? ranked
+        let ordered = orderedActivities(ranked)
+        let visible = isEditingShelf ? ordered : ordered.filter { !appState.breakShelfHiddenIDs.contains($0.id) }
+        return selectedCategory.map { category in visible.filter { $0.category == category } } ?? visible
     }
 
     private var pickedActivities: [BreakActivity] {
@@ -33,8 +38,12 @@ struct BreakShelfView: View {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                         header
                         categoryControls
-                        activityGroup(title: "Picked for you", activities: pickedActivities, tint: StillTheme.calmSoft)
-                        if !remainingActivities.isEmpty {
+                        if isEditingShelf {
+                            shelfEditor
+                        } else {
+                            activityGroup(title: "Picked for you", activities: pickedActivities, tint: StillTheme.calmSoft)
+                        }
+                        if !isEditingShelf, !remainingActivities.isEmpty {
                             activityGroup(
                                 title: selectedCategory == nil ? "Everything else" : "More options",
                                 activities: remainingActivities,
@@ -57,6 +66,14 @@ struct BreakShelfView: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
+        .onAppear {
+            resetDraft()
+            #if DEBUG || STILL_PROOF
+            if DemoLaunch.requestedScreen == "break-edit" {
+                isEditingShelf = true
+            }
+            #endif
+        }
     }
 
     private var header: some View {
@@ -66,10 +83,22 @@ struct BreakShelfView: View {
                 .textCase(.uppercase)
                 .tracking(1.4)
                 .foregroundStyle(StillTheme.textTertiary)
-            Text(Copy.BreakShelf.title)
-                .font(StillTypography.display)
-                .foregroundStyle(StillTheme.textPrimary)
-                .accessibilityAddTraits(.isHeader)
+            HStack(alignment: .firstTextBaseline) {
+                Text(Copy.BreakShelf.title)
+                    .font(StillTypography.display)
+                    .foregroundStyle(StillTheme.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer()
+                Button(isEditingShelf ? "Done" : "Edit") {
+                    if isEditingShelf {
+                        appState.setBreakShelf(order: draftOrder, hidden: draftHidden)
+                    } else {
+                        resetDraft()
+                    }
+                    isEditingShelf.toggle()
+                }
+                .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
+            }
         }
     }
 
@@ -90,6 +119,74 @@ struct BreakShelfView: View {
                 }
             }
         }
+    }
+
+    private var shelfEditor: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            SectionHeader(title: "Arrange shelf", detail: "Move a row, or hide it. Hidden activities stay here to restore anytime.")
+            MatteActivityCanvas(tint: StillTheme.calmSoft, radius: StillTheme.Radius.large) {
+                VStack(spacing: 0) {
+                    ForEach(Array(editableActivities.enumerated()), id: \.element.id) { index, activity in
+                        HStack(spacing: StillTheme.Spacing.s) {
+                            Image(systemName: draftHidden.contains(activity.id) ? "eye.slash" : activity.symbolName)
+                                .foregroundStyle(draftHidden.contains(activity.id) ? StillTheme.textTertiary : StillTheme.calm)
+                                .frame(width: 26)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(activity.name).font(StillTypography.bodyEmphasis).foregroundStyle(StillTheme.textPrimary)
+                                Text(draftHidden.contains(activity.id) ? "Hidden — restore when you want it" : "Shown on your shelf")
+                                    .font(StillTypography.caption).foregroundStyle(StillTheme.textSecondary)
+                            }
+                            Spacer(minLength: 0)
+                            Button { move(activity.id, by: -1) } label: { Image(systemName: "chevron.up") }
+                                .buttonStyle(StillRowButtonStyle())
+                                .disabled(index == 0)
+                                .accessibilityLabel("Move \(activity.name) earlier")
+                            Button { move(activity.id, by: 1) } label: { Image(systemName: "chevron.down") }
+                                .buttonStyle(StillRowButtonStyle())
+                                .disabled(index == editableActivities.count - 1)
+                                .accessibilityLabel("Move \(activity.name) later")
+                            Button {
+                                if draftHidden.contains(activity.id) { draftHidden.remove(activity.id) }
+                                else { draftHidden.insert(activity.id) }
+                            } label: {
+                                Image(systemName: draftHidden.contains(activity.id) ? "eye" : "eye.slash")
+                            }
+                            .buttonStyle(StillRowButtonStyle())
+                            .accessibilityLabel(draftHidden.contains(activity.id) ? "Show \(activity.name)" : "Hide \(activity.name)")
+                        }
+                        .stillInsetRow(verticalPadding: StillTheme.Spacing.xs)
+                        if index < editableActivities.count - 1 { InsetRowDivider(leading: 42) }
+                    }
+                }
+            }
+        }
+    }
+
+    private var editableActivities: [BreakActivity] {
+        let byID = Dictionary(uniqueKeysWithValues: ActivityCatalog.available.map { ($0.id, $0) })
+        return draftOrder.compactMap { byID[$0] }
+    }
+
+    private func orderedActivities(_ ranked: [BreakActivity]) -> [BreakActivity] {
+        guard !appState.breakShelfCustomOrder.isEmpty else { return ranked }
+        let byID = Dictionary(uniqueKeysWithValues: ranked.map { ($0.id, $0) })
+        let chosen = appState.breakShelfCustomOrder.compactMap { byID[$0] }
+        let remaining = ranked.filter { !appState.breakShelfCustomOrder.contains($0.id) }
+        return chosen + remaining
+    }
+
+    private func resetDraft() {
+        let defaults = ActivityCatalog.available.map(\.id)
+        let current = appState.breakShelfCustomOrder
+        draftOrder = current.isEmpty ? defaults : current + defaults.filter { !current.contains($0) }
+        draftHidden = appState.breakShelfHiddenIDs
+    }
+
+    private func move(_ id: BreakActivityID, by delta: Int) {
+        guard let index = draftOrder.firstIndex(of: id) else { return }
+        let destination = index + delta
+        guard draftOrder.indices.contains(destination) else { return }
+        draftOrder.swapAt(index, destination)
     }
 
     @ViewBuilder

@@ -104,6 +104,23 @@ final class PreferencesController {
         update { $0.interactionSoundsEnabled = enabled }
     }
 
+    func setSceneOrder(_ ids: [SceneID]) {
+        update { $0.sceneOrder = ids }
+    }
+
+    func setBreakShelf(order: [BreakActivityID], hidden: [BreakActivityID]) {
+        update { prefs in
+            prefs.breakActivityOrder = order
+            prefs.hiddenBreakActivityIDs = hidden
+        }
+    }
+
+    func setTodayRoutineItems(_ items: [TodayRoutineItem]) {
+        update { prefs in
+            prefs.todayRoutineItems = items.filter { !$0.title.isEmpty }
+        }
+    }
+
     func saveSoundscape(_ soundscape: SavedSoundscape) {
         update { prefs in
             let normalized = SavedSoundscape(id: soundscape.id, name: soundscape.name, mix: soundscape.mix.normalized())

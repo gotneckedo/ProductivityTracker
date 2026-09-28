@@ -194,6 +194,9 @@ jobs:
           shoot "accessibility-feedback" "proof-accessibility-feedback"
           shoot "undo-task" "proof-swipe-undo-task"
           shoot "context-previews" "proof-long-press-previews"
+          shoot "scenes-edit" "proof-edit-scenes"
+          shoot "break-edit" "proof-edit-break-shelf"
+          shoot "today-routine" "proof-edit-today-routine"
 
           # Truth-pass release proof. This is a Release configuration compiled
           # with only the internal STILL_PROOF navigation condition; FeatureFlags

@@ -127,6 +127,30 @@ struct OnboardingAnswers: Equatable {
     }
 }
 
+/// A small Today template, intentionally separate from habits. Reordering or
+/// removing it changes only the prompt shown on Today; it carries no streak,
+/// score, or historical compliance data.
+struct TodayRoutineItem: Codable, Identifiable, Equatable, Hashable {
+    var id: UUID
+    var title: String
+
+    static let maximumTitleLength = 48
+
+    init(id: UUID = UUID(), title: String) {
+        self.id = id
+        self.title = Self.normalized(title) ?? ""
+    }
+
+    static func normalized(_ raw: String) -> String? {
+        let text = raw
+            .components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        guard !text.isEmpty else { return nil }
+        return String(text.prefix(maximumTitleLength))
+    }
+}
+
 /// Device-local settings. Decoding tolerates missing keys and `migrated()`
 /// upgrades old payloads before they are returned by the repository.
 struct UserPreferences: Codable, Equatable {
@@ -166,9 +190,19 @@ struct UserPreferences: Codable, Equatable {
     /// Tiny interface sounds default off. Ambient sound remains controlled by
     /// the selected Focus mix, not by this accessibility preference.
     var interactionSoundsEnabled: Bool = false
+    /// A local display order for room cards. Missing identifiers are appended
+    /// from the shipped catalog, so future rooms cannot strand an old install.
+    var sceneOrder: [SceneID] = []
+    /// A local Break-shelf order. An empty value preserves the calm adaptive
+    /// suggestion ranking until the person explicitly arranges the shelf.
+    var breakActivityOrder: [BreakActivityID] = []
+    /// Hidden activities remain installed and recoverable from shelf edit mode.
+    var hiddenBreakActivityIDs: [BreakActivityID] = []
+    /// Today prompts are editable templates, not a compliance tracker.
+    var todayRoutineItems: [TodayRoutineItem] = []
     var schemaVersion: Int = UserPreferences.currentSchemaVersion
 
-    static let currentSchemaVersion = 6
+    static let currentSchemaVersion = 7
 
     init() {}
 
@@ -178,6 +212,7 @@ struct UserPreferences: Codable, Equatable {
         case pendingCompletionSessionID, acknowledgedUnlockedSceneCount, morningStart, wakeUpStopMethod
         case showsCalendarEvents, showsGoogleCalendarEvents, savedSoundscapes, catCoat, catName
         case hapticsEnabled, interactionSoundsEnabled, schemaVersion
+        case sceneOrder, breakActivityOrder, hiddenBreakActivityIDs, todayRoutineItems
     }
 
     init(from decoder: Decoder) throws {
@@ -203,6 +238,10 @@ struct UserPreferences: Codable, Equatable {
         catName = CatName.normalized(try? c.decodeIfPresent(String.self, forKey: .catName))
         hapticsEnabled = try c.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? defaults.hapticsEnabled
         interactionSoundsEnabled = try c.decodeIfPresent(Bool.self, forKey: .interactionSoundsEnabled) ?? defaults.interactionSoundsEnabled
+        sceneOrder = try c.decodeIfPresent([SceneID].self, forKey: .sceneOrder) ?? defaults.sceneOrder
+        breakActivityOrder = try c.decodeIfPresent([BreakActivityID].self, forKey: .breakActivityOrder) ?? defaults.breakActivityOrder
+        hiddenBreakActivityIDs = try c.decodeIfPresent([BreakActivityID].self, forKey: .hiddenBreakActivityIDs) ?? defaults.hiddenBreakActivityIDs
+        todayRoutineItems = try c.decodeIfPresent([TodayRoutineItem].self, forKey: .todayRoutineItems) ?? defaults.todayRoutineItems
         schemaVersion = try c.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
         self = migrated()
     }
@@ -230,9 +269,29 @@ struct UserPreferences: Codable, Equatable {
             result.hapticsEnabled = true
             result.interactionSoundsEnabled = false
         }
+        if result.schemaVersion < 7 {
+            result.sceneOrder = []
+            result.breakActivityOrder = []
+            result.hiddenBreakActivityIDs = []
+            result.todayRoutineItems = []
+        }
+        result.sceneOrder = Self.unique(result.sceneOrder)
+        result.breakActivityOrder = Self.unique(result.breakActivityOrder)
+        result.hiddenBreakActivityIDs = Self.unique(result.hiddenBreakActivityIDs)
+        result.todayRoutineItems = Self.uniqueRoutineItems(result.todayRoutineItems.filter { !$0.title.isEmpty })
         result.catName = CatName.normalized(result.catName)
         result.schemaVersion = Self.currentSchemaVersion
         return result
+    }
+
+    private static func unique<T: Hashable>(_ values: [T]) -> [T] {
+        var seen = Set<T>()
+        return values.filter { seen.insert($0).inserted }
+    }
+
+    private static func uniqueRoutineItems(_ values: [TodayRoutineItem]) -> [TodayRoutineItem] {
+        var seen = Set<UUID>()
+        return values.filter { seen.insert($0.id).inserted }
     }
 }
 

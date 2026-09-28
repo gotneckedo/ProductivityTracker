@@ -12,6 +12,7 @@ import Foundation
 /// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, active-final-minute, complete, break, sudoku, sudoku-invalid, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, undo-task, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback, context-previews,
+/// scenes-edit, break-edit, today-routine,
 /// calendar-settings, get-card.
 enum DemoLaunch {
     static let argument = "-still-demo"
@@ -75,6 +76,8 @@ enum DemoLaunch {
             return PreviewSupport.appState(onboarded: false)
         case "today":
             return routed(.today)
+        case "today-routine":
+            return todayRoutineState()
         case "today-light":
             // `simctl status_bar` changes chrome only; the app's local clock
             // still controls its time-aware phase. Pin a morning fixture so CI
@@ -156,6 +159,8 @@ enum DemoLaunch {
             return PreviewSupport.completedSession().state
         case "break":
             return routed(.breakShelf)
+        case "break-edit":
+            return breakShelfEditState()
         case "sudoku":
             return routed(.breakActivity(.sudoku, .shelf))
         case "sudoku-invalid":
@@ -174,6 +179,8 @@ enum DemoLaunch {
             return routed(.me)
         case "scenes":
             return routed(.sceneCollection)
+        case "scenes-edit":
+            return sceneEditState()
         case "scenes-all":
             let state = PreviewSupport.appState(populated: true, completedSessions: 30)
             state.router.go(to: .sceneCollection)
@@ -285,6 +292,32 @@ enum DemoLaunch {
             clockStart: screenshotDate(hour: hour, minute: 0)
         )
         state.router.go(to: .today)
+        return state
+    }
+
+    private static func todayRoutineState() -> AppState {
+        let state = todayState(hour: 9)
+        state.setTodayRoutineItems([
+            TodayRoutineItem(title: "Open the notes for biology"),
+            TodayRoutineItem(title: "Fill a water glass"),
+            TodayRoutineItem(title: "Choose one page to read")
+        ])
+        return state
+    }
+
+    private static func breakShelfEditState() -> AppState {
+        let state = PreviewSupport.appState(populated: true)
+        let order: [BreakActivityID] = [.shortRead, .boxBreathing, .sudoku, .pixelDoodle, .wordSearch, .picross]
+        state.setBreakShelf(order: order, hidden: [.pixelDoodle])
+        state.router.go(to: .breakShelf)
+        return state
+    }
+
+    private static func sceneEditState() -> AppState {
+        let state = PreviewSupport.appState(populated: true, completedSessions: 30, stillPlus: true)
+        state.setSceneOrder([.trainWindow, .rainyBedroom, .libraryLight, .nightCity, .autumnWindow, .snowDay, .springRain])
+        state.setDefaultScene(.trainWindow)
+        state.router.go(to: .sceneCollection)
         return state
     }
 

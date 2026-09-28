@@ -42,6 +42,8 @@ Item 19 is implemented locally but remains **unproven** until the next compact C
 
 Item 20 uses iOS **Reduce Motion** as the production authority. `proof-reduce-motion-focus.png` is a CI-only environment override exercising the same branch: room/cat movement is static, task and habit state changes cross-fade instead of bouncing or lifting, the final-minute timer cross-fades rather than animating its line, and haptic calls remain enabled. The screenshot establishes the reduced state; a temporal recording remains part of item 22.
 
+**Decision recorded — item 21:** Still uses two local switches in **Me → Accessibility**: haptics defaults on and interface sounds defaults off. Ambient soundscapes are intentionally unaffected, and iOS controls Reduce Motion independently. `proof-accessibility-feedback.png` is required before this item is marked complete.
+
 ## Master Plan decisions — product direction, not implementation proof
 
 These decisions were supplied by CoCo on 26 September 2026 in response to

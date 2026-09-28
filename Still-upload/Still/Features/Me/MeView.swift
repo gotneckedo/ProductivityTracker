@@ -20,6 +20,7 @@ struct MeView: View {
                     focusSection
                     dailySection
                     AppearanceSection()
+                    AccessibilityFeedbackSection()
                     SoundDefaultsSection()
                     cardAndBlockingSection
                     privacySection
@@ -40,6 +41,8 @@ struct MeView: View {
                         DispatchQueue.main.async { proxy.scrollTo("me-midpoint", anchor: .top) }
                     } else if DemoLaunch.requestedScreen == "release-me-your-days" {
                         DispatchQueue.main.async { proxy.scrollTo("your-days-proof", anchor: .top) }
+                    } else if DemoLaunch.requestedScreen == "accessibility-feedback" {
+                        DispatchQueue.main.async { proxy.scrollTo("accessibility-feedback-proof", anchor: .top) }
                     }
                     #endif
                 }
@@ -763,6 +766,41 @@ private struct CatAppearancePicker: View {
             .background(StillTheme.surfaceSunken, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .accessibilityLabel("Cat name, optional")
         }
+    }
+}
+
+private struct AccessibilityFeedbackSection: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            SectionHeader(
+                title: "Accessibility",
+                detail: "Reduce Motion follows your iPhone setting. These controls are independent."
+            )
+            StillInsetList(padding: StillTheme.Spacing.s) {
+                VStack(spacing: 0) {
+                    Toggle("Haptic feedback", isOn: Binding(
+                        get: { appState.hapticsEnabled },
+                        set: { appState.setHapticsEnabled($0) }
+                    ))
+                    .font(StillTypography.body)
+                    .stillInsetRow()
+                    .accessibilityHint("Controls light taps, success feedback, and error feedback.")
+
+                    InsetRowDivider()
+
+                    Toggle("Interface sounds", isOn: Binding(
+                        get: { appState.interactionSoundsEnabled },
+                        set: { appState.setInteractionSoundsEnabled($0) }
+                    ))
+                    .font(StillTypography.body)
+                    .stillInsetRow()
+                    .accessibilityHint("Controls optional short confirmation sounds. Ambient soundscapes are unchanged.")
+                }
+            }
+        }
+        .id("accessibility-feedback-proof")
     }
 }
 

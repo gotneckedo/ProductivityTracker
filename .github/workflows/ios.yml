@@ -191,6 +191,7 @@ jobs:
           shoot "tasks-complete" "proof-interaction-task"
           shoot "sudoku-invalid" "proof-interaction-invalid-entry"
           shoot_reduced_motion "active-final-minute" "proof-reduce-motion-focus"
+          shoot "accessibility-feedback" "proof-accessibility-feedback"
 
           # Truth-pass release proof. This is a Release configuration compiled
           # with only the internal STILL_PROOF navigation condition; FeatureFlags

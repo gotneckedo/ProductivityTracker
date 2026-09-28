@@ -47,7 +47,7 @@ private struct ContextPreviewTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
             Image(systemName: icon)
-                .font(StillTypography.title2)
+                .font(StillTypography.title3)
                 .foregroundStyle(StillTheme.accent)
                 .frame(width: StillTheme.minimumTapSize, height: StillTheme.minimumTapSize)
                 .background(StillTheme.accentSoft, in: Circle())

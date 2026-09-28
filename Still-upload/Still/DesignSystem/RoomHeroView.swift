@@ -355,7 +355,7 @@ private struct RoomHotspotContextPreview: View {
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
             Image(systemName: previewSymbol)
-                .font(StillTypography.title2)
+                .font(StillTypography.title3)
                 .foregroundStyle(StillTheme.accent)
             Text(hotspot.title)
                 .font(StillTypography.title3)

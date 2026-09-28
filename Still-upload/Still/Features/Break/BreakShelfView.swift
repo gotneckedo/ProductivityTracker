@@ -135,7 +135,7 @@ private struct BreakActivityContextPreview: View {
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
             Image(systemName: activity.symbolName)
-                .font(StillTypography.title2)
+                .font(StillTypography.title3)
                 .foregroundStyle(StillTheme.calm)
             Text(activity.name)
                 .font(StillTypography.title3)

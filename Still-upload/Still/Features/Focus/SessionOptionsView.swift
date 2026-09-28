@@ -357,7 +357,7 @@ private struct AmbientLayerContextPreview: View {
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
             Image(systemName: isAvailable ? "waveform" : "speaker.slash")
-                .font(StillTypography.title2)
+                .font(StillTypography.title3)
                 .foregroundStyle(isAvailable ? StillTheme.calm : StillTheme.textTertiary)
             Text(title)
                 .font(StillTypography.title3)

@@ -5,7 +5,6 @@ import UIKit
 /// whole app is decided here from router state, never in leaf views.
 struct RootView: View {
     @Environment(AppState.self) private var appState
-    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
     @Environment(\.dynamicTypeSize) private var systemDynamicTypeSize
 
     var body: some View {
@@ -20,7 +19,7 @@ struct RootView: View {
             NoticeBanner()
         }
         .tint(Color(hex: appState.preferences.appAccentPalette.accentHex))
-        .environment(\.accessibilityReduceMotion, systemReduceMotion || DemoLaunch.forcesReduceMotion)
+        .environment(\.stillReduceMotionOverride, DemoLaunch.forcesReduceMotion)
         .dynamicTypeSize(DemoLaunch.forcesAccessibilityTextSize ? .accessibility3 : systemDynamicTypeSize)
     }
 }

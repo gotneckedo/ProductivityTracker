@@ -554,8 +554,11 @@ struct SessionTimerFace: View {
     var surface: Surface = .paper
     var isFinalMinute = false
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.stillReduceMotionOverride) private var reduceMotionOverride
     @ScaledMetric(relativeTo: .largeTitle) private var timerSize: CGFloat = 76
+
+    private var reduceMotion: Bool { systemReduceMotion || reduceMotionOverride }
 
     private var primary: Color {
         surface == .scene ? StillTheme.Palette.sceneText : StillTheme.textPrimary

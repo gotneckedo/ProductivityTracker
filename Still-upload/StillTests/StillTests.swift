@@ -3041,6 +3041,17 @@ final class OnboardingPreferenceTests: XCTestCase {
         XCTAssertTrue(BreakShelfRotation.rotated([Int](), offset: 1).isEmpty)
     }
 
+    func testHistoryCalendarProducesCompleteWeeksAndLocalMarkers() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.firstWeekday = 1
+        let history = HistoryCalendar(calendar: calendar)
+        let date = calendar.date(from: DateComponents(year: 2026, month: 2, day: 11))!
+        let grid = history.monthGrid(containing: date)
+        XCTAssertEqual(grid.count % 7, 0)
+        XCTAssertEqual(grid.compactMap { $0 }.count, 28)
+        XCTAssertEqual(history.markedDays(for: [date, date.addingTimeInterval(60)]).count, 1)
+    }
+
     func testCompletionSuggestionsRemainDiverseWithBreakPreference() {
         let request = BreakSuggestionRequest(
             availableBreak: minutes(6), catalog: ActivityCatalog.available,

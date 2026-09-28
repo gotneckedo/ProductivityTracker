@@ -115,6 +115,9 @@ enum AppRoute: Hashable {
     case journal
     case presets
     case doodleGallery
+    /// Local focus and reflection history. The dense calendar view is layered
+    /// on this route without changing navigation ownership.
+    case history
     case dayTimeline
     case morningStart
     case blockingSetup
@@ -179,7 +182,7 @@ struct RouteResolver {
             return RouteDestination(tab: .focus, stack: [route], sheet: nil, completionSessionID: nil)
         case .me:
             return RouteDestination(tab: .me, stack: [], sheet: nil, completionSessionID: nil)
-        case .nfcSetup, .sceneCollection, .presets, .doodleGallery, .morningStart, .blockingSetup,
+        case .nfcSetup, .sceneCollection, .presets, .doodleGallery, .history, .morningStart, .blockingSetup,
              .calendarSettings, .getFocusCard, .stillPlus, .onboardingGoalPreference, .onboardingBreakPreference,
              .onboardingLookPreference:
             return RouteDestination(tab: .me, stack: [route], sheet: nil, completionSessionID: nil)

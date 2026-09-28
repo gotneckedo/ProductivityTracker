@@ -1908,6 +1908,7 @@ final class FeatureFlagTests: XCTestCase {
         XCTAssertEqual(resolver.destination(for: .habits, currentTab: .focus).tab, .me)
         XCTAssertEqual(RouteResolver(flags: .v1).destination(for: .habits, currentTab: .focus).stack, [.habits])
         XCTAssertEqual(resolver.destination(for: .doodleGallery, currentTab: .focus).stack, [.doodleGallery])
+        XCTAssertEqual(resolver.destination(for: .history, currentTab: .focus), RouteDestination(tab: .me, stack: [.history], sheet: nil, completionSessionID: nil))
         XCTAssertEqual(resolver.destination(for: .calendarSettings, currentTab: .focus).stack, [.calendarSettings])
         XCTAssertEqual(resolver.destination(for: .getFocusCard, currentTab: .focus).stack, [.getFocusCard])
     }

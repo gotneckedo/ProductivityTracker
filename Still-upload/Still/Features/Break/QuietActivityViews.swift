@@ -12,6 +12,7 @@ struct ShortReadActivityView: View {
     @State private var openBook: OpenSitting?
     @State private var isImporting = false
     @State private var removingBook: BookSummary?
+    @State private var query = ""
 
     /// A book sitting being read.
     struct OpenSitting: Equatable {
@@ -37,7 +38,7 @@ struct ShortReadActivityView: View {
         } else {
             StillInsetList(padding: StillTheme.Spacing.s) {
                 VStack(spacing: 0) {
-                    ForEach(Array(library.allItems().enumerated()), id: \.element.id) { index, item in
+                    ForEach(Array(filteredItems.enumerated()), id: \.element.id) { index, item in
                         Button {
                             selectedID = item.id
                         } label: {
@@ -62,9 +63,9 @@ struct ShortReadActivityView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityHint("Opens this reading.")
-                        if index < library.allItems().count - 1 { InsetRowDivider(leading: 44) }
+                        if index < filteredItems.count - 1 { InsetRowDivider(leading: 44) }
                     }
-                    if !appState.books.isEmpty { InsetRowDivider(leading: 0) }
+                    if !filteredItems.isEmpty && !filteredBooks.isEmpty { InsetRowDivider(leading: 0) }
                     bookRows
                 }
             }
@@ -82,18 +83,28 @@ struct ShortReadActivityView: View {
             } message: {
                 Text("It's deleted from Still on this device. The original file isn't touched.")
             }
+            .searchable(text: $query, prompt: "Search this reading shelf")
+            .onAppear {
+                #if DEBUG || STILL_PROOF
+                if DemoLaunch.requestedScreen == "short-read-search" {
+                    query = "the"
+                }
+                #endif
+            }
         }
     }
 
     private var bookRows: some View {
-        let bundledBooks = appState.books.filter { $0.origin == .bundled }
-        let importedBooks = appState.books.filter { $0.origin == .imported }
+        let bundledBooks = filteredBooks.filter { $0.origin == .bundled }
+        let importedBooks = filteredBooks.filter { $0.origin == .imported }
         return VStack(alignment: .leading, spacing: 0) {
-            Text("Books")
-                .font(StillTypography.bodyEmphasis)
-                .foregroundStyle(StillTheme.textPrimary)
-                .stillInsetRow()
-            if bundledBooks.isEmpty {
+            if !filteredItems.isEmpty || !filteredBooks.isEmpty || query.isEmpty {
+                Text("Books")
+                    .font(StillTypography.bodyEmphasis)
+                    .foregroundStyle(StillTheme.textPrimary)
+                    .stillInsetRow()
+            }
+            if bundledBooks.isEmpty && query.isEmpty {
                 Text("Bundled books are loading. If this stays empty, try reopening Still.")
                     .font(StillTypography.footnote)
                     .foregroundStyle(StillTheme.textSecondary)
@@ -126,6 +137,12 @@ struct ShortReadActivityView: View {
                     )
                 }
             }
+            if bundledBooks.isEmpty && importedBooks.isEmpty && !query.isEmpty {
+                Text("No books match this search.")
+                    .font(StillTypography.footnote)
+                    .foregroundStyle(StillTheme.textSecondary)
+                    .stillInsetRow()
+            }
             InsetRowDivider(leading: 0)
             Button {
                 isImporting = true
@@ -134,6 +151,26 @@ struct ShortReadActivityView: View {
             }
             .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
             .accessibilityHint("Imports a DRM-free EPUB book. It stays on this device.")
+        }
+    }
+
+    private var filteredItems: [ReadingItem] {
+        filter(appState.container.readingLibrary.allItems()) { item in
+            [item.title, item.author, item.source]
+        }
+    }
+
+    private var filteredBooks: [BookSummary] {
+        filter(appState.books) { book in
+            [book.title, book.author]
+        }
+    }
+
+    private func filter<T>(_ values: [T], text: (T) -> [String]) -> [T] {
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !needle.isEmpty else { return values }
+        return values.filter { value in
+            text(value).contains { $0.localizedCaseInsensitiveContains(needle) }
         }
     }
 

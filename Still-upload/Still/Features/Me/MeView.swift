@@ -161,6 +161,15 @@ struct MeView: View {
                         iconBackground: StillTheme.accentSoft,
                         route: .habits
                     )
+                    InsetRowDivider(leading: 52)
+                    settingLink(
+                        symbol: "clock.arrow.circlepath",
+                        title: "History",
+                        value: appState.sessions.isEmpty && appState.journalPast.isEmpty ? "Nothing saved yet" : "On this device",
+                        iconTint: StillTheme.highlight,
+                        iconBackground: StillTheme.highlightSoft,
+                        route: .history
+                    )
                 }
             }
         }

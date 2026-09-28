@@ -12,7 +12,7 @@ import Foundation
 /// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, active-final-minute, complete, break, sudoku, sudoku-invalid, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, undo-task, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback, context-previews,
-/// scenes-edit, break-edit, today-routine,
+/// scenes-edit, break-edit, today-routine, history-search, short-read-search,
 /// calendar-settings, get-card.
 enum DemoLaunch {
     static let argument = "-still-demo"
@@ -78,6 +78,8 @@ enum DemoLaunch {
             return routed(.today)
         case "today-routine":
             return todayRoutineState()
+        case "history-search":
+            return routed(.history)
         case "today-light":
             // `simctl status_bar` changes chrome only; the app's local clock
             // still controls its time-aware phase. Pin a morning fixture so CI
@@ -173,7 +175,9 @@ enum DemoLaunch {
             return routed(.breakActivity(.picross, .shelf))
         case "breathing":
             return routed(.breakActivity(.boxBreathing, .shelf))
-        case "read":
+        case "short-read":
+            return routed(.breakActivity(.shortRead, .shelf))
+        case "short-read-search":
             return routed(.breakActivity(.shortRead, .shelf))
         case "me":
             return routed(.me)

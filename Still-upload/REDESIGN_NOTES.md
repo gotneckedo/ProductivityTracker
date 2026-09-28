@@ -52,6 +52,8 @@ Item 20 uses iOS **Reduce Motion** as the production authority. `proof-reduce-mo
 
 **Decision recorded — item 25:** scene order/default, Break shelf order/hidden state, and Today routine prompts live only in `UserPreferences`; no behavioral record or streak is created. Hidden Break activities remain in edit mode with an explicit restore action. Free builds hold up to three Today prompts, and the UI does not present an in-product purchase CTA when the additional-capacity entitlement is unavailable.
 
+**Decision recorded — item 26:** search is deliberately scoped to the current surface: History searches completed focus sessions and one-line journal records held on device; Short Read searches bundled reading titles, sources, authors, and imported-book metadata. It never opens a device-wide or network search.
+
 ## Master Plan decisions — product direction, not implementation proof
 
 These decisions were supplied by CoCo on 26 September 2026 in response to

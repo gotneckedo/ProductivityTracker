@@ -204,6 +204,8 @@ struct RouteView: View {
             PresetsView()
         case .doodleGallery:
             DoodleGalleryView()
+        case .history:
+            HistoryView()
         case .morningStart:
             MorningStartView()
         case .blockingSetup:

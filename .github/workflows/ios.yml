@@ -197,6 +197,8 @@ jobs:
           shoot "scenes-edit" "proof-edit-scenes"
           shoot "break-edit" "proof-edit-break-shelf"
           shoot "today-routine" "proof-edit-today-routine"
+          shoot "history-search" "proof-search-history"
+          shoot "short-read-search" "proof-search-short-read"
 
           # Truth-pass release proof. This is a Release configuration compiled
           # with only the internal STILL_PROOF navigation condition; FeatureFlags

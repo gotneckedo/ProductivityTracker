@@ -215,6 +215,18 @@ enum StillTheme {
         }
     }
 
+    /// A visible, phase-aware contour for iOS Increase Contrast. It is kept
+    /// separate from normal glass hairlines so the default calm hierarchy does
+    /// not become a dense grid of outlines.
+    static func increasedContrastBorder(for phase: StillDayPhase) -> Color {
+        switch phase {
+        case .night, .focus:
+            return phase.ink.opacity(0.68)
+        case .morning, .afternoon, .dusk:
+            return phase.ink.opacity(0.44)
+        }
+    }
+
     static func categoryTint(_ category: ActivityCategory) -> Color {
         switch category {
         case .puzzle: return Palette.dustyBlue

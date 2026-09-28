@@ -3210,3 +3210,49 @@ final class AccessibilityTouchTargetTests: XCTestCase {
         )
     }
 }
+
+final class AccessibilityVisualPolicyTests: XCTestCase {
+    func testIncreaseContrastUsesOpaqueSurfaceAndStrongerBorder() {
+        XCTAssertTrue(
+            AccessibilityVisualPolicy.usesOpaqueControlSurface(
+                reduceTransparency: false,
+                increasedContrast: true
+            )
+        )
+        XCTAssertTrue(
+            AccessibilityVisualPolicy.usesOpaqueControlSurface(
+                reduceTransparency: true,
+                increasedContrast: false
+            )
+        )
+        XCTAssertFalse(
+            AccessibilityVisualPolicy.usesOpaqueControlSurface(
+                reduceTransparency: false,
+                increasedContrast: false
+            )
+        )
+        XCTAssertEqual(AccessibilityVisualPolicy.borderWidth(increasedContrast: false), 1)
+        XCTAssertEqual(AccessibilityVisualPolicy.borderWidth(increasedContrast: true), 1.5)
+    }
+
+    func testBoldLegibilityRespectsSystemAndProofInputs() {
+        XCTAssertFalse(
+            AccessibilityVisualPolicy.shouldRequestBoldLegibility(
+                systemBoldText: false,
+                proofOverride: false
+            )
+        )
+        XCTAssertTrue(
+            AccessibilityVisualPolicy.shouldRequestBoldLegibility(
+                systemBoldText: true,
+                proofOverride: false
+            )
+        )
+        XCTAssertTrue(
+            AccessibilityVisualPolicy.shouldRequestBoldLegibility(
+                systemBoldText: false,
+                proofOverride: true
+            )
+        )
+    }
+}

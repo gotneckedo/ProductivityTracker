@@ -13,7 +13,7 @@ import Foundation
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, undo-task, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback, context-previews,
 /// scenes-edit, scenes-locked-core, break-edit, today-routine, history-full, history-empty, history-search, short-read-search, today-refreshed, break-reshuffled, me-preferences,
-/// calendar-settings, get-card, touch-targets.
+/// calendar-settings, get-card, touch-targets, bold-today, contrast-me, contrast-sudoku.
 enum DemoLaunch {
     static let argument = "-still-demo"
     static let scrollBottomArgument = "-still-scroll-bottom"
@@ -41,6 +41,16 @@ enum DemoLaunch {
     /// iOS's accessibility setting.
     static var forcesAccessibilityTextSize: Bool {
         requestedScreen?.hasPrefix("ax3-") == true
+    }
+
+    /// CI-only proof fixtures. Production builds retain iOS as the single
+    /// authority for Bold Text and Increase Contrast.
+    static var forcesBoldText: Bool {
+        requestedScreen?.hasPrefix("bold-") == true
+    }
+
+    static var forcesIncreaseContrast: Bool {
+        requestedScreen?.hasPrefix("contrast-") == true
     }
 
     /// Used only by screenshot CI to prove the floating tab bar does not cover
@@ -80,7 +90,7 @@ enum DemoLaunch {
             return releaseRouted(.me)
         case "onboarding":
             return PreviewSupport.appState(onboarded: false)
-        case "today", "ax3-today":
+        case "today", "ax3-today", "bold-today":
             return routed(.today)
         case "today-routine":
             return todayRoutineState()
@@ -183,7 +193,7 @@ enum DemoLaunch {
             return breakShelfEditState()
         case "break-reshuffled":
             return routed(.breakShelf)
-        case "sudoku":
+        case "sudoku", "contrast-sudoku":
             return routed(.breakActivity(.sudoku, .shelf))
         case "sudoku-invalid":
             return invalidSudokuState()
@@ -199,7 +209,7 @@ enum DemoLaunch {
             return routed(.breakActivity(.shortRead, .shelf))
         case "short-read-search":
             return routed(.breakActivity(.shortRead, .shelf))
-        case "me", "ax3-me":
+        case "me", "ax3-me", "contrast-me":
             return routed(.me)
         case "scenes":
             return routed(.sceneCollection)

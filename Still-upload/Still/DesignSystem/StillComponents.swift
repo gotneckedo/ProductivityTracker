@@ -61,14 +61,25 @@ struct StillGlassSurface: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.stillDayPhase) private var environmentPhase
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.accessibilityContrast) private var accessibilityContrast
+    @Environment(\.stillIncreaseContrastOverride) private var increaseContrastOverride
 
     func body(content: Content) -> some View {
         let resolvedPhase = phase ?? environmentPhase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        let increasedContrast = accessibilityContrast == .increased || increaseContrastOverride
+        let usesOpaqueSurface = AccessibilityVisualPolicy.usesOpaqueControlSurface(
+            reduceTransparency: reduceTransparency,
+            increasedContrast: increasedContrast
+        )
+        let borderWidth = CGFloat(AccessibilityVisualPolicy.borderWidth(increasedContrast: increasedContrast))
+        let borderColor = increasedContrast
+            ? StillTheme.increasedContrastBorder(for: resolvedPhase)
+            : resolvedPhase.glassBorder
         content
             .background(
                 Group {
-                    if reduceTransparency {
+                    if usesOpaqueSurface {
                         shape.fill(resolvedPhase.glassControlFallback)
                     } else {
                         shape
@@ -79,7 +90,7 @@ struct StillGlassSurface: ViewModifier {
             )
             // Keep material, fill, and decorative content inside one contour.
             .clipShape(shape)
-            .overlay(shape.strokeBorder(resolvedPhase.glassBorder, lineWidth: StillTheme.Stroke.hairline))
+            .overlay(shape.strokeBorder(borderColor, lineWidth: borderWidth))
             .shadow(color: StillTheme.Shadow.color, radius: StillTheme.Shadow.radius, x: 0, y: StillTheme.Shadow.y)
     }
 }
@@ -128,6 +139,8 @@ struct StillInsetList<Content: View>: View {
     private let content: Content
     @Environment(\.stillDayPhase) private var environmentPhase
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityContrast) private var accessibilityContrast
+    @Environment(\.stillIncreaseContrastOverride) private var increaseContrastOverride
 
     init(
         padding: CGFloat = StillTheme.Spacing.s,
@@ -144,13 +157,17 @@ struct StillInsetList<Content: View>: View {
     var body: some View {
         let resolved = phase ?? environmentPhase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        let increasedContrast = accessibilityContrast == .increased || increaseContrastOverride
+        let fill = increasedContrast ? resolved.glassControlFallback : resolved.plainGroupFill
+        let border = increasedContrast ? StillTheme.increasedContrastBorder(for: resolved) : resolved.insetSeparator.opacity(0.72)
+        let borderWidth = CGFloat(AccessibilityVisualPolicy.borderWidth(increasedContrast: increasedContrast))
         content
             .padding(.horizontal, padding)
             .padding(.vertical, padding / 2)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(shape.fill(resolved.plainGroupFill))
+            .background(shape.fill(fill))
             .clipShape(shape)
-            .overlay(shape.strokeBorder(resolved.insetSeparator.opacity(0.72), lineWidth: StillTheme.Stroke.hairline))
+            .overlay(shape.strokeBorder(border, lineWidth: borderWidth))
     }
 }
 
@@ -190,6 +207,8 @@ struct MatteActivityCanvas<Content: View>: View {
     private let content: Content
     @Environment(\.stillDayPhase) private var environmentPhase
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityContrast) private var accessibilityContrast
+    @Environment(\.stillIncreaseContrastOverride) private var increaseContrastOverride
 
     init(
         tint: Color = StillTheme.calmSoft,
@@ -206,10 +225,16 @@ struct MatteActivityCanvas<Content: View>: View {
     var body: some View {
         let resolved = phase ?? environmentPhase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+        let increasedContrast = accessibilityContrast == .increased || increaseContrastOverride
+        let fill = increasedContrast
+            ? resolved.glassControlFallback
+            : tint.opacity(resolved == .night || resolved == .focus ? 0.42 : 0.84)
+        let border = increasedContrast ? StillTheme.increasedContrastBorder(for: resolved) : resolved.insetSeparator.opacity(0.72)
+        let borderWidth = CGFloat(AccessibilityVisualPolicy.borderWidth(increasedContrast: increasedContrast))
         content
-            .background(shape.fill(tint.opacity(resolved == .night || resolved == .focus ? 0.42 : 0.84)))
+            .background(shape.fill(fill))
             .clipShape(shape)
-            .overlay(shape.strokeBorder(resolved.insetSeparator.opacity(0.72), lineWidth: StillTheme.Stroke.hairline))
+            .overlay(shape.strokeBorder(border, lineWidth: borderWidth))
     }
 }
 

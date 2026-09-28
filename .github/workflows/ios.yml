@@ -215,6 +215,11 @@ jobs:
           # controls only for this CI review. Puzzle keypads remain in the
           # numbered compact captures (06-sudoku, 07-wordsearch, 08-picross).
           shoot "touch-targets" "proof-touch-targets-room"
+          # Item 35: CI routes inject the same SwiftUI accessibility
+          # environments iOS provides for Bold Text and Increase Contrast.
+          shoot "bold-today" "proof-bold-text-today"
+          shoot "contrast-me" "proof-increased-contrast-me"
+          shoot "contrast-sudoku" "proof-increased-contrast-sudoku"
           # Item 33: the intentionally incomplete preference fixture verifies
           # that actionable “Not set” values are readable rather than treated
           # as disabled gray text on the glass control group.

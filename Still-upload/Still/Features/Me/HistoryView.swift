@@ -50,12 +50,16 @@ struct HistoryView: View {
             .sorted { $0.day > $1.day }
     }
 
+    private var screenPhase: StillDayPhase {
+        StillDayPhase.automatic(date: appState.container.clock.now, colorScheme: colorScheme)
+    }
+
     private var resolvedPhase: StillDayPhase {
-        phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
+        phase ?? screenPhase
     }
 
     var body: some View {
-        StillScreen {
+        StillScreen(phase: screenPhase) {
             historyContent
         }
         .navigationTitle("History")

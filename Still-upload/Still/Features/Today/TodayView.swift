@@ -5,6 +5,7 @@ import SwiftUI
 struct TodayView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var reflection = ""
     @State private var mood: JournalMood? = nil
     @State private var routineItems: [TodayRoutineItem] = []
@@ -137,13 +138,35 @@ struct TodayView: View {
     }
 
     private var nextActionChoices: some View {
-        HStack(spacing: StillTheme.Spacing.s) {
-            Button("I don't know what to do") { appState.router.go(to: .nextStep) }
-                .buttonStyle(QuietSecondaryButtonStyle())
-            Button("Customize") { appState.router.go(to: .focusConfiguration) }
-                .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                Menu {
+                    Button("I don't know what to do") { appState.router.go(to: .nextStep) }
+                    Button("Customize focus") { appState.router.go(to: .focusConfiguration) }
+                } label: {
+                    HStack(spacing: StillTheme.Spacing.xs) {
+                        Text("More choices")
+                        Spacer(minLength: 0)
+                        Image(systemName: "ellipsis.circle")
+                    }
+                    .font(StillTypography.bodyEmphasis)
+                    .foregroundStyle(StillTheme.accent)
+                    .frame(maxWidth: .infinity, minHeight: StillTheme.minimumTapSize)
+                    .padding(.horizontal, StillTheme.Spacing.s)
+                }
+                .background(StillTheme.surfaceSunken, in: Capsule())
+                .accessibilityLabel("Focus alternatives")
+                .accessibilityHint("Includes a next-step guide and focus customization.")
+            } else {
+                HStack(spacing: StillTheme.Spacing.s) {
+                    Button("I don't know what to do") { appState.router.go(to: .nextStep) }
+                        .buttonStyle(QuietSecondaryButtonStyle())
+                    Button("Customize") { appState.router.go(to: .focusConfiguration) }
+                        .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var afterSection: some View {

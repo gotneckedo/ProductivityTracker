@@ -180,7 +180,7 @@ jobs:
           shoot "complete" "proof-interaction-complete"
           shoot "room-collectibles" "proof-interaction-room"
           shoot "tasks-complete" "proof-interaction-task"
-          shoot "sudoku" "proof-interaction-puzzle"
+          shoot "sudoku-invalid" "proof-interaction-invalid-entry"
 
           # Truth-pass release proof. This is a Release configuration compiled
           # with only the internal STILL_PROOF navigation condition; FeatureFlags

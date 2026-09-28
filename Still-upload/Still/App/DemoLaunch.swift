@@ -9,7 +9,7 @@ import Foundation
 ///
 /// Screens: onboarding, today, today-light, setup, home, focus-room, room-library, room-train, room-city,
 /// room-autumn, room-snow, room-spring, room-sleep, room-collectibles, sprite-contact-sheet,
-/// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, active-final-minute, complete, break, sudoku, wordsearch,
+/// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, active-final-minute, complete, break, sudoku, sudoku-invalid, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, timeline, doodle, gallery, morning, mixer-available,
 /// calendar-settings, get-card.
@@ -142,6 +142,8 @@ enum DemoLaunch {
             return routed(.breakShelf)
         case "sudoku":
             return routed(.breakActivity(.sudoku, .shelf))
+        case "sudoku-invalid":
+            return invalidSudokuState()
         case "wordsearch":
             return routed(.breakActivity(.wordSearch, .shelf))
         case "picross":
@@ -286,6 +288,19 @@ enum DemoLaunch {
         state.placeRoomObject(.wovenRug, in: .rainyBedroom, slot: .floorCorner)
         state.placeRoomObject(.trailingPlant, in: .rainyBedroom, slot: .windowsill)
         state.notice = nil
+        return state
+    }
+
+    private static func invalidSudokuState() -> AppState {
+        let state = PreviewSupport.appState(populated: true)
+        let puzzle = state.container.puzzles.sudoku(for: Date())
+        var game = SudokuGame(puzzle: puzzle)
+        // The top-left cell is editable; entering the existing 6 from its row
+        // produces the same local conflict state as a real invalid entry.
+        game.select(0)
+        _ = game.enter(6)
+        try? state.container.puzzleProgress.save(game, puzzleID: puzzle.id, at: Date())
+        state.router.go(to: .breakActivity(.sudoku, .shelf))
         return state
     }
 

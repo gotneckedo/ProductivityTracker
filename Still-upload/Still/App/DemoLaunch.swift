@@ -17,6 +17,18 @@ enum DemoLaunch {
     static let argument = "-still-demo"
     static let scrollBottomArgument = "-still-scroll-bottom"
     static let scrollMidpointArgument = "-still-scroll-midpoint"
+    private static let reduceMotionArgument = "-still-reduce-motion"
+
+    /// Screenshot-only override that lets CI exercise the exact same branches
+    /// as the system Accessibility setting. Production builds always return
+    /// false, so the user’s iOS setting remains the sole live authority.
+    static var forcesReduceMotion: Bool {
+        #if DEBUG || STILL_PROOF
+        ProcessInfo.processInfo.arguments.contains(reduceMotionArgument)
+        #else
+        false
+        #endif
+    }
 
     static var requestedScreen: String? {
         let arguments = ProcessInfo.processInfo.arguments

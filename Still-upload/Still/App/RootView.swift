@@ -5,6 +5,7 @@ import UIKit
 /// whole app is decided here from router state, never in leaf views.
 struct RootView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
 
     var body: some View {
         Group {
@@ -18,6 +19,7 @@ struct RootView: View {
             NoticeBanner()
         }
         .tint(Color(hex: appState.preferences.appAccentPalette.accentHex))
+        .environment(\.accessibilityReduceMotion, systemReduceMotion || DemoLaunch.forcesReduceMotion)
     }
 }
 

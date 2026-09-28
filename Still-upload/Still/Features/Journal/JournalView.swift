@@ -232,25 +232,12 @@ struct HabitsSection: View {
 private struct HabitRow: View {
     let day: HabitDay
     let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: StillTheme.Spacing.s) {
-                ZStack {
-                    Circle()
-                        .fill(day.isDoneToday ? StillTheme.accent : Color.white.opacity(0.14))
-                    Circle()
-                        .strokeBorder(day.isDoneToday ? StillTheme.accent : StillTheme.border, lineWidth: StillTheme.Stroke.hairline)
-                    if day.isDoneToday {
-                        Image(systemName: "checkmark")
-                            .font(StillTypography.caption.weight(.semibold))
-                            .foregroundStyle(StillTheme.onAccent)
-                    }
-                }
-                .frame(width: 38, height: 38)
-                .contentTransition(.symbolEffect(.replace))
-                .symbolEffect(.bounce, value: day.isDoneToday)
-                .accessibilityHidden(true)
+                habitSymbol
                 VStack(alignment: .leading, spacing: 2) {
                     Text(day.habit.title)
                         .font(StillTypography.body)
@@ -265,11 +252,35 @@ private struct HabitRow: View {
         }
         .buttonStyle(.plain)
         .offset(y: day.isDoneToday ? 2 : 0)
-        .animation(.spring(response: 0.24, dampingFraction: 0.72), value: day.isDoneToday)
+        .animation(StillMotion.ease(reduceMotion, duration: 0.24), value: day.isDoneToday)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(day.habit.title)
         .accessibilityValue(day.isDoneToday ? "Done today" : "Not yet today")
         .accessibilityHint("Double-tap to change today. Long-press for more.")
+    }
+
+    @ViewBuilder
+    private var habitSymbol: some View {
+        let symbol = ZStack {
+            Circle()
+                .fill(day.isDoneToday ? StillTheme.accent : Color.white.opacity(0.14))
+            Circle()
+                .strokeBorder(day.isDoneToday ? StillTheme.accent : StillTheme.border, lineWidth: StillTheme.Stroke.hairline)
+            if day.isDoneToday {
+                Image(systemName: "checkmark")
+                    .font(StillTypography.caption.weight(.semibold))
+                    .foregroundStyle(StillTheme.onAccent)
+            }
+        }
+        .frame(width: 38, height: 38)
+        .accessibilityHidden(true)
+        if reduceMotion {
+            symbol.contentTransition(.opacity)
+        } else {
+            symbol
+                .contentTransition(.symbolEffect(.replace))
+                .symbolEffect(.bounce, value: day.isDoneToday)
+        }
     }
 }
 

@@ -8,6 +8,7 @@ struct ActivityContainerView: View {
     let context: ActivityContext
 
     @Environment(AppState.self) private var appState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var usage: ActivityUsage?
     @State private var outcome: ActivityOutcome?
 
@@ -60,7 +61,7 @@ struct ActivityContainerView: View {
                             onShelf: { appState.returnToShelf() },
                             onToday: { appState.router.go(to: .today) }
                         )
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                     }
                 }
             }
@@ -118,7 +119,7 @@ struct ActivityContainerView: View {
     private func finish(_ result: ActivityOutcome) {
         guard outcome == nil else { return }
         StillInteractionFeedback.fire(.breakEnded, preferences: appState.preferences)
-        withAnimation(.easeOut(duration: StillMotion.standard)) {
+        withAnimation(StillMotion.ease(reduceMotion, duration: StillMotion.standard)) {
             outcome = result
         }
         if let usage {

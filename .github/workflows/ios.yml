@@ -145,6 +145,15 @@ jobs:
             echo "Captured $2"
           }
 
+          # The app scopes this override to DEBUG/CI. It reaches the same
+          # Accessibility environment values that iOS provides in production.
+          shoot_reduced_motion() {
+            xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" -still-reduce-motion > /dev/null
+            sleep 10
+            xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
+            echo "Captured $2"
+          }
+
           xcrun simctl ui "$UDID" appearance light
           n=1
           # The screenshot job is deliberately a compact, current P0 matrix.
@@ -181,6 +190,7 @@ jobs:
           shoot "room-collectibles" "proof-interaction-room"
           shoot "tasks-complete" "proof-interaction-task"
           shoot "sudoku-invalid" "proof-interaction-invalid-entry"
+          shoot_reduced_motion "active-final-minute" "proof-reduce-motion-focus"
 
           # Truth-pass release proof. This is a Release configuration compiled
           # with only the internal STILL_PROOF navigation condition; FeatureFlags

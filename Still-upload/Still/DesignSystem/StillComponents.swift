@@ -527,6 +527,7 @@ struct SessionTimerFace: View {
     var surface: Surface = .paper
     var isFinalMinute = false
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ScaledMetric(relativeTo: .largeTitle) private var timerSize: CGFloat = 76
 
     private var primary: Color {
@@ -552,14 +553,14 @@ struct SessionTimerFace: View {
                 .opacity(isPaused ? 0.55 : 1)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
-                .contentTransition(.numericText())
+                .contentTransition(reduceMotion ? .opacity : .numericText())
             if let progress {
                 GlowProgressLine(
                     progress: progress,
                     filled: isFinalMinute ? StillTheme.warm : (surface == .scene ? StillDayPhase.focus.accent : StillTheme.accent),
                     empty: surface == .scene ? StillTheme.Palette.sceneText.opacity(0.22) : StillTheme.border
                 )
-                .animation(.easeInOut(duration: 2), value: isFinalMinute)
+                .animation(StillMotion.ease(reduceMotion, duration: 0.24), value: isFinalMinute)
             }
         }
         .accessibilityElement(children: .ignore)

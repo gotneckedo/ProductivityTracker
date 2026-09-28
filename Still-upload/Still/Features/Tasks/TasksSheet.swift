@@ -142,17 +142,13 @@ private struct TaskFocusCard: View {
     let onDetails: () -> Void
     let onDelete: () -> Void
     let phase: StillDayPhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
             HStack(alignment: .top, spacing: StillTheme.Spacing.s) {
                 Button(action: onToggleDone) {
-                    Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                        .font(StillTypography.title3)
-                        .foregroundStyle(task.isCompleted ? StillTheme.accent : StillTheme.textTertiary)
-                        .frame(width: StillTheme.minimumTapSize, height: StillTheme.minimumTapSize)
-                        .contentTransition(.symbolEffect(.replace))
-                        .symbolEffect(.bounce, value: task.isCompleted)
+                    completionSymbol
                 }
                 .buttonStyle(StillRowButtonStyle())
                 .accessibilityLabel(task.isCompleted ? "Mark not done" : "Mark done")
@@ -218,8 +214,23 @@ private struct TaskFocusCard: View {
         }
         .stillInsetRow(verticalPadding: StillTheme.Spacing.s)
         .offset(y: task.isCompleted ? 2 : 0)
-        .animation(.spring(response: 0.24, dampingFraction: 0.72), value: task.isCompleted)
+        .animation(StillMotion.ease(reduceMotion, duration: 0.24), value: task.isCompleted)
         .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private var completionSymbol: some View {
+        let symbol = Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+            .font(StillTypography.title3)
+            .foregroundStyle(task.isCompleted ? StillTheme.accent : StillTheme.textTertiary)
+            .frame(width: StillTheme.minimumTapSize, height: StillTheme.minimumTapSize)
+        if reduceMotion {
+            symbol.contentTransition(.opacity)
+        } else {
+            symbol
+                .contentTransition(.symbolEffect(.replace))
+                .symbolEffect(.bounce, value: task.isCompleted)
+        }
     }
 
     private var subjectTint: Color {

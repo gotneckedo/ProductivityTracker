@@ -40,6 +40,8 @@ The P0 release-truth and visual-P0 changes are accepted only to the scope proved
 
 Item 19 is implemented locally but remains **unproven** until the next compact CI artifact is reviewed. The static proof routes are deliberately named `proof-interaction-final-minute.png`, `proof-interaction-complete.png`, `proof-interaction-room.png`, `proof-interaction-task.png`, and `proof-interaction-invalid-entry.png`; temporal animation and physical haptics require item 22’s simulator recordings and real-device validation.
 
+Item 20 uses iOS **Reduce Motion** as the production authority. `proof-reduce-motion-focus.png` is a CI-only environment override exercising the same branch: room/cat movement is static, task and habit state changes cross-fade instead of bouncing or lifting, the final-minute timer cross-fades rather than animating its line, and haptic calls remain enabled. The screenshot establishes the reduced state; a temporal recording remains part of item 22.
+
 ## Master Plan decisions — product direction, not implementation proof
 
 These decisions were supplied by CoCo on 26 September 2026 in response to

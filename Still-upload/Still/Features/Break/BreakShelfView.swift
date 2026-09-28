@@ -8,6 +8,8 @@ struct BreakShelfView: View {
     @State private var isEditingShelf = false
     @State private var draftOrder: [BreakActivityID] = []
     @State private var draftHidden: Set<BreakActivityID> = []
+    @State private var suggestionOffset = 0
+    @State private var didReshuffle = false
 
     private var visibleActivities: [BreakActivity] {
         let ranked = BreakShelfRanking().ranked(
@@ -37,6 +39,10 @@ struct BreakShelfView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                         header
+                        if didReshuffle && !isEditingShelf {
+                            QuietNote(text: "Fresh suggestions, still finite.", symbol: "arrow.clockwise")
+                                .transition(.opacity)
+                        }
                         categoryControls
                         if isEditingShelf {
                             shelfEditor
@@ -56,6 +62,7 @@ struct BreakShelfView: View {
                     .padding(.vertical, StillTheme.Spacing.m)
                 }
                 .stillScrollableViewport()
+                .refreshable { reshuffleSuggestions() }
                 .onAppear {
                     #if DEBUG || STILL_PROOF
                     if DemoLaunch.shouldScrollToBottom("break") {
@@ -71,6 +78,9 @@ struct BreakShelfView: View {
             #if DEBUG || STILL_PROOF
             if DemoLaunch.requestedScreen == "break-edit" {
                 isEditingShelf = true
+            } else if DemoLaunch.requestedScreen == "break-reshuffled" {
+                suggestionOffset = 1
+                didReshuffle = true
             }
             #endif
         }
@@ -168,7 +178,10 @@ struct BreakShelfView: View {
     }
 
     private func orderedActivities(_ ranked: [BreakActivity]) -> [BreakActivity] {
-        guard !appState.breakShelfCustomOrder.isEmpty else { return ranked }
+        guard !appState.breakShelfCustomOrder.isEmpty else {
+            guard !ranked.isEmpty else { return [] }
+            return BreakShelfRotation.rotated(ranked, offset: suggestionOffset)
+        }
         let byID = Dictionary(uniqueKeysWithValues: ranked.map { ($0.id, $0) })
         let chosen = appState.breakShelfCustomOrder.compactMap { byID[$0] }
         let remaining = ranked.filter { !appState.breakShelfCustomOrder.contains($0.id) }
@@ -187,6 +200,16 @@ struct BreakShelfView: View {
         let destination = index + delta
         guard draftOrder.indices.contains(destination) else { return }
         draftOrder.swapAt(index, destination)
+    }
+
+    private func reshuffleSuggestions() {
+        guard appState.breakShelfCustomOrder.isEmpty else {
+            withAnimation(.easeInOut(duration: 0.18)) { didReshuffle = true }
+            return
+        }
+        let count = max(1, ActivityCatalog.available.count)
+        suggestionOffset = (suggestionOffset + 1) % count
+        withAnimation(.easeInOut(duration: 0.18)) { didReshuffle = true }
     }
 
     @ViewBuilder

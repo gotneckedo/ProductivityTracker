@@ -36,3 +36,13 @@ struct BreakShelfRanking {
         }
     }
 }
+
+/// Pull-to-refresh only changes the presentation order of automatically ranked
+/// suggestions. A person's explicit shelf order always wins.
+enum BreakShelfRotation {
+    static func rotated<T>(_ values: [T], offset: Int) -> [T] {
+        guard !values.isEmpty else { return [] }
+        let safeOffset = ((offset % values.count) + values.count) % values.count
+        return Array(values.dropFirst(safeOffset)) + Array(values.prefix(safeOffset))
+    }
+}

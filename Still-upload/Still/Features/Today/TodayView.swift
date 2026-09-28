@@ -9,6 +9,7 @@ struct TodayView: View {
     @State private var mood: JournalMood? = nil
     @State private var routineItems: [TodayRoutineItem] = []
     @State private var newRoutineTitle = ""
+    @State private var didRecheckDay = false
 
     private var nextTask: TaskItem? {
         appState.selectedTask ?? appState.todaysTasks.first(where: { !$0.isCompleted })
@@ -29,6 +30,10 @@ struct TodayView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                         greeting
+                        if didRecheckDay {
+                            QuietNote(text: "Day checked. Your next small step is still here.", symbol: "arrow.clockwise")
+                                .transition(.opacity)
+                        }
                         nextAction
                         afterSection
                         dayContext
@@ -41,6 +46,7 @@ struct TodayView: View {
                     .padding(.vertical, StillTheme.Spacing.m)
                 }
                 .stillScrollableViewport()
+                .refreshable { recheckDay() }
                 .onAppear {
                     #if DEBUG
                     if DemoLaunch.requestedScreen == "today-routine" {
@@ -57,6 +63,9 @@ struct TodayView: View {
             reflection = appState.journalToday?.text ?? ""
             mood = appState.journalToday?.mood
             routineItems = appState.todayRoutineItems
+            #if DEBUG || STILL_PROOF
+            didRecheckDay = DemoLaunch.requestedScreen == "today-refreshed"
+            #endif
         }
     }
 
@@ -275,6 +284,14 @@ struct TodayView: View {
         guard routineItems.indices.contains(destination) else { return }
         routineItems.swapAt(index, destination)
         commitRoutine()
+    }
+
+    private func recheckDay() {
+        appState.reload()
+        reflection = appState.journalToday?.text ?? ""
+        mood = appState.journalToday?.mood
+        routineItems = appState.todayRoutineItems
+        withAnimation(.easeInOut(duration: 0.18)) { didRecheckDay = true }
     }
 
     private var reflectionCard: some View {

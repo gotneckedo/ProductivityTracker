@@ -12,7 +12,7 @@ import Foundation
 /// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, active-final-minute, complete, break, sudoku, sudoku-invalid, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, undo-task, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback, context-previews,
-/// scenes-edit, break-edit, today-routine, history-search, short-read-search,
+/// scenes-edit, break-edit, today-routine, history-search, short-read-search, today-refreshed, break-reshuffled,
 /// calendar-settings, get-card.
 enum DemoLaunch {
     static let argument = "-still-demo"
@@ -78,6 +78,8 @@ enum DemoLaunch {
             return routed(.today)
         case "today-routine":
             return todayRoutineState()
+        case "today-refreshed":
+            return routed(.today)
         case "history-search":
             return routed(.history)
         case "today-light":
@@ -163,6 +165,8 @@ enum DemoLaunch {
             return routed(.breakShelf)
         case "break-edit":
             return breakShelfEditState()
+        case "break-reshuffled":
+            return routed(.breakShelf)
         case "sudoku":
             return routed(.breakActivity(.sudoku, .shelf))
         case "sudoku-invalid":

@@ -54,6 +54,8 @@ Item 20 uses iOS **Reduce Motion** as the production authority. `proof-reduce-mo
 
 **Decision recorded — item 26:** search is deliberately scoped to the current surface: History searches completed focus sessions and one-line journal records held on device; Short Read searches bundled reading titles, sources, authors, and imported-book metadata. It never opens a device-wide or network search.
 
+**Decision recorded — item 27:** pull-to-refresh never fetches network data. Today reloads local records and recalculates its time phase; Break rotates only automatically ranked suggestions, while a person’s saved shelf order stays fixed.
+
 ## Master Plan decisions — product direction, not implementation proof
 
 These decisions were supplied by CoCo on 26 September 2026 in response to

@@ -199,6 +199,8 @@ jobs:
           shoot "today-routine" "proof-edit-today-routine"
           shoot "history-search" "proof-search-history"
           shoot "short-read-search" "proof-search-short-read"
+          shoot "today-refreshed" "proof-pull-today"
+          shoot "break-reshuffled" "proof-pull-break"
 
           # Truth-pass release proof. This is a Release configuration compiled
           # with only the internal STILL_PROOF navigation condition; FeatureFlags

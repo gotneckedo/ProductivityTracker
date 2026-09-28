@@ -3034,6 +3034,13 @@ final class OnboardingPreferenceTests: XCTestCase {
         XCTAssertEqual(ranked.dropFirst().first?.id, .sudoku)
     }
 
+    func testShelfRefreshRotationPreservesEverySuggestion() {
+        XCTAssertEqual(BreakShelfRotation.rotated([1, 2, 3, 4], offset: 1), [2, 3, 4, 1])
+        XCTAssertEqual(BreakShelfRotation.rotated([1, 2, 3, 4], offset: 5), [2, 3, 4, 1])
+        XCTAssertEqual(BreakShelfRotation.rotated([1, 2, 3, 4], offset: -1), [4, 1, 2, 3])
+        XCTAssertTrue(BreakShelfRotation.rotated([Int](), offset: 1).isEmpty)
+    }
+
     func testCompletionSuggestionsRemainDiverseWithBreakPreference() {
         let request = BreakSuggestionRequest(
             availableBreak: minutes(6), catalog: ActivityCatalog.available,

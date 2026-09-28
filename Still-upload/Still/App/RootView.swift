@@ -1,17 +1,17 @@
 import SwiftUI
 import UIKit
+import Combine
 
 /// Onboarding until answered, then the tab app. Modal presentation for the
 /// whole app is decided here from router state, never in leaf views.
 struct RootView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dynamicTypeSize) private var systemDynamicTypeSize
-    @Environment(\.legibilityWeight) private var systemLegibilityWeight
-    @Environment(\.accessibilityContrast) private var systemAccessibilityContrast
+    @State private var isBoldTextEnabled = UIAccessibility.isBoldTextEnabled
 
     private var requestsBoldLegibility: Bool {
         AccessibilityVisualPolicy.shouldRequestBoldLegibility(
-            systemBoldText: systemLegibilityWeight == .bold,
+            systemBoldText: isBoldTextEnabled,
             proofOverride: DemoLaunch.forcesBoldText
         )
     }
@@ -29,19 +29,16 @@ struct RootView: View {
         }
         .tint(Color(hex: appState.preferences.appAccentPalette.accentHex))
         .environment(\.stillReduceMotionOverride, DemoLaunch.forcesReduceMotion)
-        .environment(\.stillBoldTextOverride, DemoLaunch.forcesBoldText)
         .environment(\.stillIncreaseContrastOverride, DemoLaunch.forcesIncreaseContrast)
-        .environment(\.legibilityWeight, requestsBoldLegibility ? .bold : systemLegibilityWeight)
-        .environment(
-            \.accessibilityContrast,
-            DemoLaunch.forcesIncreaseContrast ? .increased : systemAccessibilityContrast
-        )
         .dynamicTypeSize(DemoLaunch.forcesAccessibilityTextSize ? .accessibility3 : systemDynamicTypeSize)
         // Custom bundled fonts do not all have authored bold faces. Applying the
         // same environment weight here lets iOS synthesize the requested
         // legibility weight consistently rather than leaving serif displays
         // visually lighter than the surrounding system text.
         .fontWeight(requestsBoldLegibility ? .bold : nil)
+        .onReceive(NotificationCenter.default.publisher(for: UIAccessibility.boldTextStatusDidChangeNotification)) { _ in
+            isBoldTextEnabled = UIAccessibility.isBoldTextEnabled
+        }
     }
 }
 

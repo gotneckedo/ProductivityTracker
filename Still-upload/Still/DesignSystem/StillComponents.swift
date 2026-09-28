@@ -61,13 +61,13 @@ struct StillGlassSurface: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.stillDayPhase) private var environmentPhase
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
-    @Environment(\.accessibilityContrast) private var accessibilityContrast
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @Environment(\.stillIncreaseContrastOverride) private var increaseContrastOverride
 
     func body(content: Content) -> some View {
         let resolvedPhase = phase ?? environmentPhase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        let increasedContrast = accessibilityContrast == .increased || increaseContrastOverride
+        let increasedContrast = colorSchemeContrast == .increased || increaseContrastOverride
         let usesOpaqueSurface = AccessibilityVisualPolicy.usesOpaqueControlSurface(
             reduceTransparency: reduceTransparency,
             increasedContrast: increasedContrast
@@ -139,7 +139,7 @@ struct StillInsetList<Content: View>: View {
     private let content: Content
     @Environment(\.stillDayPhase) private var environmentPhase
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityContrast) private var accessibilityContrast
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @Environment(\.stillIncreaseContrastOverride) private var increaseContrastOverride
 
     init(
@@ -157,7 +157,7 @@ struct StillInsetList<Content: View>: View {
     var body: some View {
         let resolved = phase ?? environmentPhase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        let increasedContrast = accessibilityContrast == .increased || increaseContrastOverride
+        let increasedContrast = colorSchemeContrast == .increased || increaseContrastOverride
         let fill = increasedContrast ? resolved.glassControlFallback : resolved.plainGroupFill
         let border = increasedContrast ? StillTheme.increasedContrastBorder(for: resolved) : resolved.insetSeparator.opacity(0.72)
         let borderWidth = CGFloat(AccessibilityVisualPolicy.borderWidth(increasedContrast: increasedContrast))
@@ -207,7 +207,7 @@ struct MatteActivityCanvas<Content: View>: View {
     private let content: Content
     @Environment(\.stillDayPhase) private var environmentPhase
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityContrast) private var accessibilityContrast
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @Environment(\.stillIncreaseContrastOverride) private var increaseContrastOverride
 
     init(
@@ -225,7 +225,7 @@ struct MatteActivityCanvas<Content: View>: View {
     var body: some View {
         let resolved = phase ?? environmentPhase ?? StillDayPhase.automatic(colorScheme: colorScheme)
         let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-        let increasedContrast = accessibilityContrast == .increased || increaseContrastOverride
+        let increasedContrast = colorSchemeContrast == .increased || increaseContrastOverride
         let fill = increasedContrast
             ? resolved.glassControlFallback
             : tint.opacity(resolved == .night || resolved == .focus ? 0.42 : 0.84)

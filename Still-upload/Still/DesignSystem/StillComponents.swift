@@ -464,9 +464,36 @@ struct SubtleMetric: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .contextMenu {
+            Label("Stored on this device", systemImage: "lock")
+        } preview: {
+            MetricContextPreview(value: value, label: label)
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
         .accessibilityValue(accessibilityValue ?? value)
+    }
+}
+
+private struct MetricContextPreview: View {
+    let value: String
+    let label: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
+            Text(value)
+                .font(StillTypography.hero)
+                .foregroundStyle(StillTheme.textPrimary)
+            Text(label)
+                .font(StillTypography.bodyEmphasis)
+                .foregroundStyle(StillTheme.textSecondary)
+            Text("Your local focus history")
+                .font(StillTypography.caption)
+                .foregroundStyle(StillTheme.textTertiary)
+        }
+        .frame(width: 210, alignment: .leading)
+        .padding(StillTheme.Spacing.m)
+        .background(StillTheme.surface, in: RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous))
     }
 }
 

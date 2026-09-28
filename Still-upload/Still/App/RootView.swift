@@ -198,6 +198,8 @@ struct RouteView: View {
             RoomCollectionView()
         case .spriteContactSheet:
             SpriteContactSheetView()
+        case .contextPreviewReview:
+            ContextPreviewReviewView()
         case .presets:
             PresetsView()
         case .doodleGallery:

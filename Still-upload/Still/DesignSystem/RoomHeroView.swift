@@ -333,6 +333,11 @@ private struct RoomHotspotOverlay: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .contextMenu {
+                    Button("Open \(hotspot.title)") { action(hotspot) }
+                } preview: {
+                    RoomHotspotContextPreview(hotspot: hotspot)
+                }
                 .accessibilityLabel(hotspot.title)
                 .accessibilityHint(hotspot.hint)
                 .position(
@@ -340,6 +345,37 @@ private struct RoomHotspotOverlay: View {
                     y: proxy.size.height * (layout.hotspots[hotspot] ?? hotspot.normalizedPosition).y
                 )
             }
+        }
+    }
+}
+
+private struct RoomHotspotContextPreview: View {
+    let hotspot: RoomHotspot
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            Image(systemName: previewSymbol)
+                .font(StillTypography.title2)
+                .foregroundStyle(StillTheme.accent)
+            Text(hotspot.title)
+                .font(StillTypography.title3)
+                .foregroundStyle(StillTheme.textPrimary)
+            Text(hotspot.hint)
+                .font(StillTypography.footnote)
+                .foregroundStyle(StillTheme.textSecondary)
+        }
+        .frame(width: 220, alignment: .leading)
+        .padding(StillTheme.Spacing.m)
+        .background(StillTheme.surface, in: RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous))
+    }
+
+    private var previewSymbol: String {
+        switch hotspot {
+        case .desk: return "checklist"
+        case .shelf: return "books.vertical"
+        case .calendar: return "calendar"
+        case .plant: return "leaf"
+        case .window: return "square.grid.2x2"
         }
     }
 }

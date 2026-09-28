@@ -110,6 +110,8 @@ enum AppRoute: Hashable {
     case roomCollection
     /// Debug and review-only surface for the original sprite package.
     case spriteContactSheet
+    /// Debug and review-only catalogue of long-press preview treatments.
+    case contextPreviewReview
     case journal
     case presets
     case doodleGallery
@@ -172,6 +174,8 @@ struct RouteResolver {
         case .roomCollection:
             return RouteDestination(tab: .focus, stack: [route], sheet: nil, completionSessionID: nil)
         case .spriteContactSheet:
+            return RouteDestination(tab: .focus, stack: [route], sheet: nil, completionSessionID: nil)
+        case .contextPreviewReview:
             return RouteDestination(tab: .focus, stack: [route], sheet: nil, completionSessionID: nil)
         case .me:
             return RouteDestination(tab: .me, stack: [], sheet: nil, completionSessionID: nil)

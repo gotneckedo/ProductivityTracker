@@ -11,7 +11,7 @@ import Foundation
 /// room-autumn, room-snow, room-spring, room-sleep, room-collectibles, sprite-contact-sheet,
 /// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, active-final-minute, complete, break, sudoku, sudoku-invalid, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
-/// journal, presets, tasks, undo-task, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback,
+/// journal, presets, tasks, undo-task, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback, context-previews,
 /// calendar-settings, get-card.
 enum DemoLaunch {
     static let argument = "-still-demo"
@@ -96,6 +96,8 @@ enum DemoLaunch {
             return state
         case "accessibility-feedback":
             return routed(.me)
+        case "context-previews":
+            return routed(.contextPreviewReview)
         case "home":
             return PreviewSupport.appState(populated: true)
         case "focus-room":

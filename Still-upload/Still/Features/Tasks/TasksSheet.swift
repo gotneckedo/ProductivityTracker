@@ -220,6 +220,17 @@ private struct TaskFocusCard: View {
                 Label("Delete", systemImage: "trash")
             }
         }
+        .contextMenu {
+            if !task.isCompleted {
+                Button("Use for next focus", action: onSelect)
+            }
+            Button("Details", action: onDetails)
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete task", systemImage: "trash")
+            }
+        } preview: {
+            TaskContextPreview(task: task, detailLine: detailLine)
+        }
         .accessibilityElement(children: .contain)
     }
 
@@ -240,6 +251,30 @@ private struct TaskFocusCard: View {
 
     private var subjectTint: Color {
         task.subject.map { Color(hex: $0.color.hex) } ?? StillTheme.textTertiary.opacity(0.55)
+    }
+}
+
+private struct TaskContextPreview: View {
+    let task: TaskItem
+    let detailLine: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            Label(task.isCompleted ? "Done" : "Task", systemImage: task.isCompleted ? "checkmark.circle.fill" : "checklist")
+                .font(StillTypography.caption.weight(.semibold))
+                .foregroundStyle(StillTheme.accent)
+            Text(task.title)
+                .font(StillTypography.title3)
+                .foregroundStyle(StillTheme.textPrimary)
+            if let detailLine {
+                Text(detailLine)
+                    .font(StillTypography.footnote)
+                    .foregroundStyle(StillTheme.textSecondary)
+            }
+        }
+        .frame(width: 240, alignment: .leading)
+        .padding(StillTheme.Spacing.m)
+        .background(StillTheme.surface, in: RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous))
     }
 }
 

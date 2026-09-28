@@ -34,7 +34,7 @@ The P0 release-truth and visual-P0 changes are accepted only to the scope proved
 
 **Decision recorded:** room unlocks communicate one fixed milestone (“Opens after 12 sessions”) rather than a changing “sessions to go” counter. This preserves the earned-room model without importing countdown pressure.
 
-## Block C — touch response (implementation awaiting CI evidence)
+## Blocks C–D — touch response and affordances (implementation awaiting CI evidence)
 
 **Decision recorded:** the shared press response supplies the light touch-down cue for ordinary rows; semantic actions fire their own one-shot feedback after a state transition so starting focus or finishing a break never double-pulses. Haptics default on, interface sounds default off, and both remain local device preferences.
 
@@ -47,6 +47,8 @@ Item 20 uses iOS **Reduce Motion** as the production authority. `proof-reduce-mo
 **Decision recorded — item 22:** automated simulator video is not available in this repository’s Linux/Actions toolchain because no UI gesture driver or UI-test target is configured. Static end-state frames remain CI-proven; the four requested touch recordings are deferred to a Mac/Xcode UI-test or physical-device pass rather than fabricated from stitched screenshots.
 
 **Item 23 scope:** Tasks, habits, journal lines, and custom presets now use local destructive swipes with a five-second undo toast. The current data model has no user-reminder or Later-item entity, so no destructive action exists to add there; that is recorded as an absent-model boundary, not treated as covered.
+
+**Item 24 scope:** task rows, room targets, Break activities, Scene cards, soundscape layers, and statistic tiles now expose native long-press context menus with an object-specific preview. `proof-long-press-previews.png` is the required CI review catalogue for the six preview treatments; the actual native press menu remains an iOS system interaction, not a custom simulated sheet.
 
 ## Master Plan decisions — product direction, not implementation proof
 

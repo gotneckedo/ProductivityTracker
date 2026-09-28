@@ -109,6 +109,13 @@ struct BreakShelfView: View {
                                 )
                             }
                             .buttonStyle(StillRowButtonStyle())
+                            .contextMenu {
+                                Button("Open \(activity.name)") {
+                                    appState.router.go(to: .breakActivity(activity.id, .shelf))
+                                }
+                            } preview: {
+                                BreakActivityContextPreview(activity: activity)
+                            }
                             if index < activities.count - 1 {
                                 InsetRowDivider(leading: 58)
                             }
@@ -119,6 +126,30 @@ struct BreakShelfView: View {
                 }
             }
         }
+    }
+}
+
+private struct BreakActivityContextPreview: View {
+    let activity: BreakActivity
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            Image(systemName: activity.symbolName)
+                .font(StillTypography.title2)
+                .foregroundStyle(StillTheme.calm)
+            Text(activity.name)
+                .font(StillTypography.title3)
+                .foregroundStyle(StillTheme.textPrimary)
+            Text(activity.summary)
+                .font(StillTypography.footnote)
+                .foregroundStyle(StillTheme.textSecondary)
+            Text("About \(activity.estimatedMinutes) min")
+                .font(StillTypography.caption.weight(.semibold))
+                .foregroundStyle(StillTheme.calm)
+        }
+        .frame(width: 230, alignment: .leading)
+        .padding(StillTheme.Spacing.m)
+        .background(StillTheme.surface, in: RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous))
     }
 }
 

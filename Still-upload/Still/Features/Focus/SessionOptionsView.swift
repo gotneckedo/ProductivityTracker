@@ -306,14 +306,15 @@ struct AmbientMixEditor: View {
                         title: source.displayName,
                         value: Binding(get: { mix.level(for: source.id) }, set: { mix.setLevel($0, for: source.id) }),
                         note: (status == .ready && !isAvailable(source.id)) ? AmbientAudioCopy.sourceUnavailable : nil,
-                        isAvailable: status != .ready || isAvailable(source.id)
+                        isAvailable: status != .ready || isAvailable(source.id),
+                        source: source
                     )
                 }
             }
         }
     }
 
-    private func levelRow(title: String, value: Binding<Double>, note: String?, isAvailable: Bool = true) -> some View {
+    private func levelRow(title: String, value: Binding<Double>, note: String?, isAvailable: Bool = true, source: AmbientSource? = nil) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
                 Text(title)
@@ -336,7 +337,38 @@ struct AmbientMixEditor: View {
         }
         .stillInsetRow()
         .opacity(isAvailable ? 1 : 0.58)
+        .contextMenu {
+            if let source, isAvailable {
+                Button("Set \(title) to 50%") { mix.setLevel(0.5, for: source.id) }
+                Button("Mute \(title)") { mix.setLevel(0, for: source.id) }
+            }
+        } preview: {
+            AmbientLayerContextPreview(title: title, level: value.wrappedValue, isAvailable: isAvailable)
+        }
         .accessibilityHint(isAvailable ? "" : "Unavailable because this build has no audio file for this layer.")
+    }
+}
+
+private struct AmbientLayerContextPreview: View {
+    let title: String
+    let level: Double
+    let isAvailable: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            Image(systemName: isAvailable ? "waveform" : "speaker.slash")
+                .font(StillTypography.title2)
+                .foregroundStyle(isAvailable ? StillTheme.calm : StillTheme.textTertiary)
+            Text(title)
+                .font(StillTypography.title3)
+                .foregroundStyle(StillTheme.textPrimary)
+            Text(isAvailable ? "\(Int((level * 100).rounded()))% volume" : "Unavailable in this build")
+                .font(StillTypography.footnote)
+                .foregroundStyle(StillTheme.textSecondary)
+        }
+        .frame(width: 210, alignment: .leading)
+        .padding(StillTheme.Spacing.m)
+        .background(StillTheme.surface, in: RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous))
     }
 }
 

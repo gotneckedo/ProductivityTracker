@@ -1897,6 +1897,13 @@ final class FeatureFlagTests: XCTestCase {
         XCTAssertEqual(router.selectedTab, .me)
         XCTAssertEqual(router.mePath, [.habits])
     }
+
+    func testContextPreviewReviewRemainsAFocusOnlyDebugRoute() {
+        let destination = RouteResolver(flags: .release).destination(for: .contextPreviewReview, currentTab: .today)
+        XCTAssertEqual(destination.tab, .focus)
+        XCTAssertEqual(destination.stack, [.contextPreviewReview])
+        XCTAssertNil(destination.sheet)
+    }
 }
 
 final class JournalControllerTests: XCTestCase {

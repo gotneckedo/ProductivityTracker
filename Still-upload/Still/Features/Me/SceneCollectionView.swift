@@ -192,6 +192,15 @@ private struct SceneCard: View {
             }
         }
         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+        .contextMenu {
+            if isUnlocked {
+                Button("Use \(scene.name)", action: onSelect)
+            } else if let onLocked {
+                Button("About Still+ rooms", action: onLocked)
+            }
+        } preview: {
+            SceneContextPreview(scene: scene, isUnlocked: isUnlocked, lockedText: unlockText)
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(scene.name)
         .accessibilityValue(isUnlocked ? (isSelected ? "Selected. \(scene.summary)" : scene.summary) : unlockText)
@@ -261,6 +270,35 @@ private struct SceneCard: View {
         // pressure loop. Keep the requirement visible without narrating the
         // person's remaining work back to them.
         return "Opens after \(Copy.Count.session(needed))"
+    }
+}
+
+private struct SceneContextPreview: View {
+    let scene: SceneDefinition
+    let isUnlocked: Bool
+    let lockedText: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            RoomHeroView(
+                sceneName: scene.name,
+                sceneID: scene.id,
+                allowsCatInteraction: false,
+                phase: .afternoon,
+                showsControls: false
+            )
+            .frame(width: 250, height: 250)
+            .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
+            Text(scene.name)
+                .font(StillTypography.title3)
+                .foregroundStyle(StillTheme.textPrimary)
+            Text(isUnlocked ? scene.summary : lockedText)
+                .font(StillTypography.footnote)
+                .foregroundStyle(StillTheme.textSecondary)
+        }
+        .frame(width: 250, alignment: .leading)
+        .padding(StillTheme.Spacing.s)
+        .background(StillTheme.surface, in: RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous))
     }
 }
 

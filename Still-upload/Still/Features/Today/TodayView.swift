@@ -155,9 +155,6 @@ struct TodayView: View {
 
     private func primaryActionRow(title: String, action: @escaping () -> Void) -> some View {
         HStack(spacing: StillTheme.Spacing.s) {
-            Button(title, action: action)
-                .buttonStyle(QuietPrimaryButtonStyle())
-                .frame(maxWidth: .infinity)
             if dynamicTypeSize.isAccessibilitySize {
                 Menu {
                     Button("I don't know what to do") { appState.router.go(to: .nextStep) }
@@ -172,6 +169,9 @@ struct TodayView: View {
                 .accessibilityLabel("Focus alternatives")
                 .accessibilityHint("Includes a next-step guide and focus customization.")
             }
+            Button(title, action: action)
+                .buttonStyle(QuietPrimaryButtonStyle())
+                .frame(maxWidth: .infinity)
         }
     }
 

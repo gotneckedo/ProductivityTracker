@@ -192,6 +192,21 @@ private struct HomeTaskLine: View {
     let task: TaskItem?
     let emphasized: Bool
     let action: () -> Void
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// The full local prompt remains available to VoiceOver. At accessibility
+    /// sizes, the visible task-picker title becomes deliberately shorter so it
+    /// never truncates beside the persistent disclosure chevron.
+    private var displayTitle: String {
+        guard task == nil, dynamicTypeSize.isAccessibilitySize else {
+            return task?.title ?? (emphasized ? Copy.Home.addHomework : Copy.Home.chooseTask)
+        }
+        return "Choose a task"
+    }
+
+    private var accessibilityTitle: String {
+        task?.title ?? (emphasized ? Copy.Home.addHomework : Copy.Home.chooseTask)
+    }
 
     var body: some View {
         Button(action: action) {
@@ -201,7 +216,7 @@ private struct HomeTaskLine: View {
                     .frame(width: 10, height: 10)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(task?.title ?? (emphasized ? Copy.Home.addHomework : Copy.Home.chooseTask))
+                    Text(displayTitle)
                         .font(StillTypography.bodyEmphasis)
                         .foregroundStyle(StillTheme.textPrimary)
                         .lineLimit(2)
@@ -222,6 +237,7 @@ private struct HomeTaskLine: View {
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityTitle)
         .accessibilityHint("Opens today's tasks.")
     }
 

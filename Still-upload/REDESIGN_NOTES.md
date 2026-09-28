@@ -44,6 +44,10 @@ Item 20 uses iOS **Reduce Motion** as the production authority. `proof-reduce-mo
 
 **Decision recorded — item 21:** Still uses two local switches in **Me → Accessibility**: haptics defaults on and interface sounds defaults off. Ambient soundscapes are intentionally unaffected, and iOS controls Reduce Motion independently. `proof-accessibility-feedback.png` is required before this item is marked complete.
 
+**Decision recorded — item 22:** automated simulator video is not available in this repository’s Linux/Actions toolchain because no UI gesture driver or UI-test target is configured. Static end-state frames remain CI-proven; the four requested touch recordings are deferred to a Mac/Xcode UI-test or physical-device pass rather than fabricated from stitched screenshots.
+
+**Item 23 scope:** Tasks, habits, journal lines, and custom presets now use local destructive swipes with a five-second undo toast. The current data model has no user-reminder or Later-item entity, so no destructive action exists to add there; that is recorded as an absent-model boundary, not treated as covered.
+
 ## Master Plan decisions — product direction, not implementation proof
 
 These decisions were supplied by CoCo on 26 September 2026 in response to

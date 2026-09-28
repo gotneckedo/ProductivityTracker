@@ -136,6 +136,12 @@ final class TaskController {
         }
     }
 
+    /// Restores the exact local record after a short-lived undo action.
+    @discardableResult
+    func restore(_ task: TaskItem) -> Bool {
+        persist(task)
+    }
+
     func task(id: UUID) -> TaskItem? {
         tasks.task(id: id)
     }

@@ -182,6 +182,13 @@ final class PreferencesController {
         }
     }
 
+    /// Reinstates a custom preset exactly as it was before an undoable swipe.
+    func restorePreset(_ preset: FocusPreset, wasDefault: Bool) {
+        guard !preset.isBuiltIn else { return }
+        presets.save(preset)
+        if wasDefault { update { $0.defaultPresetID = preset.id } }
+    }
+
     func setDefaultPreset(_ id: FocusPresetID) {
         guard presets.preset(id: id) != nil else { return }
         update { $0.defaultPresetID = id }

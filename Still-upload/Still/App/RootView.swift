@@ -250,12 +250,21 @@ struct NoticeBanner: View {
 
     var body: some View {
         if let notice = appState.notice {
-            Text(notice.text)
-                .font(StillTypography.footnote.weight(.medium))
-                .foregroundStyle(StillTheme.textPrimary)
-                .multilineTextAlignment(.center)
+            HStack(spacing: StillTheme.Spacing.s) {
+                Text(notice.text)
+                    .font(StillTypography.footnote.weight(.medium))
+                    .foregroundStyle(StillTheme.textPrimary)
+                    .multilineTextAlignment(.leading)
+                if let undo = appState.undo {
+                    Button("Undo") { appState.performUndo(undo.id) }
+                        .font(StillTypography.footnote.weight(.bold))
+                        .foregroundStyle(StillTheme.accent)
+                        .frame(minHeight: StillTheme.minimumTapSize)
+                        .accessibilityHint("Restores the action that was just removed.")
+                }
+            }
                 .padding(.horizontal, StillTheme.Spacing.m)
-                .padding(.vertical, StillTheme.Spacing.s)
+                .padding(.vertical, StillTheme.Spacing.xs)
                 .background(Capsule(style: .continuous).fill(StillTheme.surface))
                 .overlay(Capsule(style: .continuous).strokeBorder(StillTheme.border, lineWidth: StillTheme.Stroke.hairline))
                 .shadow(color: StillTheme.Shadow.color, radius: StillTheme.Shadow.radius, y: StillTheme.Shadow.y)
@@ -270,6 +279,7 @@ struct NoticeBanner: View {
                     try? await Task.sleep(nanoseconds: 4_000_000_000)
                     if appState.notice?.id == notice.id {
                         appState.notice = nil
+                        appState.undo = nil
                     }
                 }
                 .accessibilityAddTraits(.isButton)

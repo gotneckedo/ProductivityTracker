@@ -42,6 +42,14 @@ extension AppState {
         reload()
     }
 
+    func deleteJournalEntryWithUndo(_ entry: JournalEntry) {
+        deleteJournalEntry(entry.id)
+        offerUndo(text: "Journal line deleted") { [weak self] in
+            self?.container.journalController.restore(entry)
+            self?.reload()
+        }
+    }
+
     var journalRun: Int { container.journalController.currentRun() }
 }
 
@@ -80,6 +88,14 @@ extension AppState {
     func archiveHabit(_ id: UUID) {
         container.habitController.archive(id: id)
         reload()
+    }
+
+    func archiveHabitWithUndo(_ habit: HabitDefinition) {
+        archiveHabit(habit.id)
+        offerUndo(text: "Habit removed from your list") { [weak self] in
+            self?.container.habitController.unarchive(habit)
+            self?.reload()
+        }
     }
 }
 
@@ -156,6 +172,15 @@ extension AppState {
     func deletePreset(_ id: FocusPresetID) {
         container.preferences.deletePreset(id)
         reload()
+    }
+
+    func deletePresetWithUndo(_ preset: FocusPreset) {
+        let wasDefault = preferences.defaultPresetID == preset.id
+        deletePreset(preset.id)
+        offerUndo(text: "Preset deleted") { [weak self] in
+            self?.container.preferences.restorePreset(preset, wasDefault: wasDefault)
+            self?.reload()
+        }
     }
 }
 

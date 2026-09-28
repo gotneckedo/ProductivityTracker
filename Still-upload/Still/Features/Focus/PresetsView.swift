@@ -35,7 +35,8 @@ struct PresetsView: View {
                                     onSelect: { appState.setDefaultPreset(preset.id) },
                                     onDuplicate: { beginNaming(.create(basedOn: preset)) },
                                     onRename: { beginNaming(.rename(preset)) },
-                                    onDelete: { deleting = preset }
+                                    onDelete: { deleting = preset },
+                                    onSwipeDelete: { appState.deletePresetWithUndo(preset) }
                                 )
                                 if index < appState.presets.count - 1 {
                                     InsetRowDivider(leading: 46)
@@ -80,7 +81,7 @@ struct PresetsView: View {
         }
         .confirmationDialog("Delete this preset?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
             Button("Delete \(deleting?.name ?? "preset")", role: .destructive) {
-                if let preset = deleting { appState.deletePreset(preset.id) }
+                if let preset = deleting { appState.deletePresetWithUndo(preset) }
                 deleting = nil
             }
             Button("Cancel", role: .cancel) { deleting = nil }
@@ -134,6 +135,7 @@ private struct PresetRow: View {
     let onDuplicate: () -> Void
     let onRename: () -> Void
     let onDelete: () -> Void
+    let onSwipeDelete: () -> Void
 
     var body: some View {
         HStack(spacing: StillTheme.Spacing.s) {
@@ -177,6 +179,13 @@ private struct PresetRow: View {
             .accessibilityLabel("More for \(preset.name)")
         }
         .stillInsetRow(verticalPadding: StillTheme.Spacing.s)
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            if !preset.isBuiltIn {
+                Button(role: .destructive, action: onSwipeDelete) {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
     }
 
     private var detail: String {

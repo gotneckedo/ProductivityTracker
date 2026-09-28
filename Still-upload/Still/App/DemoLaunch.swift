@@ -11,7 +11,7 @@ import Foundation
 /// room-autumn, room-snow, room-spring, room-sleep, room-collectibles, sprite-contact-sheet,
 /// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, active-final-minute, complete, break, sudoku, sudoku-invalid, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
-/// journal, presets, tasks, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback,
+/// journal, presets, tasks, undo-task, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback,
 /// calendar-settings, get-card.
 enum DemoLaunch {
     static let argument = "-still-demo"
@@ -190,6 +190,8 @@ enum DemoLaunch {
             return routed(.presets)
         case "tasks":
             return routed(.tasks)
+        case "undo-task":
+            return undoTaskState()
         case "tasks-complete":
             let state = PreviewSupport.appState(populated: true)
             if let task = state.todaysTasks.first {
@@ -315,6 +317,15 @@ enum DemoLaunch {
         _ = game.enter(6)
         try? state.container.puzzleProgress.save(game, puzzleID: puzzle.id, at: Date())
         state.router.go(to: .breakActivity(.sudoku, .shelf))
+        return state
+    }
+
+    private static func undoTaskState() -> AppState {
+        let state = PreviewSupport.appState(populated: true)
+        if let task = state.todaysTasks.first {
+            state.deleteTaskWithUndo(task)
+        }
+        state.router.go(to: .tasks)
         return state
     }
 

@@ -1947,6 +1947,16 @@ final class JournalControllerTests: XCTestCase {
             XCTAssertFalse(event.properties.values.values.contains { $0.description.contains("private") })
         }
     }
+
+    func testRestoreReturnsDeletedJournalEntryExactly() {
+        let container = makeContainer()
+        let entry = container.journalController.saveToday(text: "Keep this line", mood: .calm)!
+        container.journalController.delete(id: entry.id)
+        XCTAssertNil(container.journalController.todaysEntry())
+
+        container.journalController.restore(entry)
+        XCTAssertEqual(container.journalController.todaysEntry(), entry)
+    }
 }
 
 final class HabitControllerTests: XCTestCase {
@@ -1995,6 +2005,19 @@ final class HabitControllerTests: XCTestCase {
         XCTAssertNil(HabitController.runLine(1))
         XCTAssertEqual(HabitController.runLine(3), "3 days in a row")
     }
+
+    func testUnarchiveRestoresHabitWithoutErasingCheckIns() {
+        let container = makeContainer()
+        let habit = container.habitController.create(title: "Stretch")!
+        container.habitController.setDone(habitID: habit.id, on: referenceDate, true)
+        container.habitController.archive(id: habit.id)
+        let archived = try! XCTUnwrap(container.habits.allHabits().first { $0.id == habit.id })
+        XCTAssertTrue(archived.isArchived)
+
+        container.habitController.unarchive(archived)
+        XCTAssertEqual(container.habitController.today().map(\.habit.id), [habit.id])
+        XCTAssertTrue(container.habitController.isDone(habitID: habit.id, on: referenceDate))
+    }
 }
 
 final class PresetManagementTests: XCTestCase {
@@ -2026,6 +2049,18 @@ final class PresetManagementTests: XCTestCase {
         prefs.deletePreset(custom.id)
         XCTAssertNil(container.presets.preset(id: custom.id))
         XCTAssertEqual(prefs.current.defaultPresetID, .defaultPreset, "Deleting the default falls back to Default.")
+    }
+
+    func testRestorePresetKeepsItsOriginalDefaultRole() {
+        let container = makeContainer()
+        let prefs = container.preferences
+        let custom = prefs.createPreset(named: "Recovery", basedOn: prefs.preset(.study))!
+        prefs.setDefaultPreset(custom.id)
+        prefs.deletePreset(custom.id)
+        prefs.restorePreset(custom, wasDefault: true)
+
+        XCTAssertEqual(container.presets.preset(id: custom.id), custom)
+        XCTAssertEqual(prefs.current.defaultPresetID, custom.id)
     }
 
     func testBuiltInsCannotBeDeletedAndCountIsCapped() {
@@ -2109,6 +2144,25 @@ final class TaskScheduleTests: XCTestCase {
         XCTAssertEqual(result.dueToday.map(\.title), ["Due today"])
         XCTAssertEqual(result.timed.map(\.title), ["Dentist", "Focus", "At three"])
         XCTAssertEqual(result.timed.last?.duration, 30 * 60)
+    }
+
+    func testRestoreReturnsDeletedTaskWithItsDetails() {
+        let container = makeContainer()
+        let task = container.taskController.create(title: "Lab notes")!
+        container.taskController.updateDetails(
+            id: task.id,
+            dueAt: day(1, hour: 17),
+            scheduledAt: day(1, hour: 15),
+            subject: .biology,
+            plannedDuration: 45 * 60,
+            dayPeriod: .afternoon
+        )
+        let original = try! XCTUnwrap(container.tasks.task(id: task.id))
+        container.taskController.delete(id: task.id)
+        XCTAssertNil(container.tasks.task(id: task.id))
+
+        XCTAssertTrue(container.taskController.restore(original))
+        XCTAssertEqual(container.tasks.task(id: task.id), original)
     }
 
     func testSubjectPaletteMigrationAndControllerUpdates() throws {

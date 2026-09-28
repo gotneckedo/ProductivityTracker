@@ -47,7 +47,7 @@ struct TasksSheet: View {
                                                 },
                                                 onToggleStep: { step in appState.toggleTaskStep(taskID: task.id, stepID: step.id) },
                                                 onDetails: { detailTaskID = task.id },
-                                                onDelete: { appState.deleteTask(task.id) },
+                                                onDelete: { appState.deleteTaskWithUndo(task) },
                                                 phase: phase
                                             )
                                             if index < appState.todaysTasks.count - 1 {
@@ -215,6 +215,11 @@ private struct TaskFocusCard: View {
         .stillInsetRow(verticalPadding: StillTheme.Spacing.s)
         .offset(y: task.isCompleted ? 2 : 0)
         .animation(StillMotion.ease(reduceMotion, duration: 0.24), value: task.isCompleted)
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
+        }
         .accessibilityElement(children: .contain)
     }
 

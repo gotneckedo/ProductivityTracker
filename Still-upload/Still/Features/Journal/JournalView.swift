@@ -183,9 +183,16 @@ struct HabitsSection: View {
                                 Label("Rename", systemImage: "pencil")
                             }
                             Button(role: .destructive) {
-                                appState.archiveHabit(day.habit.id)
+                                appState.archiveHabitWithUndo(day.habit)
                             } label: {
                                 Label("Remove from list", systemImage: "archivebox")
+                            }
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                appState.archiveHabitWithUndo(day.habit)
+                            } label: {
+                                Label("Remove", systemImage: "archivebox")
                             }
                         }
                         if day.id != appState.habitDays.last?.id {
@@ -301,11 +308,18 @@ private struct PastLinesSection: View {
                             PastLineRow(entry: entry)
                                 .contextMenu {
                                     Button(role: .destructive) {
-                                        appState.deleteJournalEntry(entry.id)
+                                        appState.deleteJournalEntryWithUndo(entry)
                                     } label: {
                                         Label("Delete line", systemImage: "trash")
                                     }
-                            }
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        appState.deleteJournalEntryWithUndo(entry)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
                             if entry.id != appState.journalPast.last?.id {
                                 InsetRowDivider(leading: 60)
                             }

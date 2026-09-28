@@ -7,6 +7,14 @@ struct StillNotice: Identifiable, Equatable {
     let text: String
 }
 
+/// A short-lived, local reversal for a destructive swipe. The closure remains
+/// in memory only; once the toast expires, the original action stays final.
+struct StillUndo: Identifiable {
+    let id = UUID()
+    let text: String
+    let action: () -> Void
+}
+
 /// The observable app store. It holds mirrored, display-ready state and
 /// forwards every action to the platform-neutral controllers in
 /// `DependencyContainer`, then reloads. Business rules live in the controllers
@@ -36,6 +44,7 @@ final class AppState {
     /// Mute toggled on the active screen. Transient: the preset mix is unchanged.
     private(set) var isAudioMuted = false
     var notice: StillNotice? = nil
+    var undo: StillUndo? = nil
 
     /// Suggestions are generated once per completed session so they don't
     /// shuffle while the user looks at them.
@@ -92,6 +101,30 @@ final class AppState {
                 reload()
             }
         }
+    }
+
+    // MARK: - Reversible local actions
+
+    /// Presents one short-lived undo at a time. This is intentionally local and
+    /// memory-only: an expired destructive action is not represented as a
+    /// hidden queue, account state, or engagement prompt.
+    func offerUndo(text: String, action: @escaping () -> Void) {
+        let undo = StillUndo(text: text, action: action)
+        self.undo = undo
+        notice = StillNotice(text: text)
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(5))
+            guard self?.undo?.id == undo.id else { return }
+            self?.undo = nil
+            if self?.notice?.text == text { self?.notice = nil }
+        }
+    }
+
+    func performUndo(_ id: UUID) {
+        guard let undo, undo.id == id else { return }
+        self.undo = nil
+        notice = nil
+        undo.action()
     }
 
     /// Call when the app returns to the foreground.
@@ -415,6 +448,17 @@ final class AppState {
             container.preferences.update { $0.selectedTaskID = nil }
         }
         reload()
+    }
+
+    func deleteTaskWithUndo(_ task: TaskItem) {
+        let wasSelected = preferences.selectedTaskID == task.id
+        deleteTask(task.id)
+        offerUndo(text: "Task deleted") { [weak self] in
+            guard let self else { return }
+            _ = self.container.taskController.restore(task)
+            if wasSelected { self.container.preferences.update { $0.selectedTaskID = task.id } }
+            self.reload()
+        }
     }
 
     // MARK: - Presets & preferences

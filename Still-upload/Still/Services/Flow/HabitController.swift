@@ -46,6 +46,13 @@ final class HabitController {
         persist { try habits.save(habit) }
     }
 
+    /// Reinstates an archived habit without touching its existing check-ins.
+    func unarchive(_ archivedHabit: HabitDefinition) {
+        var habit = archivedHabit
+        habit.archivedAt = nil
+        persist { try habits.save(habit) }
+    }
+
     func delete(id: UUID) {
         persist { try habits.delete(id: id) }
     }

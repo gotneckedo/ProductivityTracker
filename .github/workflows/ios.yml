@@ -207,6 +207,10 @@ jobs:
           shoot "ax3-focus" "proof-ax3-focus"
           shoot "ax3-break" "proof-ax3-break"
           shoot "ax3-me" "proof-ax3-me"
+          # Item 33: the intentionally incomplete preference fixture verifies
+          # that actionable “Not set” values are readable rather than treated
+          # as disabled gray text on the glass control group.
+          shoot "me-preferences" "proof-contrast-me-preferences"
 
           # Truth-pass release proof. This is a Release configuration compiled
           # with only the internal STILL_PROOF navigation condition; FeatureFlags

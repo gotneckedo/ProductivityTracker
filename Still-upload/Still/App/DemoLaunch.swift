@@ -12,7 +12,7 @@ import Foundation
 /// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, active-final-minute, complete, break, sudoku, sudoku-invalid, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, undo-task, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback, context-previews,
-/// scenes-edit, break-edit, today-routine, history-full, history-empty, history-search, short-read-search, today-refreshed, break-reshuffled,
+/// scenes-edit, break-edit, today-routine, history-full, history-empty, history-search, short-read-search, today-refreshed, break-reshuffled, me-preferences,
 /// calendar-settings, get-card.
 enum DemoLaunch {
     static let argument = "-still-demo"
@@ -115,6 +115,8 @@ enum DemoLaunch {
             return state
         case "accessibility-feedback":
             return routed(.me)
+        case "me-preferences":
+            return preferenceContrastState()
         case "context-previews":
             return routed(.contextPreviewReview)
         case "home":
@@ -322,6 +324,17 @@ enum DemoLaunch {
             TodayRoutineItem(title: "Fill a water glass"),
             TodayRoutineItem(title: "Choose one page to read")
         ])
+        return state
+    }
+
+    /// An incomplete-but-onboarded local profile. This makes the user-visible
+    /// “Not set” values reviewable in CI without inventing production data.
+    private static func preferenceContrastState() -> AppState {
+        let state = PreviewSupport.appState(populated: true)
+        state.container.preferences.setOnboardingGoal(nil)
+        state.container.preferences.setBreakAppeal(nil)
+        state.reload()
+        state.router.go(to: .me)
         return state
     }
 

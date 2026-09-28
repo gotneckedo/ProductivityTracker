@@ -43,6 +43,8 @@ struct MeView: View {
                         DispatchQueue.main.async { proxy.scrollTo("your-days-proof", anchor: .top) }
                     } else if DemoLaunch.requestedScreen == "accessibility-feedback" {
                         DispatchQueue.main.async { proxy.scrollTo("accessibility-feedback-proof", anchor: .top) }
+                    } else if DemoLaunch.requestedScreen == "me-preferences" {
+                        DispatchQueue.main.async { proxy.scrollTo("me-preferences-proof", anchor: .top) }
                     }
                     #endif
                 }
@@ -272,6 +274,7 @@ struct MeView: View {
                 .accessibilityHint("Asks before deleting everything on this device.")
             }
         }
+        .id("me-preferences-proof")
     }
 
     private func settingLink(

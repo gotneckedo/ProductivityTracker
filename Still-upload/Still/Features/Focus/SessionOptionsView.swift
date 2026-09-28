@@ -35,7 +35,7 @@ struct SessionOptionsView: View {
                         switch DemoLaunch.requestedScreen {
                         case "mixer":
                             DispatchQueue.main.async { proxy.scrollTo("soundscape-proof", anchor: .bottom) }
-                        case "mixer-available":
+                        case "mixer-available", "error-audio":
                             DispatchQueue.main.async { proxy.scrollTo("soundscape-available-proof", anchor: .top) }
                         default:
                             break

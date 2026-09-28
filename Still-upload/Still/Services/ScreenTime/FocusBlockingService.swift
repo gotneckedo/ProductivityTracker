@@ -107,6 +107,23 @@ final class MockFocusBlockingService: FocusBlockingService {
     }
 }
 
+/// A non-shielding capability boundary for tests and CI review. It lets the
+/// interface show the real "permission needed" branch without importing
+/// FamilyControls, requesting authorization, or claiming that apps are
+/// shielded. Live builds still use `MockFocusBlockingService` until the Apple
+/// entitlement and DeviceActivity extension are ready.
+final class UnavailableFocusBlockingService: FocusBlockingService {
+    let capability: BlockingCapability
+    let isShielding = false
+
+    init(capability: BlockingCapability = .notAuthorized) {
+        self.capability = capability
+    }
+
+    func sessionDidStart(sessionID: UUID, presetID: FocusPresetID, intent: BlockerIntent) {}
+    func sessionDidEnd(sessionID: UUID) {}
+}
+
 // MARK: - FamilyControlsBlockingService
 
 #if canImport(FamilyControls) && canImport(ManagedSettings) && os(iOS)

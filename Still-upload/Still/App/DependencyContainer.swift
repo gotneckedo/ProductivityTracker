@@ -173,11 +173,13 @@ final class DependencyContainer {
         flags: FeatureFlags = .current,
         notifications: LocalNotificationScheduling = RecordingNotificationScheduler(),
         audio: AmbientAudioPlaying = SilentAmbientAudioPlayer(),
+        blocking: FocusBlockingService = MockFocusBlockingService(),
         calendarAdapter: CalendarAdapter = NoCalendarAdapter(),
         googleCalendar: GoogleCalendarAdapter? = nil,
         purchases: PurchaseService? = nil,
         focusCardOffering: FocusCardOffering? = nil,
-        bookLibrary: BookLibrary = EmptyBookLibrary()
+        bookLibrary: BookLibrary = EmptyBookLibrary(),
+        storageNotice: String? = nil
     ) -> DependencyContainer {
         let morningStart = RecordingMorningStartScheduler()
         return DependencyContainer(
@@ -188,7 +190,7 @@ final class DependencyContainer {
             keyValueStore: InMemoryKeyValueStore(),
             notifications: notifications,
             audio: audio,
-            blocking: MockFocusBlockingService(),
+            blocking: blocking,
             liveActivity: NoopLiveActivityUpdater(),
             bookLibrary: bookLibrary,
             calendarAdapter: calendarAdapter,
@@ -202,7 +204,8 @@ final class DependencyContainer {
             purchases: purchases ?? (flags.purchasePreview ? LocalPurchaseService() : NoPurchaseService()),
             focusCardOffering: focusCardOffering ?? (flags.brandedFocusCardPreview
                 ? PlaceholderFocusCardOffering()
-                : NoFocusCardOffering())
+                : NoFocusCardOffering()),
+            storageNotice: storageNotice
         )
     }
 }

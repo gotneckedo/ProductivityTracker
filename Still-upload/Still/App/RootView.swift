@@ -24,6 +24,9 @@ struct RootView: View {
                 OnboardingView()
             }
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            StorageDegradedBanner()
+        }
         .overlay(alignment: .top) {
             NoticeBanner()
         }
@@ -38,6 +41,38 @@ struct RootView: View {
         .fontWeight(requestsBoldLegibility ? .bold : nil)
         .onReceive(NotificationCenter.default.publisher(for: UIAccessibility.boldTextStatusDidChangeNotification)) { _ in
             isBoldTextEnabled = UIAccessibility.isBoldTextEnabled
+        }
+    }
+}
+
+/// Unlike a transient write warning, a storage fallback remains visible while
+/// the app is using memory-only storage. It tells the person exactly what will
+/// happen without blocking the session they can still use in the moment.
+private struct StorageDegradedBanner: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        if let detail = appState.container.storageNotice {
+            HStack(alignment: .top, spacing: StillTheme.Spacing.s) {
+                Image(systemName: "externaldrive.badge.exclamationmark")
+                    .font(StillTypography.callout.weight(.semibold))
+                    .accessibilityHidden(true)
+                Text(detail)
+                    .font(StillTypography.footnote.weight(.medium))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(StillTheme.textPrimary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, StillTheme.Spacing.screen)
+            .padding(.vertical, StillTheme.Spacing.xs)
+            .background(StillTheme.attentionSoft)
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(StillTheme.attention.opacity(0.55))
+                    .frame(height: StillTheme.Stroke.hairline)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Storage unavailable. \(detail)")
         }
     }
 }

@@ -62,6 +62,13 @@ struct FocusCardView: View {
                             }
                         }
 
+                        if !nfcWritingIsAvailable {
+                            QuietNote(
+                                text: "NFC writing isn't available in this build. Copy the Still link into an NFC writing app on a compatible iPhone; no tag is written by Still.",
+                                symbol: "wave.3.right"
+                            )
+                        }
+
                         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
                             SectionHeader(title: "Links and simulator", detail: "Write a link to a tag, or tap Simulate to run the same route here.")
                             ForEach(appState.presets) { preset in
@@ -103,6 +110,14 @@ struct FocusCardView: View {
         .toolbar(.visible, for: .navigationBar)
         .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
         .toolbarBackground(.visible, for: .navigationBar)
+    }
+
+    private var nfcWritingIsAvailable: Bool {
+        #if canImport(CoreNFC) && os(iOS) && STILL_CORENFC
+        CoreNFCTagWriter.isAvailable
+        #else
+        false
+        #endif
     }
 
     private func presetCard(_ preset: FocusPreset) -> some View {

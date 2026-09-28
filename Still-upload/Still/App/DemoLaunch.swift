@@ -13,7 +13,8 @@ import Foundation
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, undo-task, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback, context-previews,
 /// scenes-edit, scenes-locked-core, break-edit, today-routine, history-full, history-empty, history-search, short-read-search, today-refreshed, break-reshuffled, me-preferences,
-/// calendar-settings, get-card, touch-targets, bold-today, contrast-me, contrast-sudoku.
+/// calendar-settings, get-card, touch-targets, bold-today, contrast-me, contrast-sudoku,
+/// error-audio, error-nfc, error-family-controls, error-storage.
 enum DemoLaunch {
     static let argument = "-still-demo"
     static let scrollBottomArgument = "-still-scroll-bottom"
@@ -115,6 +116,8 @@ enum DemoLaunch {
             let state = releaseProofState()
             state.router.go(to: .focusConfiguration)
             return state
+        case "error-audio":
+            return audioUnavailableState()
         case "mixer-top":
             let state = releaseProofState()
             state.router.go(to: .focusConfiguration)
@@ -227,6 +230,12 @@ enum DemoLaunch {
             return state
         case "card":
             return routed(.nfcSetup)
+        case "error-nfc":
+            return routed(.nfcSetup)
+        case "error-family-controls":
+            return familyControlsUnavailableState()
+        case "error-storage":
+            return storageDegradedState()
         case "journal":
             return routed(.journal)
         case "habits":
@@ -301,6 +310,58 @@ enum DemoLaunch {
         PreviewFixtures.populate(container)
         PreviewFixtures.populateDailyLife(container)
         return AppState(container: container)
+    }
+
+    /// CI-only fixture for the same missing-assets state the on-device player
+    /// exposes when no authored loop can be loaded. No audio is synthesized.
+    private static func audioUnavailableState() -> AppState {
+        let clock = ManualClock(screenshotDate(hour: 9, minute: 41))
+        let container = DependencyContainer.inMemory(
+            clock: clock,
+            flags: .current,
+            audio: SilentAmbientAudioPlayer(status: .assetsMissing),
+            purchases: NoPurchaseService()
+        )
+        PreviewFixtures.populate(container)
+        PreviewFixtures.populateDailyLife(container)
+        let state = AppState(container: container)
+        state.router.go(to: .focusConfiguration)
+        return state
+    }
+
+    /// CI-only non-shielding fixture for the production permission boundary.
+    /// It never imports FamilyControls, requests authorization, or shields an
+    /// app; its sole purpose is visual review of the honest unavailable copy.
+    private static func familyControlsUnavailableState() -> AppState {
+        var flags = FeatureFlags.current
+        flags.appBlocking = true
+        let container = DependencyContainer.inMemory(
+            clock: ManualClock(screenshotDate(hour: 9, minute: 41)),
+            flags: flags,
+            blocking: UnavailableFocusBlockingService(),
+            purchases: NoPurchaseService()
+        )
+        PreviewFixtures.populate(container)
+        PreviewFixtures.populateDailyLife(container)
+        let state = AppState(container: container)
+        state.router.go(to: .blockingSetup)
+        return state
+    }
+
+    /// CI-only memory-fallback fixture. The banner is persistent in a real
+    /// fallback and does not pretend entries will survive a relaunch.
+    private static func storageDegradedState() -> AppState {
+        let container = DependencyContainer.inMemory(
+            clock: ManualClock(screenshotDate(hour: 9, minute: 41)),
+            flags: .current,
+            purchases: NoPurchaseService(),
+            storageNotice: "Storage isn't available right now, so this session won't be saved."
+        )
+        PreviewFixtures.populate(container)
+        PreviewFixtures.populateDailyLife(container)
+        let state = AppState(container: container)
+        state.router.go(to: .today)
+        return state
     }
 
     private static func focusRoomState(

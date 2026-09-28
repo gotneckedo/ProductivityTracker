@@ -220,6 +220,13 @@ jobs:
           shoot "bold-today" "proof-bold-text-today"
           shoot "contrast-me" "proof-increased-contrast-me"
           shoot "contrast-sudoku" "proof-increased-contrast-sudoku"
+          # Item 37: each boundary is a real unavailable/fallback state. CI
+          # only injects local no-op services; it never writes a tag, requests
+          # Family Controls permission, shields an app, or disables storage.
+          shoot "error-audio" "proof-error-audio-missing"
+          shoot "error-nfc" "proof-error-nfc-unavailable"
+          shoot "error-family-controls" "proof-error-family-controls"
+          shoot "error-storage" "proof-error-storage-degraded"
           # Item 33: the intentionally incomplete preference fixture verifies
           # that actionable “Not set” values are readable rather than treated
           # as disabled gray text on the glass control group.

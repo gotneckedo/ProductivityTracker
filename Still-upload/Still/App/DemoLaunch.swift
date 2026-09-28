@@ -37,6 +37,12 @@ enum DemoLaunch {
         return arguments[index + 1]
     }
 
+    /// CI-only Dynamic Type fixture. It leaves production governed entirely by
+    /// iOS's accessibility setting.
+    static var forcesAccessibilityTextSize: Bool {
+        requestedScreen?.hasPrefix("ax3-") == true
+    }
+
     /// Used only by screenshot CI to prove the floating tab bar does not cover
     /// the final row of a tab. It has no production effect.
     static func shouldScrollToBottom(_ screen: String) -> Bool {
@@ -74,7 +80,7 @@ enum DemoLaunch {
             return releaseRouted(.me)
         case "onboarding":
             return PreviewSupport.appState(onboarded: false)
-        case "today":
+        case "today", "ax3-today":
             return routed(.today)
         case "today-routine":
             return todayRoutineState()
@@ -113,7 +119,7 @@ enum DemoLaunch {
             return routed(.contextPreviewReview)
         case "home":
             return PreviewSupport.appState(populated: true)
-        case "focus-room":
+        case "focus-room", "ax3-focus":
             // One completed session provides a selected task while the native
             // room targets remain invisible and VoiceOver-labeled, preserving
             // a clean art review surface.
@@ -167,7 +173,7 @@ enum DemoLaunch {
         case "complete":
             // bootstrap() reopens the pending completion screen.
             return PreviewSupport.completedSession().state
-        case "break":
+        case "break", "ax3-break":
             return routed(.breakShelf)
         case "break-edit":
             return breakShelfEditState()
@@ -189,7 +195,7 @@ enum DemoLaunch {
             return routed(.breakActivity(.shortRead, .shelf))
         case "short-read-search":
             return routed(.breakActivity(.shortRead, .shelf))
-        case "me":
+        case "me", "ax3-me":
             return routed(.me)
         case "scenes":
             return routed(.sceneCollection)

@@ -6,6 +6,7 @@ import UIKit
 struct RootView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.accessibilityReduceMotion) private var systemReduceMotion
+    @Environment(\.dynamicTypeSize) private var systemDynamicTypeSize
 
     var body: some View {
         Group {
@@ -20,6 +21,7 @@ struct RootView: View {
         }
         .tint(Color(hex: appState.preferences.appAccentPalette.accentHex))
         .environment(\.accessibilityReduceMotion, systemReduceMotion || DemoLaunch.forcesReduceMotion)
+        .dynamicTypeSize(DemoLaunch.forcesAccessibilityTextSize ? .accessibility3 : systemDynamicTypeSize)
     }
 }
 

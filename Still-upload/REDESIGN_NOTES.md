@@ -58,6 +58,8 @@ Item 20 uses iOS **Reduce Motion** as the production authority. `proof-reduce-mo
 
 **Decision recorded — items 28–30:** History is calendar-led but non-judgmental: dots mean a saved local record, never a streak or a score. The CI default fixture contains 30 completed sessions spread across recent days; the dedicated `history-empty` route remains deliberately unseeded.
 
+**Item 31 implementation, pending CI visual review:** all core type tokens already use relative custom-font styles; the app now has CI-only AX3 routes that inject `.accessibility3` through the same SwiftUI environment iOS uses. The four named screenshots, rather than a source-only audit, will decide acceptance.
+
 ## Master Plan decisions — product direction, not implementation proof
 
 These decisions were supplied by CoCo on 26 September 2026 in response to

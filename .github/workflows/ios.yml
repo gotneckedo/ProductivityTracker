@@ -203,6 +203,10 @@ jobs:
           shoot "history-empty" "proof-history-empty"
           shoot "today-refreshed" "proof-pull-today"
           shoot "break-reshuffled" "proof-pull-break"
+          shoot "ax3-today" "proof-ax3-today"
+          shoot "ax3-focus" "proof-ax3-focus"
+          shoot "ax3-break" "proof-ax3-break"
+          shoot "ax3-me" "proof-ax3-me"
 
           # Truth-pass release proof. This is a Release configuration compiled
           # with only the internal STILL_PROOF navigation condition; FeatureFlags

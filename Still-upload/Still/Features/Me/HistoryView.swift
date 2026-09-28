@@ -133,14 +133,16 @@ struct HistoryView: View {
                 .foregroundStyle(StillTheme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, StillTheme.Spacing.xs)
-                .background(StillTheme.pageBackground.opacity(0.96))
+                .background(StillTheme.background.opacity(0.96))
         }
     }
 
     private var filterBar: some View {
         HStack(spacing: StillTheme.Spacing.xs) {
             ForEach(HistoryFilter.allCases, id: \.self) { option in
-                Button(option.title) { filter = option } label: {
+                Button {
+                    filter = option
+                } label: {
                     Text(option.title)
                         .font(StillTypography.caption.weight(filter == option ? .semibold : .regular))
                         .foregroundStyle(filter == option ? StillTheme.textPrimary : StillTheme.textSecondary)
@@ -153,7 +155,7 @@ struct HistoryView: View {
         }
         .padding(.horizontal, StillTheme.Spacing.screen)
         .padding(.vertical, StillTheme.Spacing.xs)
-        .background(StillTheme.pageBackground.opacity(0.98))
+        .background(StillTheme.background.opacity(0.98))
     }
 
     private var monthCalendar: some View {

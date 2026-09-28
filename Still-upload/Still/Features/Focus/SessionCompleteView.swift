@@ -27,6 +27,14 @@ struct SessionCompleteView: View {
                         taskLine(task)
                     }
 
+                    if FirstRunExperience.offersPersonalization(
+                        completedSessions: appState.completedSessionCount,
+                        goal: appState.preferences.onboardingGoal,
+                        breakAppeal: appState.preferences.breakAppeal
+                    ) {
+                        firstSessionPreferences
+                    }
+
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
                         Text("What's next?")
                             .font(StillTypography.title)
@@ -130,6 +138,41 @@ struct SessionCompleteView: View {
             }
         }
         .padding(.vertical, StillTheme.Spacing.s)
+    }
+
+    /// The preference questions deliberately appear only after a person has
+    /// experienced one real session. Choosing this never blocks the break or
+    /// return actions; Me contains the same editable answers at any time.
+    private var firstSessionPreferences: some View {
+        Button {
+            appState.openPersonalizationAfterFirstSession()
+        } label: {
+            HStack(spacing: StillTheme.Spacing.s) {
+                Image(systemName: "slider.horizontal.3")
+                    .font(StillTypography.title3)
+                    .foregroundStyle(StillDayPhase.dusk.accent)
+                    .frame(width: 38, height: 38)
+                    .background(StillDayPhase.dusk.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Make Still yours — optional")
+                        .font(StillTypography.bodyEmphasis)
+                        .foregroundStyle(StillTheme.textPrimary)
+                    Text("Choose a focus goal, break preference, or look. You can skip it now and change it in Me later.")
+                        .font(StillTypography.footnote)
+                        .foregroundStyle(StillTheme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: StillTheme.Spacing.xs)
+                Image(systemName: "chevron.right")
+                    .foregroundStyle(StillTheme.textSecondary)
+                    .accessibilityHidden(true)
+            }
+            .padding(StillTheme.Spacing.m)
+            .stillGlass(radius: StillTheme.Radius.medium, phase: .dusk)
+        }
+        .buttonStyle(StillRowButtonStyle())
+        .accessibilityHint("Opens optional preferences in Me. You can also skip them.")
     }
 
     private func newUnlock(_ object: RoomObject) -> some View {

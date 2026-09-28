@@ -14,7 +14,8 @@ import Foundation
 /// journal, presets, tasks, undo-task, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback, context-previews,
 /// scenes-edit, scenes-locked-core, break-edit, today-routine, history-full, history-empty, history-search, short-read-search, today-refreshed, break-reshuffled, me-preferences,
 /// calendar-settings, get-card, touch-targets, bold-today, contrast-me, contrast-sudoku,
-/// error-audio, error-nfc, error-family-controls, error-storage.
+/// error-audio, error-nfc, error-family-controls, error-storage, onboarding-starter,
+/// complete-first-run.
 enum DemoLaunch {
     static let argument = "-still-demo"
     static let scrollBottomArgument = "-still-scroll-bottom"
@@ -89,8 +90,10 @@ enum DemoLaunch {
             return releaseRouted(.nfcSetup)
         case "release-me-your-days":
             return releaseRouted(.me)
-        case "onboarding":
+        case "onboarding", "onboarding-privacy", "onboarding-room":
             return PreviewSupport.appState(onboarded: false)
+        case "onboarding-starter":
+            return firstRunStarterState()
         case "today", "ax3-today", "bold-today":
             return routed(.today)
         case "today-routine":
@@ -189,6 +192,8 @@ enum DemoLaunch {
             return activeCatState(elapsed: 24 * 60)
         case "complete":
             // bootstrap() reopens the pending completion screen.
+            return PreviewSupport.completedSession().state
+        case "complete-first-run":
             return PreviewSupport.completedSession().state
         case "break", "ax3-break":
             return routed(.breakShelf)
@@ -389,6 +394,14 @@ enum DemoLaunch {
             clockStart: screenshotDate(hour: hour, minute: 0)
         )
         state.router.go(to: .today)
+        return state
+    }
+
+    /// Mirrors the actual destination after the third and final first-run
+    /// screen: a furnished starter room with the normal one-tap Start control.
+    private static func firstRunStarterState() -> AppState {
+        let state = PreviewSupport.appState(populated: false)
+        state.router.go(to: .focusHome)
         return state
     }
 

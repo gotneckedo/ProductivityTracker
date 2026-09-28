@@ -386,6 +386,15 @@ final class AppState {
         router.go(to: .focusHome)
     }
 
+    /// First-run preferences are optional and become available only after a
+    /// completed session. Clear the completion presentation before visiting Me
+    /// so this is a normal, resumable settings visit—not another setup gate.
+    func openPersonalizationAfterFirstSession() {
+        container.focus.acknowledgeCompletion(returningToFocus: false)
+        reload()
+        router.go(to: .me)
+    }
+
     // MARK: - Break activities
 
     func beginActivity(_ id: BreakActivityID, context: ActivityContext) -> ActivityUsage {

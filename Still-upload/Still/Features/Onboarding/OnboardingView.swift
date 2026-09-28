@@ -1,13 +1,26 @@
 import SwiftUI
 
-/// Privacy first, then three short, optional questions. Each answer only tunes
-/// local defaults and remains individually editable from Me.
+/// A brief privacy-first entry: three screens at most, then the furnished
+/// starter room. Optional preferences wait until a person has actually
+/// completed one session and remain editable individually from Me.
 struct OnboardingView: View {
     @Environment(AppState.self) private var appState
-    @State private var step: OnboardingStep = .privacy
-    @State private var goal: OnboardingGoal?
-    @State private var breakAppeal: BreakAppeal?
-    @State private var palette: AppAccentPalette = .mint
+    @State private var step: OnboardingStep
+
+    init() {
+        #if DEBUG || STILL_PROOF
+        switch DemoLaunch.requestedScreen {
+        case "onboarding-privacy":
+            _step = State(initialValue: .privacy)
+        case "onboarding-room":
+            _step = State(initialValue: .starterRoom)
+        default:
+            _step = State(initialValue: .welcome)
+        }
+        #else
+        _step = State(initialValue: .welcome)
+        #endif
+    }
 
     var body: some View {
         StillScreen {
@@ -38,73 +51,42 @@ struct OnboardingView: View {
     @ViewBuilder
     private var content: some View {
         switch step {
+        case .welcome:
+            WelcomeIntroduction()
         case .privacy:
             PrivacyIntroduction()
-        case .goal:
-            OnboardingQuestionHeader(
-                eyebrow: "A little about you",
-                title: "What would you like help with?",
-                detail: "Choose one, or skip it. You can change this later in Me."
-            )
-            OnboardingChoiceList(options: OnboardingGoal.allCases, selection: $goal)
-        case .breakAppeal:
-            OnboardingQuestionHeader(
-                eyebrow: "Your kind of break",
-                title: "What sounds good after focusing?",
-                detail: "This only decides what starts near the top of your Break shelf."
-            )
-            OnboardingChoiceList(options: BreakAppeal.allCases, selection: $breakAppeal)
-        case .look:
-            OnboardingQuestionHeader(
-                eyebrow: "Make it yours",
-                title: "Pick a look.",
-                detail: "Your accent and Home Screen icon can change together."
-            )
-            PaletteChoiceList(selection: $palette)
+        case .starterRoom:
+            StarterRoomIntroduction()
         }
     }
 
     private var controls: some View {
-        VStack(spacing: StillTheme.Spacing.xs) {
-            Button(step == .look ? "Begin gently" : "Continue") {
-                advance()
-            }
-            .buttonStyle(QuietPrimaryButtonStyle())
-
-            if step != .privacy {
-                Button("Skip this question") {
-                    if step == .look { palette = .mint }
-                    advance()
-                }
-                    .buttonStyle(QuietTextButtonStyle())
-                    .frame(maxWidth: .infinity)
-            }
+        Button(step == .starterRoom ? "Enter your room" : "Continue") {
+            advance()
         }
+        .buttonStyle(QuietPrimaryButtonStyle())
     }
 
     private func advance() {
         if let next = step.next {
             step = next
         } else {
-            appState.completeOnboarding(OnboardingAnswers(
-                goal: goal,
-                breakAppeal: breakAppeal,
-                appAccentPalette: palette
-            ))
+            // Leave every optional preference unset. The post-first-session
+            // invitation owns this choice; Me always offers the editors too.
+            appState.completeOnboarding(OnboardingAnswers())
         }
     }
 }
 
 private enum OnboardingStep: Int, CaseIterable {
+    case welcome
     case privacy
-    case goal
-    case breakAppeal
-    case look
+    case starterRoom
 
     var next: OnboardingStep? { OnboardingStep(rawValue: rawValue + 1) }
 }
 
-private struct PrivacyIntroduction: View {
+private struct WelcomeIntroduction: View {
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
             RoomHeroView(sceneName: "Your room", plantStage: .sprout)
@@ -124,17 +106,58 @@ private struct PrivacyIntroduction: View {
                     .foregroundStyle(StillTheme.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
-                Text("Processed on this device. No account. No servers.")
+                Text("A quiet place to begin one thing at a time.")
                     .font(StillTypography.callout)
                     .foregroundStyle(StillTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .stillEntrance(delay: 0.1)
+        }
+    }
+}
 
+private struct PrivacyIntroduction: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+            OnboardingQuestionHeader(
+                eyebrow: "Private by default",
+                title: "Your focus stays with you.",
+                detail: "Still works on this device. There is no account, server, or shared activity feed."
+            )
             QuietNote(
-                text: "Your setup answers, sessions, tasks, notes, and activity history stay on this device in this version.",
+                text: "Sessions, tasks, notes, and activity history stay on this device in this version.",
                 symbol: "lock"
             )
+        }
+    }
+}
+
+private struct StarterRoomIntroduction: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+            OnboardingQuestionHeader(
+                eyebrow: "Your starter room",
+                title: "Everything is ready.",
+                detail: "Your furnished Rainy Bedroom and a 25-minute focus session are waiting. You can adjust the details later."
+            )
+            GlassControlGroup {
+                HStack(spacing: StillTheme.Spacing.s) {
+                    Image(systemName: "lamp.desk")
+                        .font(StillTypography.title2)
+                        .foregroundStyle(StillTheme.accent)
+                        .frame(width: 42, height: 42)
+                        .background(StillTheme.accentSoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Rainy Bedroom")
+                            .font(StillTypography.bodyEmphasis)
+                            .foregroundStyle(StillTheme.textPrimary)
+                        Text("Start focus in one tap when you arrive.")
+                            .font(StillTypography.footnote)
+                            .foregroundStyle(StillTheme.textSecondary)
+                    }
+                }
+            }
         }
     }
 }
@@ -160,12 +183,11 @@ private struct OnboardingQuestionHeader: View {
                 .font(StillTypography.callout)
                 .foregroundStyle(StillTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            DataNotSharedChip()
         }
     }
 }
 
-private struct DataNotSharedChip: View {
+struct DataNotSharedChip: View {
     var body: some View {
         Label("Data not shared", systemImage: "lock.fill")
             .font(StillTypography.caption)
@@ -186,26 +208,7 @@ private protocol OnboardingChoice: Hashable {
 extension OnboardingGoal: OnboardingChoice {}
 extension BreakAppeal: OnboardingChoice {}
 
-private struct OnboardingChoiceList<Option: OnboardingChoice>: View {
-    let options: [Option]
-    @Binding var selection: Option?
-
-    var body: some View {
-        VStack(spacing: StillTheme.Spacing.s) {
-            ForEach(options, id: \.self) { option in
-                OnboardingChoiceRow(
-                    title: option.title,
-                    detail: option.detail,
-                    isSelected: selection == option
-                ) {
-                    selection = selection == option ? nil : option
-                }
-            }
-        }
-    }
-}
-
-private struct OnboardingChoiceRow: View {
+struct OnboardingChoiceRow: View {
     let title: String
     let detail: String
     let isSelected: Bool
@@ -246,7 +249,7 @@ private struct OnboardingChoiceRow: View {
     }
 }
 
-private struct PaletteChoiceList: View {
+struct PaletteChoiceList: View {
     @Binding var selection: AppAccentPalette
 
     var body: some View {

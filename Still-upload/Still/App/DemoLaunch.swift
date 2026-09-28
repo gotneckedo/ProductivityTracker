@@ -12,7 +12,7 @@ import Foundation
 /// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, active-final-minute, complete, break, sudoku, sudoku-invalid, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, undo-task, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback, context-previews,
-/// scenes-edit, break-edit, today-routine, history-full, history-empty, history-search, short-read-search, today-refreshed, break-reshuffled, me-preferences,
+/// scenes-edit, scenes-locked-core, break-edit, today-routine, history-full, history-empty, history-search, short-read-search, today-refreshed, break-reshuffled, me-preferences,
 /// calendar-settings, get-card.
 enum DemoLaunch {
     static let argument = "-still-demo"
@@ -201,6 +201,8 @@ enum DemoLaunch {
             return routed(.me)
         case "scenes":
             return routed(.sceneCollection)
+        case "scenes-locked-core":
+            return lockedCoreScenesState()
         case "scenes-edit":
             return sceneEditState()
         case "scenes-all":
@@ -350,6 +352,16 @@ enum DemoLaunch {
         let state = PreviewSupport.appState(populated: true, completedSessions: 30, stillPlus: true)
         state.setSceneOrder([.trainWindow, .rainyBedroom, .libraryLight, .nightCity, .autumnWindow, .snowDay, .springRain])
         state.setDefaultScene(.trainWindow)
+        state.router.go(to: .sceneCollection)
+        return state
+    }
+
+    /// Uses the same local first-run progression state as an actual person with
+    /// no completed sessions. The capture is intentionally not an entitlement
+    /// stand-in: Rainy Bedroom remains available while the earned core rooms
+    /// visibly communicate their unlock requirement.
+    private static func lockedCoreScenesState() -> AppState {
+        let state = PreviewSupport.appState(populated: false)
         state.router.go(to: .sceneCollection)
         return state
     }

@@ -180,7 +180,11 @@ jobs:
           shoot_bottom "today" "proof-today-reflection-link"
           shoot "read" "proof-short-read-top"
           shoot_bottom "read" "proof-short-read-bottom"
-          shoot "scenes" "proof-scenes-locked-core"
+          # Item 33: this route seeds no completed sessions, so Library, Train,
+          # and City are genuinely locked earned rooms rather than a populated
+          # scene collection that happens to include the word “locked” in its
+          # historical proof filename.
+          shoot "scenes-locked-core" "proof-scenes-locked-core"
           shoot "mixer-available" "proof-ambient-available"
           shoot "mixer" "proof-ambient-unavailable"
           # Block C static evidence. Motion and haptics are recorded in the

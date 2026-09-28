@@ -62,7 +62,7 @@ Item 20 uses iOS **Reduce Motion** as the production authority. `proof-reduce-mo
 
 **Adjacent History visual recheck:** the same reviewed artifact includes `proof-history-full.png`, `proof-history-empty.png`, and `proof-search-history.png`. The seeded local calendar/list, empty state, and search state retain phase-correct readable status/navigation chrome; these captures do not replace the required full-gallery run for the sprint block.
 
-**Item 32 partial implementation:** the timer is no longer marked as continuously updating for VoiceOver; it announces its value when focused. Room objects, cat, and Sudoku controls have explicit labels and hints. The exhaustive custom-control audit is still pending and is not claimed complete.
+**Item 32 — partial / deferred:** the timer is no longer marked as continuously updating for VoiceOver; it announces its value when focused. Room objects, cat, and Sudoku controls have explicit labels and hints. An exhaustive VoiceOver audit cannot be credibly closed from this repository’s static screenshot runner: it has no UI-test target or accessibility-tree assertion harness, and a screenshot cannot verify spoken output, focus order, or a custom control’s actual trait. The full audit is deferred to an Xcode Accessibility Inspector/UI-test or physical-iPhone pass. This sprint therefore makes no blanket “every custom control” claim.
 
 ## Master Plan decisions — product direction, not implementation proof
 

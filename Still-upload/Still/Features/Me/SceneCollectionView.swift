@@ -279,10 +279,15 @@ private struct SceneCard: View {
             if isUnlocked {
                 Button(action: onSelect) { cardContent }
                     .buttonStyle(.plain)
-            } else {
-                Button(action: { onLocked?() }) { cardContent }
+            } else if let onLocked {
+                Button(action: onLocked) { cardContent }
                     .buttonStyle(.plain)
-                    .disabled(onLocked == nil)
+            } else {
+                // An earned room with no available action is intentionally a
+                // static card, not a disabled Button. SwiftUI's disabled
+                // treatment lowers the entire card's opacity—including the
+                // “Opens after…” requirement—below readable contrast.
+                cardContent
             }
         }
         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)

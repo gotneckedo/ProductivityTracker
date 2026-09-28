@@ -143,7 +143,7 @@ private struct StarterRoomIntroduction: View {
             GlassControlGroup {
                 HStack(spacing: StillTheme.Spacing.s) {
                     Image(systemName: "lamp.desk")
-                        .font(StillTypography.title2)
+                        .font(StillTypography.title3)
                         .foregroundStyle(StillTheme.accent)
                         .frame(width: 42, height: 42)
                         .background(StillTheme.accentSoft, in: RoundedRectangle(cornerRadius: 12, style: .continuous))

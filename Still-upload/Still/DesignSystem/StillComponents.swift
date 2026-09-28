@@ -323,7 +323,7 @@ private struct StillPressResponse: ViewModifier {
     }
 }
 
-private extension View {
+extension View {
     func stillPressResponse(_ isPressed: Bool, feedback: InteractionFeedbackKind? = .rowPressed) -> some View {
         modifier(StillPressResponse(isPressed: isPressed, feedback: feedback))
     }

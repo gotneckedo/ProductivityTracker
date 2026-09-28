@@ -127,10 +127,10 @@ struct ActiveFocusView: View {
                                 time: timeText(snapshot),
                                 caption: caption(snapshot),
                                 progress: snapshot.phaseProgress,
-                                isFinalMinute: snapshot.phaseKind == .focus && (snapshot.remainingInPhase ?? .infinity) <= 60,
                                 isPaused: snapshot.isPaused,
                                 accessibilityText: spokenState(snapshot),
-                                surface: .scene
+                                surface: .scene,
+                                isFinalMinute: snapshot.phaseKind == .focus && (snapshot.remainingInPhase ?? .infinity) <= 60
                             )
                             .padding(.vertical, StillTheme.Spacing.xs)
 

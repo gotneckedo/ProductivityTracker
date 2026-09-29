@@ -5,6 +5,7 @@ import SwiftUI
 /// becoming a small decorative header.
 struct FocusHomeView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
 
     /// Room arrows normally stay out of the art-first home composition; the
     /// dedicated CI route exposes the same 44pt controls for visual review.
@@ -16,6 +17,12 @@ struct FocusHomeView: View {
         #else
         false
         #endif
+    }
+
+    /// The room and its screen use the same injected clock. A status-bar
+    /// screenshot fixture can therefore never imply a different time phase.
+    private var roomPhase: StillDayPhase {
+        StillDayPhase.automatic(date: appState.container.clock.now, colorScheme: colorScheme)
     }
 
     var body: some View {
@@ -34,6 +41,7 @@ struct FocusHomeView: View {
                                 catName: appState.catName,
                                 catState: catState,
                                 initialCatReaction: initialCatReaction,
+                                phase: roomPhase,
                                 plantStage: appState.plantStage,
                                 bookCount: 2 + appState.books.count,
                                 doodle: appState.doodles.max { $0.updatedAt < $1.updatedAt }?.doodle,

@@ -8,7 +8,8 @@ import Foundation
 ///   xcrun simctl launch booted com.cocomedia.still -still-demo home
 ///
 /// Screens: onboarding, today, today-light, setup, home, focus-room, room-library, room-train, room-city,
-/// room-autumn, room-snow, room-spring, room-sleep, room-collectibles, sprite-contact-sheet,
+/// room-autumn, room-snow, room-spring, room-sleep, room-collectibles, room-phase-morning,
+/// room-phase-afternoon, room-phase-dusk, room-phase-night, sprite-contact-sheet,
 /// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, active-final-minute, complete, break, sudoku, sudoku-invalid, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, undo-task, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback, context-previews,
@@ -163,6 +164,14 @@ enum DemoLaunch {
             // this direct review route verifies its bundled art without implying
             // an armable production alarm.
             return routed(.spriteContactSheet)
+        case "room-phase-morning":
+            return focusRoomState(hour: 9)
+        case "room-phase-afternoon":
+            return focusRoomState(hour: 14)
+        case "room-phase-dusk":
+            return focusRoomState(hour: 18)
+        case "room-phase-night":
+            return focusRoomState(hour: 22)
         case "room-collectibles":
             return roomWithPlacedCollectibles()
         case "active-autumn":

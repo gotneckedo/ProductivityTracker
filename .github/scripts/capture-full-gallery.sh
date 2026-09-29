@@ -81,6 +81,14 @@ shoot "onboarding-room" "proof-first-run-room"
 shoot "onboarding-starter" "proof-first-run-starter"
 shoot "complete-first-run" "proof-first-run-personalize"
 
+# Item 39: one starter room at four clock-derived phases. These named frames
+# verify distinct light, window treatment, and a small environmental detail
+# without adding room-art work to the compact push-time matrix.
+shoot "room-phase-morning" "proof-room-phase-morning"
+shoot "room-phase-afternoon" "proof-room-phase-afternoon"
+shoot "room-phase-dusk" "proof-room-phase-dusk"
+shoot "room-phase-night" "proof-room-phase-night"
+
 for screen in break journal me scenes; do
   shoot_midpoint "$screen" "$(printf '%02d' "$n")-$screen-midpoint"
   n=$((n + 1))

@@ -44,6 +44,10 @@ struct RoomHeroView: View {
         phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
     }
 
+    private var ambientState: RoomAmbientState {
+        RoomAmbientState(dayPhaseName: resolvedPhase.rawValue)
+    }
+
     var body: some View {
         ZStack {
             Ellipse()
@@ -131,7 +135,7 @@ struct RoomHeroView: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(sceneName) room. A warm, original isometric study room with a desk, window, books, and growing plant.")
+        .accessibilityLabel("\(sceneName) room. A warm, original isometric study room with a desk, window, books, and growing plant. \(ambientState.accessibilityDescription)")
     }
 
     private var catAccessibilityLabel: String {
@@ -410,6 +414,8 @@ private struct SpriteFirstRoomSurface: View {
                         .interpolation(.none)
                         .scaledToFit()
                         .opacity(dimmed ? 0.66 : 1)
+                    RoomAmbientOverlay(sceneID: sceneID, phase: phase, dimmed: dimmed)
+                        .allowsHitTesting(false)
                     SpriteRoomObjectOverlay(sceneID: sceneID, placements: placedObjects)
                 }
             } else if reduceMotion {
@@ -422,6 +428,103 @@ private struct SpriteFirstRoomSurface: View {
                                plantStage: plantStage, bookCount: bookCount, doodle: doodle, placedObjects: placedObjects)
                 }
             }
+        }
+    }
+}
+
+/// A small phase-specific lighting pass keeps the supplied room bases alive
+/// without replacing their authored composition. The base remains the same
+/// original asset; this layer changes only light, the window, and one local
+/// environmental detail for the current on-device clock phase.
+private struct RoomAmbientOverlay: View {
+    let sceneID: SceneID
+    let phase: StillDayPhase
+    let dimmed: Bool
+
+    private var state: RoomAmbientState { RoomAmbientState(dayPhaseName: phase.rawValue) }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let window = SpriteRoomLayout.forScene(sceneID).hotspots[.window] ?? RoomHotspot.window.normalizedPosition
+            let windowPoint = CGPoint(x: proxy.size.width * window.x, y: proxy.size.height * window.y)
+
+            ZStack {
+                LinearGradient(
+                    colors: [tint.opacity(dimmed ? 0.34 : 1), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                RadialGradient(
+                    colors: [windowLight.opacity(dimmed ? 0.16 : 0.42), .clear],
+                    center: .center,
+                    startRadius: 1,
+                    endRadius: max(proxy.size.width * 0.26, 40)
+                )
+                .frame(width: proxy.size.width * 0.54, height: proxy.size.height * 0.42)
+                .position(windowPoint)
+
+                phaseDetail(in: proxy.size, windowPoint: windowPoint)
+            }
+            .clipped()
+        }
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private func phaseDetail(in size: CGSize, windowPoint: CGPoint) -> some View {
+        switch state {
+        case .morning:
+            ForEach([CGFloat(-0.07), 0.02, 0.10], id: \.self) { offset in
+                Circle()
+                    .fill(Color.white.opacity(dimmed ? 0.12 : 0.42))
+                    .frame(width: 3, height: 3)
+                    .position(x: windowPoint.x + size.width * offset, y: windowPoint.y + size.height * (0.03 - offset / 2))
+            }
+        case .afternoon:
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(Color.white.opacity(dimmed ? 0.05 : 0.18))
+                .frame(width: size.width * 0.29, height: max(4, size.height * 0.018))
+                .rotationEffect(.degrees(-22))
+                .position(x: windowPoint.x + size.width * 0.09, y: windowPoint.y + size.height * 0.11)
+        case .dusk:
+            Circle()
+                .fill(Color(hex: 0xFFB275).opacity(dimmed ? 0.14 : 0.52))
+                .frame(width: max(8, size.width * 0.052), height: max(8, size.width * 0.052))
+                .position(x: windowPoint.x + size.width * 0.075, y: windowPoint.y - size.height * 0.06)
+        case .night:
+            let points = [CGPoint(x: -0.09, y: -0.07), CGPoint(x: 0.04, y: -0.10), CGPoint(x: 0.11, y: 0.02)]
+            ForEach(Array(points.enumerated()), id: \.offset) { _, point in
+                Circle()
+                    .fill(Color(hex: 0xDCEBFF).opacity(dimmed ? 0.16 : 0.72))
+                    .frame(width: 3, height: 3)
+                    .position(x: windowPoint.x + size.width * point.x, y: windowPoint.y + size.height * point.y)
+            }
+        case .focus:
+            Capsule()
+                .fill(Color(hex: 0xFFC478).opacity(dimmed ? 0.10 : 0.28))
+                .frame(width: size.width * 0.20, height: max(3, size.height * 0.014))
+                .position(x: windowPoint.x + size.width * 0.06, y: windowPoint.y + size.height * 0.14)
+        }
+    }
+
+    private var tint: Color {
+        switch state {
+        case .morning: return Color(hex: 0xFFE0A8).opacity(0.18)
+        case .afternoon: return Color(hex: 0xF5F0BA).opacity(0.13)
+        case .dusk: return Color(hex: 0xA65A83).opacity(0.17)
+        case .night: return Color(hex: 0x13234B).opacity(0.33)
+        case .focus: return Color(hex: 0x2D1E4A).opacity(0.30)
+        }
+    }
+
+    private var windowLight: Color {
+        switch state {
+        case .morning: return Color(hex: 0xFFE6AB)
+        case .afternoon: return Color(hex: 0xFFF7D2)
+        case .dusk: return Color(hex: 0xFFAB8C)
+        case .night: return Color(hex: 0x8CB9FF)
+        case .focus: return Color(hex: 0xFFB35E)
         }
     }
 }

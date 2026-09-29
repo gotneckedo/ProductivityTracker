@@ -17,6 +17,15 @@ struct SessionCompleteView: View {
                 VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                     completionHero(session: session)
                     transitionRitual
+
+                    if FirstRunExperience.offersPersonalization(
+                        completedSessions: appState.completedSessionCount,
+                        goal: appState.preferences.onboardingGoal,
+                        breakAppeal: appState.preferences.breakAppeal
+                    ) {
+                        firstSessionPreferences
+                    }
+
                     metrics(session: session)
 
                     if let object = appState.newlyUnlockedRoomObjects.first {
@@ -25,14 +34,6 @@ struct SessionCompleteView: View {
 
                     if let task = appState.task(session?.taskID) {
                         taskLine(task)
-                    }
-
-                    if FirstRunExperience.offersPersonalization(
-                        completedSessions: appState.completedSessionCount,
-                        goal: appState.preferences.onboardingGoal,
-                        breakAppeal: appState.preferences.breakAppeal
-                    ) {
-                        firstSessionPreferences
                     }
 
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {

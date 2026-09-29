@@ -7,8 +7,8 @@ import XCTest
 
 final class CapabilityBoundaryTests: XCTestCase {
     func testMissingAudioCopyNamesTheUnavailableCapabilityWithoutClaimingPlayback() {
-        XCTAssertTrue(AmbientAudioCopy.assetsMissing.lowercased().contains("sound files"))
-        XCTAssertFalse(AmbientAudioCopy.assetsMissing.lowercased().contains("playing"))
+        XCTAssertTrue(AmbientAudioCopy.assetsMissing.lowercased().contains("no ambient audio files"))
+        XCTAssertTrue(AmbientAudioCopy.assetsMissing.lowercased().contains("stays silent"))
         XCTAssertTrue(AmbientAudioCopy.unavailable.lowercased().contains("isn't available"))
     }
 

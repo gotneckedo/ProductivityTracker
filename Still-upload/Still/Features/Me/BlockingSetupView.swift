@@ -17,16 +17,20 @@ struct BlockingSetupView: View {
                 } else {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                         header
-                        BlockingPreviewDiagram()
-                        content
-                        BlockingScheduleSection()
-                        Button("End blocking now") { isConfirmingEnd = true }
-                            .buttonStyle(QuietSecondaryButtonStyle(foreground: StillTheme.attention))
-                            .frame(maxWidth: .infinity)
-                        Text("This button always works. It does not end a focus timer.")
-                            .font(StillTypography.caption)
-                            .foregroundStyle(StillTheme.textTertiary)
-                            .frame(maxWidth: .infinity, alignment: .center)
+                        if appState.blockingCapability == .notAuthorized {
+                            unauthorizedBoundary
+                        } else {
+                            BlockingPreviewDiagram()
+                            content
+                            BlockingScheduleSection()
+                            Button("End blocking now") { isConfirmingEnd = true }
+                                .buttonStyle(QuietSecondaryButtonStyle(foreground: StillTheme.attention))
+                                .frame(maxWidth: .infinity)
+                            Text("This button always works. It does not end a focus timer.")
+                                .font(StillTypography.caption)
+                                .foregroundStyle(StillTheme.textTertiary)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
                     }
                     .padding(.horizontal, StillTheme.Spacing.screen)
                     .padding(.vertical, StillTheme.Spacing.m)
@@ -112,6 +116,23 @@ struct BlockingSetupView: View {
                     .font(StillTypography.bodyEmphasis)
                     .foregroundStyle(StillTheme.textPrimary)
                 Text(BlockingCopy.detail(for: appState.blockingCapability))
+                    .font(StillTypography.footnote)
+                    .foregroundStyle(StillTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private var unauthorizedBoundary: some View {
+        StillCard {
+            VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
+                Label("Preview", systemImage: "eye")
+                    .font(StillTypography.caption.weight(.semibold))
+                    .foregroundStyle(StillTheme.warm)
+                Text("Screen Time permission needed")
+                    .font(StillTypography.bodyEmphasis)
+                    .foregroundStyle(StillTheme.textPrimary)
+                Text("Screen Time access has not been granted. Still will not shield apps or start a blocking schedule in this state. Focus and Break remain available normally.")
                     .font(StillTypography.footnote)
                     .foregroundStyle(StillTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

@@ -43,6 +43,13 @@ struct FocusCardView: View {
                                 .foregroundStyle(StillTheme.textSecondary)
                         }
 
+                        if !nfcWritingIsAvailable {
+                            QuietNote(
+                                text: "NFC writing isn't available in this build. Copy the Still link into an NFC writing app on a compatible iPhone; no tag is written by Still.",
+                                symbol: "wave.3.right"
+                            )
+                        }
+
                         StillInsetList(padding: StillTheme.Spacing.s) {
                             ForEach(Array(FocusCardGuide.steps.enumerated()), id: \.offset) { entry in
                                 HStack(alignment: .firstTextBaseline, spacing: StillTheme.Spacing.s) {
@@ -60,13 +67,6 @@ struct FocusCardView: View {
                                     InsetRowDivider(leading: 32)
                                 }
                             }
-                        }
-
-                        if !nfcWritingIsAvailable {
-                            QuietNote(
-                                text: "NFC writing isn't available in this build. Copy the Still link into an NFC writing app on a compatible iPhone; no tag is written by Still.",
-                                symbol: "wave.3.right"
-                            )
                         }
 
                         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {

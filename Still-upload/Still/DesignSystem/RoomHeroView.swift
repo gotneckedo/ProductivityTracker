@@ -480,7 +480,7 @@ private struct RoomHotspotContextPreview: View {
         }
         .frame(width: 220, alignment: .leading)
         .padding(StillTheme.Spacing.m)
-        .background(StillTheme.surface, in: RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous))
+        .stillGlass(radius: StillTheme.Radius.large)
     }
 }
 

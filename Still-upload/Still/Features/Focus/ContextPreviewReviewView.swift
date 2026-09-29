@@ -6,6 +6,7 @@ import SwiftUI
 struct ContextPreviewReviewView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.colorScheme) private var colorScheme
+    @State private var scrolledToProofBottom = false
 
     private let columns = [
         GridItem(.flexible(), spacing: StillTheme.Spacing.s),
@@ -28,29 +29,47 @@ struct ContextPreviewReviewView: View {
         )
     }
 
+    private var shouldCaptureProofBottom: Bool {
+        #if DEBUG || STILL_PROOF
+        DemoLaunch.shouldScrollToBottom("context-previews")
+        #else
+        false
+        #endif
+    }
+
     var body: some View {
         StillScreen {
-            ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
-                    VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
-                        Text("Room long-press previews")
-                            .font(StillTypography.display)
-                            .foregroundStyle(StillTheme.textPrimary)
-                        Text("Review-only: these are the same local facts shown when an object in the Focus room is held.")
-                            .font(StillTypography.footnote)
-                            .foregroundStyle(StillTheme.textSecondary)
-                    }
-
-                    LazyVGrid(columns: columns, spacing: StillTheme.Spacing.s) {
-                        ForEach(RoomSecondLayerTarget.allCases) { target in
-                            RoomSecondLayerReviewTile(fact: roomSnapshot.fact(for: target))
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+                        VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
+                            Text("Room long-press previews")
+                                .font(StillTypography.display)
+                                .foregroundStyle(StillTheme.textPrimary)
+                            Text("Review-only: these are the same local facts shown when an object in the Focus room is held.")
+                                .font(StillTypography.footnote)
+                                .foregroundStyle(StillTheme.textSecondary)
                         }
+
+                        LazyVGrid(columns: columns, spacing: StillTheme.Spacing.s) {
+                            ForEach(RoomSecondLayerTarget.allCases) { target in
+                                RoomSecondLayerReviewTile(fact: roomSnapshot.fact(for: target))
+                            }
+                        }
+                        Color.clear.frame(height: 1).id("roomSecondLayerProofEnd")
+                    }
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.vertical, StillTheme.Spacing.m)
+                }
+                .stillScrollableViewport()
+                .onAppear {
+                    guard shouldCaptureProofBottom, !scrolledToProofBottom else { return }
+                    scrolledToProofBottom = true
+                    DispatchQueue.main.async {
+                        proxy.scrollTo("roomSecondLayerProofEnd", anchor: .bottom)
                     }
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.vertical, StillTheme.Spacing.m)
             }
-            .stillScrollableViewport()
         }
         .navigationTitle("Interaction previews")
         .navigationBarTitleDisplayMode(.inline)
@@ -85,8 +104,7 @@ private struct RoomSecondLayerReviewTile: View {
         }
         .frame(maxWidth: .infinity, minHeight: 138, alignment: .topLeading)
         .padding(StillTheme.Spacing.s)
-        .background(StillTheme.surface, in: RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous).strokeBorder(StillTheme.border, lineWidth: StillTheme.Stroke.hairline))
+        .stillGlass(radius: StillTheme.Radius.medium)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(fact.accessibilityDescription)
     }

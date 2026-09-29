@@ -42,6 +42,8 @@ struct RoomHeroView: View {
     @State private var roomTargetZoom: CGFloat = 1
     @State private var catTapTracker = CatTapTracker()
     @State private var catReaction: CatReaction = .none
+    @State private var catArrivalProgress: CGFloat = 1
+    @State private var catExplorationProgress: CGFloat = 1
 
     private var resolvedPhase: StillDayPhase {
         phase ?? StillDayPhase.automatic(colorScheme: colorScheme)
@@ -133,10 +135,14 @@ struct RoomHeroView: View {
             if initialCatReaction != .none {
                 catReaction = initialCatReaction
             }
+            startCatTravel(for: catState)
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 4.2).repeatForever(autoreverses: true)) {
                 isFloating = true
             }
+        }
+        .onChange(of: catState) { _, state in
+            startCatTravel(for: state)
         }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("\(sceneName) room. A warm, original isometric study room with a desk, window, books, and growing plant. \(ambientState.accessibilityDescription) \(sessionState.accessibilityDescription)")
@@ -160,7 +166,35 @@ struct RoomHeroView: View {
     }
 
     private func catPosition(in size: CGSize) -> CGPoint {
-        SpriteRoomLayout.forScene(sceneID).catPosition(for: catState, in: size)
+        SpriteRoomLayout.forScene(sceneID).catPosition(
+            for: catState,
+            in: size,
+            arrivalProgress: catArrivalProgress,
+            explorationProgress: catExplorationProgress
+        )
+    }
+
+    private func startCatTravel(for state: CatRoomState) {
+        guard !reduceMotion else {
+            catArrivalProgress = 1
+            catExplorationProgress = 1
+            return
+        }
+        switch state {
+        case .walkingToDesk:
+            catArrivalProgress = 0
+            withAnimation(.easeInOut(duration: CatCompanion.arrivalDuration)) {
+                catArrivalProgress = 1
+            }
+        case .exploring:
+            catExplorationProgress = 0
+            withAnimation(.easeInOut(duration: CatCompanion.arrivalDuration)) {
+                catExplorationProgress = 1
+            }
+        default:
+            catArrivalProgress = 1
+            catExplorationProgress = 1
+        }
     }
 
     private func reactToCat() {
@@ -251,14 +285,31 @@ private struct SpriteRoomLayout {
         [.desk: desk, .shelf: shelf, .calendar: calendar, .plant: plant, .window: window]
     }
 
-    func catPosition(for state: CatRoomState, in size: CGSize) -> CGPoint {
+    func catPosition(
+        for state: CatRoomState,
+        in size: CGSize,
+        arrivalProgress: CGFloat = 1,
+        explorationProgress: CGFloat = 1
+    ) -> CGPoint {
         let normalized: CGPoint
         switch state {
-        case .focus, .sleeping, .complete: normalized = focusCat
+        case .walkingToDesk:
+            normalized = interpolate(from: idleCat, to: focusCat, progress: arrivalProgress)
+        case .exploring:
+            normalized = interpolate(from: idleCat, to: breakCat, progress: explorationProgress)
+        case .focus, .sleeping, .finalMinute, .complete: normalized = focusCat
         case .breakTime: normalized = breakCat
-        case .idle, .morning: normalized = idleCat
+        case .idle, .morning, .nightSleeping: normalized = idleCat
         }
         return CGPoint(x: size.width * normalized.x, y: size.height * normalized.y)
+    }
+
+    private func interpolate(from start: CGPoint, to end: CGPoint, progress: CGFloat) -> CGPoint {
+        let amount = min(max(progress, 0), 1)
+        return CGPoint(
+            x: start.x + (end.x - start.x) * amount,
+            y: start.y + (end.y - start.y) * amount
+        )
     }
 }
 

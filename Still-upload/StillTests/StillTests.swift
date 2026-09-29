@@ -1755,10 +1755,26 @@ final class CatCompanionTests: XCTestCase {
     func testStatePrioritizesCompletionThenBreakThenFocusSleep() {
         XCTAssertEqual(CatCompanion.state(isCompletion: true, isFocusRunning: true, isBreakPhase: true, focusedSeconds: 900, hour: 9), .complete)
         XCTAssertEqual(CatCompanion.state(isBreakPhase: true, hour: 14), .breakTime)
+        XCTAssertEqual(CatCompanion.state(isFocusRunning: true, focusedSeconds: 0, hour: 14), .walkingToDesk)
         XCTAssertEqual(CatCompanion.state(isFocusRunning: true, focusedSeconds: 9 * 60 + 59, hour: 14), .focus)
         XCTAssertEqual(CatCompanion.state(isFocusRunning: true, focusedSeconds: 10 * 60, hour: 14), .sleeping)
         XCTAssertEqual(CatCompanion.state(hour: 9), .morning)
         XCTAssertEqual(CatCompanion.state(hour: 14), .idle)
+    }
+
+    func testStateIncludesFinalMinuteNightAndAmbientExplorationWithoutCareMechanics() {
+        XCTAssertEqual(CatCompanion.state(isFocusRunning: true, focusedSeconds: 12 * 60, remainingFocusSeconds: 120, hour: 14), .finalMinute)
+        XCTAssertEqual(CatCompanion.state(hour: 22), .nightSleeping)
+        XCTAssertEqual(CatCompanion.state(isReturningAfterLongAway: true, hour: 14), .exploring)
+        XCTAssertEqual(CatCompanion.state(isChangingRoom: true, hour: 14), .exploring)
+        XCTAssertEqual(CatCompanion.animation(for: .walkingToDesk).poses.first, .walk)
+        XCTAssertEqual(CatCompanion.animation(for: .finalMinute).poses.first, .stretch)
+    }
+
+    func testAwayDetectionUsesOnlyTheFourHourPresentationThreshold() {
+        XCTAssertFalse(CatCompanion.wasAway(since: nil, now: referenceDate))
+        XCTAssertFalse(CatCompanion.wasAway(since: referenceDate.addingTimeInterval(-(4 * 60 * 60 - 1)), now: referenceDate))
+        XCTAssertTrue(CatCompanion.wasAway(since: referenceDate.addingTimeInterval(-4 * 60 * 60), now: referenceDate))
     }
 
     func testStateAnimationUsesOnlyOriginalSixSheetPoses() {

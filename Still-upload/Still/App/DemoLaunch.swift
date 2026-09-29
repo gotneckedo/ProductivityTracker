@@ -11,7 +11,7 @@ import Foundation
 /// room-autumn, room-snow, room-spring, room-sleep, room-collectibles, room-phase-morning,
 /// room-phase-afternoon, room-phase-dusk, room-phase-night, room-session-idle,
 /// room-session-focus, room-session-break, room-session-finished, sprite-contact-sheet,
-/// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, active-final-minute, complete, break, sudoku, sudoku-invalid, wordsearch,
+/// cat-morning, cat-away, cat-room-change, cat-night, cat-reaction, cat-focus, cat-asleep, cat-final-minute, cat-complete, calm, active, active-final-minute, complete, break, sudoku, sudoku-invalid, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, undo-task, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback, context-previews,
 /// scenes-edit, scenes-locked-core, break-edit, today-routine, history-full, history-empty, history-search, short-read-search, today-refreshed, break-reshuffled, me-preferences,
@@ -187,12 +187,18 @@ enum DemoLaunch {
             return activeEntitledRoomState()
         case "cat-morning":
             return focusRoomState(hour: 9)
+        case "cat-away", "cat-room-change":
+            return focusRoomState(hour: 14)
+        case "cat-night":
+            return focusRoomState(hour: 22)
         case "cat-reaction":
             return focusRoomState(hour: 14)
         case "cat-focus":
             return activeCatState(elapsed: 4 * 60)
         case "cat-asleep":
             return activeCatState(elapsed: 12 * 60)
+        case "cat-final-minute":
+            return activeCatState(elapsed: 24 * 60)
         case "cat-complete":
             let completed = PreviewSupport.completedSession()
             completed.state.setCatName("Mochi")

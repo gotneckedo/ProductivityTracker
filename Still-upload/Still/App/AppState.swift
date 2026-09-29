@@ -43,6 +43,13 @@ final class AppState {
     private(set) var calendarAccess: CalendarAccess = .unavailable
     /// Mute toggled on the active screen. Transient: the preset mix is unchanged.
     private(set) var isAudioMuted = false
+    /// A short local presentation state after returning from a long absence.
+    /// It only changes the cat's ambient position; it is never a check-in,
+    /// reminder, streak, or behavioural requirement.
+    private(set) var isCatExploring = false
+    /// Scene changes receive the same short ambient walk, whether they came
+    /// from room arrows or the Scene picker.
+    private(set) var isCatExploringNewRoom = false
     var notice: StillNotice? = nil
     var undo: StillUndo? = nil
 
@@ -86,6 +93,7 @@ final class AppState {
     func bootstrap() {
         guard !hasBootstrapped else { return }
         hasBootstrapped = true
+        updateCatPresence()
         container.breaks.closeStaleUsages()
         let events = container.focus.restore()
         if container.flags.appBlocking {
@@ -129,11 +137,33 @@ final class AppState {
 
     /// Call when the app returns to the foreground.
     func handleBecameActive() {
+        updateCatPresence()
         if container.flags.appBlocking {
             _ = container.blockingSchedule.refresh()
         }
         tick()
         reload()
+    }
+
+    private func updateCatPresence() {
+        let now = container.clock.now
+        if CatCompanion.wasAway(since: preferences.lastCatPresenceAt, now: now) {
+            isCatExploring = true
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(CatCompanion.arrivalDuration))
+                self?.isCatExploring = false
+            }
+        }
+        container.preferences.update { $0.lastCatPresenceAt = now }
+        preferences = container.preferencesStore.load()
+    }
+
+    private func presentCatRoomChange() {
+        isCatExploringNewRoom = true
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(CatCompanion.arrivalDuration))
+            self?.isCatExploringNewRoom = false
+        }
     }
 
     /// Advances the running session. The active screen calls this each second.
@@ -473,7 +503,9 @@ final class AppState {
     // MARK: - Presets & preferences
 
     func savePreset(_ preset: FocusPreset) {
+        let previousSceneID = currentPreset.sceneID
         container.preferences.save(preset)
+        if preset.sceneID != previousSceneID { presentCatRoomChange() }
         reload()
     }
 

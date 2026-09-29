@@ -184,6 +184,9 @@ struct UserPreferences: Codable, Equatable {
     /// Optional, device-local companion name. It appears only in Cat settings
     /// and in a rare completed-session acknowledgement.
     var catName: String? = nil
+    /// Local-only timestamp used solely to choose a different ambient cat pose
+    /// after a long absence. It is not a check-in, reminder, score, or streak.
+    var lastCatPresenceAt: Date?
     /// Tactile responses are local and can be turned off independently of
     /// motion. They default on because they are a direct control affordance.
     var hapticsEnabled: Bool = true
@@ -202,7 +205,7 @@ struct UserPreferences: Codable, Equatable {
     var todayRoutineItems: [TodayRoutineItem] = []
     var schemaVersion: Int = UserPreferences.currentSchemaVersion
 
-    static let currentSchemaVersion = 7
+    static let currentSchemaVersion = 8
 
     init() {}
 
@@ -210,7 +213,7 @@ struct UserPreferences: Codable, Equatable {
         case hasCompletedOnboarding, onboardingGoal, breakAppeal, appAccentPalette, defaultPresetID, selectedTaskID
         case animationIntensity, hasRequestedNotificationPermission, notificationPermissionGranted
         case pendingCompletionSessionID, acknowledgedUnlockedSceneCount, morningStart, wakeUpStopMethod
-        case showsCalendarEvents, showsGoogleCalendarEvents, savedSoundscapes, catCoat, catName
+        case showsCalendarEvents, showsGoogleCalendarEvents, savedSoundscapes, catCoat, catName, lastCatPresenceAt
         case hapticsEnabled, interactionSoundsEnabled, schemaVersion
         case sceneOrder, breakActivityOrder, hiddenBreakActivityIDs, todayRoutineItems
     }
@@ -236,6 +239,7 @@ struct UserPreferences: Codable, Equatable {
         savedSoundscapes = (try? c.decodeIfPresent([SavedSoundscape].self, forKey: .savedSoundscapes)) ?? []
         catCoat = (try? c.decodeIfPresent(CatCoat.self, forKey: .catCoat)) ?? .ginger
         catName = CatName.normalized(try? c.decodeIfPresent(String.self, forKey: .catName))
+        lastCatPresenceAt = try c.decodeIfPresent(Date.self, forKey: .lastCatPresenceAt)
         hapticsEnabled = try c.decodeIfPresent(Bool.self, forKey: .hapticsEnabled) ?? defaults.hapticsEnabled
         interactionSoundsEnabled = try c.decodeIfPresent(Bool.self, forKey: .interactionSoundsEnabled) ?? defaults.interactionSoundsEnabled
         sceneOrder = try c.decodeIfPresent([SceneID].self, forKey: .sceneOrder) ?? defaults.sceneOrder
@@ -274,6 +278,9 @@ struct UserPreferences: Codable, Equatable {
             result.breakActivityOrder = []
             result.hiddenBreakActivityIDs = []
             result.todayRoutineItems = []
+        }
+        if result.schemaVersion < 8 {
+            result.lastCatPresenceAt = nil
         }
         result.sceneOrder = Self.unique(result.sceneOrder)
         result.breakActivityOrder = Self.unique(result.breakActivityOrder)

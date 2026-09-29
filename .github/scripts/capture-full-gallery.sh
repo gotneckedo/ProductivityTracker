@@ -122,10 +122,19 @@ for screen in home active complete journal me tasks sudoku wordsearch picross; d
 done
 
 xcrun simctl ui "$UDID" appearance light
-for screen in cat-morning cat-focus cat-asleep cat-complete cat-reaction; do
+for screen in cat-morning cat-away cat-room-change cat-night cat-focus cat-asleep cat-final-minute cat-complete cat-reaction; do
   shoot "$screen" "$(printf '%02d' "$n")-$screen"
   n=$((n + 1))
 done
+
+# Item 41: These deterministic visual states correspond to the local cat
+# state machine. They stay in the broad gallery because the compact P0 matrix
+# cannot prove a transient room pose or a timed companion reaction.
+shoot "cat-away" "proof-cat-away"
+shoot "cat-room-change" "proof-cat-room-change"
+shoot "cat-night" "proof-cat-night"
+shoot "cat-final-minute" "proof-cat-final-minute"
+shoot "cat-reaction" "proof-cat-rare-reaction"
 
 for screen in room-library room-train room-city room-autumn room-snow room-spring room-sleep; do
   shoot "$screen" "$(printf '%02d' "$n")-$screen"

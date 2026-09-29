@@ -25,10 +25,30 @@ struct FocusHomeView: View {
         StillDayPhase.automatic(date: appState.container.clock.now, colorScheme: colorScheme)
     }
 
+    private var forcesCatRoomChangeProof: Bool {
+        #if DEBUG || STILL_PROOF
+        DemoLaunch.requestedScreen == "cat-room-change"
+        #else
+        false
+        #endif
+    }
+
+    private var forcesCatAwayProof: Bool {
+        #if DEBUG || STILL_PROOF
+        DemoLaunch.requestedScreen == "cat-away"
+        #else
+        false
+        #endif
+    }
+
     var body: some View {
         let preset = appState.currentPreset
         let scene = displayScene(for: preset)
-        let catState = CatCompanion.state(hour: Calendar.autoupdatingCurrent.component(.hour, from: appState.container.clock.now))
+        let catState = CatCompanion.state(
+            isReturningAfterLongAway: appState.isCatExploring || forcesCatAwayProof,
+            isChangingRoom: appState.isCatExploringNewRoom || forcesCatRoomChangeProof,
+            hour: Calendar.autoupdatingCurrent.component(.hour, from: appState.container.clock.now)
+        )
         StillScreen(phase: roomPhase) {
             ScrollViewReader { proxy in
                 ScrollView {

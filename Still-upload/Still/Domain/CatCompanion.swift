@@ -6,8 +6,12 @@ import Foundation
 enum CatRoomState: String, Codable, CaseIterable, Equatable {
     case idle
     case morning
+    case exploring
+    case walkingToDesk
     case focus
     case sleeping
+    case nightSleeping
+    case finalMinute
     case breakTime
     case complete
 
@@ -15,8 +19,12 @@ enum CatRoomState: String, Codable, CaseIterable, Equatable {
         switch self {
         case .idle: return "resting nearby"
         case .morning: return "awake for the morning"
-        case .focus: return "settling in to focus"
+        case .exploring: return "exploring the room"
+        case .walkingToDesk: return "walking toward the desk"
+        case .focus: return "settled at the desk"
         case .sleeping: return "curled up asleep"
+        case .nightSleeping: return "curled up for the night"
+        case .finalMinute: return "stretching as the session settles"
         case .breakTime: return "heading toward the bookshelf"
         case .complete: return "awake and looking up"
         }
@@ -51,20 +59,37 @@ struct CatAnimationPlan: Equatable {
 
 enum CatCompanion {
     static let sleepThreshold: TimeInterval = 10 * 60
+    static let arrivalDuration: TimeInterval = 3
+    static let finalMinuteThreshold: TimeInterval = 2 * 60
+    static let awayThreshold: TimeInterval = 4 * 60 * 60
 
     static func state(
         isCompletion: Bool = false,
         isFocusRunning: Bool = false,
         isBreakPhase: Bool = false,
         focusedSeconds: TimeInterval = 0,
+        remainingFocusSeconds: TimeInterval? = nil,
+        isReturningAfterLongAway: Bool = false,
+        isChangingRoom: Bool = false,
         hour: Int
     ) -> CatRoomState {
         if isCompletion { return .complete }
         if isBreakPhase { return .breakTime }
-        if isFocusRunning, focusedSeconds >= sleepThreshold { return .sleeping }
-        if isFocusRunning { return .focus }
+        if isFocusRunning {
+            if (remainingFocusSeconds ?? .infinity) <= finalMinuteThreshold { return .finalMinute }
+            if focusedSeconds < arrivalDuration { return .walkingToDesk }
+            if focusedSeconds >= sleepThreshold { return .sleeping }
+            return .focus
+        }
+        if isChangingRoom || isReturningAfterLongAway { return .exploring }
+        if hour >= 21 || hour < 5 { return .nightSleeping }
         if (5..<12).contains(hour) { return .morning }
         return .idle
+    }
+
+    static func wasAway(since lastPresenceAt: Date?, now: Date) -> Bool {
+        guard let lastPresenceAt else { return false }
+        return now.timeIntervalSince(lastPresenceAt) >= awayThreshold
     }
 
     static func animation(for state: CatRoomState, reaction: CatReaction = .none) -> CatAnimationPlan {
@@ -82,10 +107,18 @@ enum CatCompanion {
             return CatAnimationPlan(poses: [.sit, .idle], secondsPerPose: 2.4)
         case .morning:
             return CatAnimationPlan(poses: [.sit, .idle], secondsPerPose: 2.8)
+        case .exploring:
+            return CatAnimationPlan(poses: [.walk, .walk, .sit], secondsPerPose: 1.0)
+        case .walkingToDesk:
+            return CatAnimationPlan(poses: [.walk, .walk, .walk, .idle, .idle, .idle], secondsPerPose: 0.5)
         case .focus:
-            return CatAnimationPlan(poses: [.walk, .walk, .idle], secondsPerPose: 1.0)
+            return CatAnimationPlan(poses: [.idle], secondsPerPose: 2.4)
         case .sleeping:
             return CatAnimationPlan(poses: [.sleep], secondsPerPose: 2.4)
+        case .nightSleeping:
+            return CatAnimationPlan(poses: [.sleep], secondsPerPose: 2.8)
+        case .finalMinute:
+            return CatAnimationPlan(poses: [.stretch, .idle], secondsPerPose: 1.1)
         case .breakTime:
             return CatAnimationPlan(poses: [.walk, .sit], secondsPerPose: 1.2)
         case .complete:

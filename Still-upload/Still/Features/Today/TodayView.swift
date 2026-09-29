@@ -367,7 +367,11 @@ struct TodayView: View {
             RoomHeroView(sceneName: appState.currentPreset.sceneID.rawValue, sceneID: appState.currentPreset.sceneID,
                          catCoat: appState.preferences.catCoat,
                          catName: appState.catName,
-                         catState: CatCompanion.state(hour: Calendar.autoupdatingCurrent.component(.hour, from: appState.container.clock.now)),
+                         catState: CatCompanion.state(
+                            isReturningAfterLongAway: appState.isCatExploring,
+                            isChangingRoom: appState.isCatExploringNewRoom,
+                            hour: Calendar.autoupdatingCurrent.component(.hour, from: appState.container.clock.now)
+                         ),
                          allowsCatInteraction: false,
                          plantStage: appState.plantStage, bookCount: appState.books.count,
                          showsControls: false)

@@ -99,6 +99,7 @@ struct ActiveFocusView: View {
                             isFocusRunning: snapshot.isRunning && !snapshot.phaseKind.isBreak,
                             isBreakPhase: snapshot.phaseKind.isBreak,
                             focusedSeconds: snapshot.totalFocusElapsed,
+                            remainingFocusSeconds: snapshot.phaseKind == .focus ? snapshot.remainingInPhase : nil,
                             hour: Calendar.autoupdatingCurrent.component(.hour, from: appState.container.clock.now)
                         ),
                         sessionState: snapshot.isRunning ? RoomSessionState(activePhase: snapshot.phaseKind) : .idle,

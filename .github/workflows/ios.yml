@@ -227,13 +227,10 @@ jobs:
           shoot "error-nfc" "proof-error-nfc-unavailable"
           shoot "error-family-controls" "proof-error-family-controls"
           shoot "error-storage" "proof-error-storage-degraded"
-          # Item 38: three screens maximum before the furnished starter room;
-          # optional preferences are offered only after the first completion.
-          shoot "onboarding" "proof-first-run-welcome"
-          shoot "onboarding-privacy" "proof-first-run-privacy"
-          shoot "onboarding-room" "proof-first-run-room"
-          shoot "onboarding-starter" "proof-first-run-starter"
-          shoot "complete-first-run" "proof-first-run-personalize"
+          # Item 38's five static first-run frames are deliberately captured
+          # by the manual/scheduled broad gallery. Adding them here pushed the
+          # compact P0 matrix over the hosted runner's screenshot time budget
+          # and starved the Release truth captures before they could run.
           # Item 33: the intentionally incomplete preference fixture verifies
           # that actionable “Not set” values are readable rather than treated
           # as disabled gray text on the glass control group.

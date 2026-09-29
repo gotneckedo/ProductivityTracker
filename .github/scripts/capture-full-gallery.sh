@@ -71,6 +71,15 @@ shoot_bottom "today" "proof-today-bottom-clear"
 shoot_bottom "tasks" "proof-tasks-bottom-clear"
 shoot_bottom "sudoku" "proof-sudoku-bottom-clear"
 shoot_bottom "me" "proof-me-bottom-clear"
+# Item 38: a short three-screen entry, its furnished one-tap starter room,
+# and the only optional personalization invitation after a first completion.
+# These stay in the broad gallery because the compact proof job must preserve
+# enough runner time for all Release truth captures.
+shoot "onboarding" "proof-first-run-welcome"
+shoot "onboarding-privacy" "proof-first-run-privacy"
+shoot "onboarding-room" "proof-first-run-room"
+shoot "onboarding-starter" "proof-first-run-starter"
+shoot "complete-first-run" "proof-first-run-personalize"
 
 for screen in break journal me scenes; do
   shoot_midpoint "$screen" "$(printf '%02d' "$n")-$screen-midpoint"

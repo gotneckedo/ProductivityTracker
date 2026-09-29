@@ -30,6 +30,9 @@ struct RoomHeroView: View {
     var bookCount: Int = 2
     var doodle: PixelDoodle? = nil
     var placedObjects: [RoomPlacement] = []
+    /// The real local facts surfaced by the room objects' second layer. A nil
+    /// value is retained for isolated previews that do not have AppState data.
+    var secondLayerSnapshot: RoomSecondLayerSnapshot? = nil
     var onPrevious: (() -> Void)?
     var onNext: (() -> Void)?
     var onRoomTarget: ((RoomHotspot) -> Void)?
@@ -106,7 +109,12 @@ struct RoomHeroView: View {
             }
 
             if onRoomTarget != nil {
-                RoomHotspotOverlay(sceneID: sceneID, action: handleRoomTarget)
+                RoomHotspotOverlay(
+                    sceneID: sceneID,
+                    snapshot: secondLayerSnapshot,
+                    action: handleRoomTarget,
+                    explain: handleRoomTargetExplanation
+                )
             }
 
             if showsControls {
@@ -224,6 +232,11 @@ struct RoomHeroView: View {
         }
     }
 
+    private func handleRoomTargetExplanation(_ hotspot: RoomHotspot) {
+        let fact = secondLayerSnapshot?.fact(for: hotspot.secondLayerTarget)
+        appState.notice = StillNotice(text: fact?.accessibilityDescription ?? hotspot.hint)
+    }
+
     @ViewBuilder
     private func roomButton(symbol: String, label: String, action: (() -> Void)?) -> some View {
         if let action {
@@ -282,7 +295,15 @@ private struct SpriteRoomLayout {
     }
 
     private static func standardHotspots(desk: CGPoint, shelf: CGPoint, calendar: CGPoint, plant: CGPoint, window: CGPoint) -> [RoomHotspot: CGPoint] {
-        [.desk: desk, .shelf: shelf, .calendar: calendar, .plant: plant, .window: window]
+        [
+            .desk: desk,
+            .shelf: shelf,
+            .calendar: calendar,
+            .plant: plant,
+            .window: window,
+            .lamp: CGPoint(x: min(0.92, desk.x + 0.04), y: max(0.16, desk.y - 0.10)),
+            .clock: CGPoint(x: max(0.10, calendar.x - 0.10), y: max(0.12, calendar.y + 0.05))
+        ]
     }
 
     func catPosition(
@@ -337,30 +358,47 @@ private struct RoomMotes: View {
     }
 }
 
-/// The five reliable, named touch targets in the starter room. Their actions
-/// are routed by FocusHomeView, not hidden in the illustration itself.
+/// The seven reliable, named touch targets in the starter room. Their actions
+/// are routed by FocusHomeView, not hidden in the illustration itself; holding
+/// one opens its separate local-information layer.
 enum RoomHotspot: String, CaseIterable, Identifiable {
-    case desk, shelf, calendar, plant, window
+    case desk, shelf, calendar, plant, window, lamp, clock
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .desk: return "Desk"
-        case .shelf: return "Bookshelf"
+        case .shelf: return "Book spines"
         case .calendar: return "Wall calendar"
         case .plant: return "Plant"
         case .window: return "Window"
+        case .lamp: return "Lamp"
+        case .clock: return "Wall clock"
         }
     }
 
     var hint: String {
         switch self {
         case .desk: return "Opens today’s tasks."
-        case .shelf: return "Opens finite break activities."
+        case .shelf: return "Opens Break and Short Read."
         case .calendar: return "Opens Today."
         case .plant: return "Opens your focus statistics."
         case .window: return "Opens rooms and Scenes."
+        case .lamp: return "Opens session options."
+        case .clock: return "Opens your local focus history."
+        }
+    }
+
+    var secondLayerTarget: RoomSecondLayerTarget {
+        switch self {
+        case .desk: return .desk
+        case .shelf: return .books
+        case .calendar: return .calendar
+        case .plant: return .plant
+        case .window: return .window
+        case .lamp: return .lamp
+        case .clock: return .clock
         }
     }
 
@@ -371,13 +409,17 @@ enum RoomHotspot: String, CaseIterable, Identifiable {
         case .calendar: return CGPoint(x: 0.43, y: 0.31)
         case .plant: return CGPoint(x: 0.89, y: 0.49)
         case .window: return CGPoint(x: 0.23, y: 0.40)
+        case .lamp: return CGPoint(x: 0.70, y: 0.50)
+        case .clock: return CGPoint(x: 0.31, y: 0.37)
         }
     }
 }
 
 private struct RoomHotspotOverlay: View {
     let sceneID: SceneID
+    let snapshot: RoomSecondLayerSnapshot?
     let action: (RoomHotspot) -> Void
+    let explain: (RoomHotspot) -> Void
 
     var body: some View {
         GeometryReader { proxy in
@@ -393,9 +435,17 @@ private struct RoomHotspotOverlay: View {
                 }
                 .buttonStyle(.plain)
                 .contextMenu {
-                    Button("Open \(hotspot.title)") { action(hotspot) }
+                    Button("What is this?") { explain(hotspot) }
+                    Button("Go to \(hotspot.secondLayerTarget.destinationTitle)") { action(hotspot) }
                 } preview: {
-                    RoomHotspotContextPreview(hotspot: hotspot)
+                    RoomHotspotContextPreview(
+                        fact: snapshot?.fact(for: hotspot.secondLayerTarget)
+                            ?? RoomSecondLayerFact(
+                                target: hotspot.secondLayerTarget,
+                                detail: hotspot.title,
+                                supportingDetail: hotspot.hint
+                            )
+                    )
                 }
                 .accessibilityLabel(hotspot.title)
                 .accessibilityHint(hotspot.hint)
@@ -409,33 +459,28 @@ private struct RoomHotspotOverlay: View {
 }
 
 private struct RoomHotspotContextPreview: View {
-    let hotspot: RoomHotspot
+    let fact: RoomSecondLayerFact
 
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            Image(systemName: previewSymbol)
+            Image(systemName: fact.symbolName)
                 .font(StillTypography.title3)
                 .foregroundStyle(StillTheme.accent)
-            Text(hotspot.title)
+            Text(fact.title)
                 .font(StillTypography.title3)
                 .foregroundStyle(StillTheme.textPrimary)
-            Text(hotspot.hint)
+            Text(fact.detail)
                 .font(StillTypography.footnote)
+                .foregroundStyle(StillTheme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(fact.supportingDetail)
+                .font(StillTypography.caption)
                 .foregroundStyle(StillTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(width: 220, alignment: .leading)
         .padding(StillTheme.Spacing.m)
         .background(StillTheme.surface, in: RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous))
-    }
-
-    private var previewSymbol: String {
-        switch hotspot {
-        case .desk: return "checklist"
-        case .shelf: return "books.vertical"
-        case .calendar: return "calendar"
-        case .plant: return "leaf"
-        case .window: return "square.grid.2x2"
-        }
     }
 }
 

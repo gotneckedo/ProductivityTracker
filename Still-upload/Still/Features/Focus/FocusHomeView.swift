@@ -25,6 +25,24 @@ struct FocusHomeView: View {
         StillDayPhase.automatic(date: appState.container.clock.now, colorScheme: colorScheme)
     }
 
+    /// One shared local snapshot drives the real context-menu previews and the
+    /// review route. Holding a room object observes existing data only; it does
+    /// not create a collectible, change a streak, or add a hidden score.
+    private var roomSecondLayer: RoomSecondLayerSnapshot {
+        RoomSecondLayerSnapshot(
+            selectedTaskTitle: appState.selectedTask?.title,
+            books: appState.books.map(\.title),
+            plantStage: appState.plantStage,
+            windowPhaseName: roomPhase.rawValue,
+            totalFocus: appState.stats.totalFocus,
+            weeklyFocus: appState.stats.lastSevenDays.map {
+                RoomSecondLayerDay(day: $0.day, focusDuration: $0.focusDuration)
+            },
+            now: appState.container.clock.now,
+            calendar: appState.container.calendar
+        )
+    }
+
     private var forcesCatRoomChangeProof: Bool {
         #if DEBUG || STILL_PROOF
         DemoLaunch.requestedScreen == "cat-room-change"
@@ -66,6 +84,7 @@ struct FocusHomeView: View {
                                 bookCount: 2 + appState.books.count,
                                 doodle: appState.doodles.max { $0.updatedAt < $1.updatedAt }?.doodle,
                                 placedObjects: appState.placedRoomObjects(in: scene.id),
+                                secondLayerSnapshot: roomSecondLayer,
                                 onPrevious: { cycleScene(from: preset, direction: -1) },
                                 onNext: { cycleScene(from: preset, direction: 1) },
                                 // Object targets remain 44pt and fully named for VoiceOver,
@@ -224,6 +243,10 @@ struct FocusHomeView: View {
             appState.router.go(to: .me)
         case .window:
             appState.router.go(to: .sceneCollection)
+        case .lamp:
+            appState.router.go(to: .focusConfiguration)
+        case .clock:
+            appState.router.go(to: .me)
         }
     }
 }

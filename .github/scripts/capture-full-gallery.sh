@@ -104,6 +104,11 @@ shoot "room-session-finished" "proof-room-session-finished"
 shoot "complete-unlock" "proof-progression-completion-unlock"
 shoot "room-collection-unlock" "proof-progression-collection-unlock"
 
+# Item 43: the DEBUG catalogue renders the exact local facts supplied to the
+# long-press preview of each named room object. It proves the second layer
+# without trying to automate a system context-menu gesture in CI.
+shoot "context-previews" "proof-room-second-layer"
+
 for screen in break journal me scenes; do
   shoot_midpoint "$screen" "$(printf '%02d' "$n")-$screen-midpoint"
   n=$((n + 1))

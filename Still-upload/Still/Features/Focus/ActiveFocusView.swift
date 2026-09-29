@@ -101,6 +101,7 @@ struct ActiveFocusView: View {
                             focusedSeconds: snapshot.totalFocusElapsed,
                             hour: Calendar.autoupdatingCurrent.component(.hour, from: appState.container.clock.now)
                         ),
+                        sessionState: snapshot.isRunning ? RoomSessionState(activePhase: snapshot.phaseKind) : .idle,
                         phase: .focus,
                         dimmed: true,
                         plantStage: appState.plantStage,

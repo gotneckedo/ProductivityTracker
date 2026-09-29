@@ -15,6 +15,9 @@ struct RoomHeroView: View {
     var catCoat: CatCoat = .ginger
     var catName: String? = nil
     var catState: CatRoomState = .idle
+    /// A focus session changes the room softly and locally. It never signals a
+    /// score, obligation, or loss state.
+    var sessionState: RoomSessionState = .idle
     /// Used by the DEBUG screenshot route only; normal reactions start from a
     /// direct cat tap and clear automatically.
     var initialCatReaction: CatReaction = .none
@@ -67,6 +70,7 @@ struct RoomHeroView: View {
                 sceneName: sceneName,
                 sceneID: sceneID,
                 phase: resolvedPhase,
+                sessionState: sessionState,
                 dimmed: dimmed,
                 plantStage: plantStage,
                 bookCount: bookCount,
@@ -135,7 +139,7 @@ struct RoomHeroView: View {
             }
         }
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(sceneName) room. A warm, original isometric study room with a desk, window, books, and growing plant. \(ambientState.accessibilityDescription)")
+        .accessibilityLabel("\(sceneName) room. A warm, original isometric study room with a desk, window, books, and growing plant. \(ambientState.accessibilityDescription) \(sessionState.accessibilityDescription)")
     }
 
     private var catAccessibilityLabel: String {
@@ -391,6 +395,7 @@ private struct SpriteFirstRoomSurface: View {
     let sceneName: String
     let sceneID: SceneID
     let phase: StillDayPhase
+    let sessionState: RoomSessionState
     let dimmed: Bool
     let plantStage: PlantGrowthStage
     let bookCount: Int
@@ -416,16 +421,24 @@ private struct SpriteFirstRoomSurface: View {
                         .opacity(dimmed ? 0.66 : 1)
                     RoomAmbientOverlay(sceneID: sceneID, phase: phase, dimmed: dimmed)
                         .allowsHitTesting(false)
+                    RoomSessionOverlay(sceneID: sceneID, state: sessionState, dimmed: dimmed)
+                        .allowsHitTesting(false)
                     SpriteRoomObjectOverlay(sceneID: sceneID, placements: placedObjects)
                 }
             } else if reduceMotion {
-                RoomCanvas(sceneName: sceneName, sceneID: sceneID, phase: phase, time: 0, dimmed: dimmed,
-                           plantStage: plantStage, bookCount: bookCount, doodle: doodle, placedObjects: placedObjects)
+                ZStack {
+                    RoomCanvas(sceneName: sceneName, sceneID: sceneID, phase: phase, time: 0, dimmed: dimmed,
+                               plantStage: plantStage, bookCount: bookCount, doodle: doodle, placedObjects: placedObjects)
+                    RoomSessionOverlay(sceneID: sceneID, state: sessionState, dimmed: dimmed)
+                }
             } else {
                 TimelineView(.animation(minimumInterval: 1.0 / 12.0, paused: false)) { timeline in
-                    RoomCanvas(sceneName: sceneName, sceneID: sceneID, phase: phase,
-                               time: timeline.date.timeIntervalSinceReferenceDate, dimmed: dimmed,
-                               plantStage: plantStage, bookCount: bookCount, doodle: doodle, placedObjects: placedObjects)
+                    ZStack {
+                        RoomCanvas(sceneName: sceneName, sceneID: sceneID, phase: phase,
+                                   time: timeline.date.timeIntervalSinceReferenceDate, dimmed: dimmed,
+                                   plantStage: plantStage, bookCount: bookCount, doodle: doodle, placedObjects: placedObjects)
+                        RoomSessionOverlay(sceneID: sceneID, state: sessionState, dimmed: dimmed)
+                    }
                 }
             }
         }
@@ -553,6 +566,75 @@ private struct RoomAmbientOverlay: View {
         case .night: return Color(hex: 0x8CB9FF)
         case .focus: return Color(hex: 0xFFB35E)
         }
+    }
+}
+
+/// A session changes light at real room anchors rather than replacing the
+/// supplied art or showing a progress reward. The exact same treatment is used
+/// on the live Focus screen and the completion moment.
+private struct RoomSessionOverlay: View {
+    let sceneID: SceneID
+    let state: RoomSessionState
+    let dimmed: Bool
+
+    var body: some View {
+        GeometryReader { proxy in
+            let layout = SpriteRoomLayout.forScene(sceneID)
+            let desk = CGPoint(x: proxy.size.width * layout.objectAnchors[.desk, default: .init(x: 0.67, y: 0.60)].x,
+                               y: proxy.size.height * layout.objectAnchors[.desk, default: .init(x: 0.67, y: 0.60)].y)
+            let floor = CGPoint(x: proxy.size.width * layout.objectAnchors[.floorCorner, default: .init(x: 0.48, y: 0.77)].x,
+                                y: proxy.size.height * layout.objectAnchors[.floorCorner, default: .init(x: 0.48, y: 0.77)].y)
+
+            ZStack {
+                switch state {
+                case .idle:
+                    EmptyView()
+                case .focusing:
+                    RadialGradient(
+                        colors: [Color(hex: 0xFFC478).opacity(dimmed ? 0.16 : 0.32), .clear],
+                        center: .center,
+                        startRadius: 1,
+                        endRadius: max(42, proxy.size.width * 0.20)
+                    )
+                    .frame(width: proxy.size.width * 0.42, height: proxy.size.height * 0.30)
+                    .position(desk)
+                    RoundedRectangle(cornerRadius: 2, style: .continuous)
+                        .fill(Color(hex: 0xFFE0AC).opacity(dimmed ? 0.22 : 0.38))
+                        .frame(width: max(28, proxy.size.width * 0.10), height: 3)
+                        .position(x: desk.x - proxy.size.width * 0.02, y: desk.y - proxy.size.height * 0.06)
+                case .breakTime:
+                    LinearGradient(
+                        colors: [.clear, Color(hex: 0xA8D9E8).opacity(dimmed ? 0.13 : 0.24), .clear],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: proxy.size.width * 0.56, height: max(14, proxy.size.height * 0.06))
+                    .rotationEffect(.degrees(-18))
+                    .position(x: floor.x + proxy.size.width * 0.08, y: floor.y - proxy.size.height * 0.05)
+                    Circle()
+                        .fill(Color(hex: 0xD8F3F6).opacity(dimmed ? 0.22 : 0.48))
+                        .frame(width: 7, height: 7)
+                        .position(x: floor.x + proxy.size.width * 0.10, y: floor.y - proxy.size.height * 0.12)
+                case .justFinished:
+                    RadialGradient(
+                        colors: [Color(hex: 0xFFE2A8).opacity(dimmed ? 0.16 : 0.38), .clear],
+                        center: .center,
+                        startRadius: 1,
+                        endRadius: max(44, proxy.size.width * 0.22)
+                    )
+                    .frame(width: proxy.size.width * 0.44, height: proxy.size.height * 0.32)
+                    .position(floor)
+                    ForEach([CGFloat(-0.07), 0, 0.07], id: \.self) { offset in
+                        Circle()
+                            .fill(Color(hex: 0xFFF1C6).opacity(dimmed ? 0.22 : 0.70))
+                            .frame(width: 4, height: 4)
+                            .position(x: floor.x + proxy.size.width * offset, y: floor.y - proxy.size.height * (0.08 + abs(offset)))
+                    }
+                }
+            }
+            .clipped()
+        }
+        .accessibilityHidden(true)
     }
 }
 

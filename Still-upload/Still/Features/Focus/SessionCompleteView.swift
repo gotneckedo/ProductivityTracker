@@ -87,6 +87,7 @@ struct SessionCompleteView: View {
                 catCoat: appState.preferences.catCoat,
                 catName: appState.catName,
                 catState: .complete,
+                sessionState: .justFinished,
                 phase: .dusk,
                 plantStage: appState.plantStage,
                 bookCount: 2 + appState.books.count,

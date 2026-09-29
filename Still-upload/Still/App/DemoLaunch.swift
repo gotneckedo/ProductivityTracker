@@ -9,7 +9,8 @@ import Foundation
 ///
 /// Screens: onboarding, today, today-light, setup, home, focus-room, room-library, room-train, room-city,
 /// room-autumn, room-snow, room-spring, room-sleep, room-collectibles, room-phase-morning,
-/// room-phase-afternoon, room-phase-dusk, room-phase-night, sprite-contact-sheet,
+/// room-phase-afternoon, room-phase-dusk, room-phase-night, room-session-idle,
+/// room-session-focus, room-session-break, room-session-finished, sprite-contact-sheet,
 /// cat-morning, cat-reaction, cat-focus, cat-asleep, cat-complete, calm, active, active-final-minute, complete, break, sudoku, sudoku-invalid, wordsearch,
 /// picross, picross-320, breathing, read, me, scenes, scenes-all, scenes-extra, card,
 /// journal, presets, tasks, undo-task, timeline, doodle, gallery, morning, mixer-available, accessibility-feedback, context-previews,
@@ -172,6 +173,14 @@ enum DemoLaunch {
             return focusRoomState(hour: 18)
         case "room-phase-night":
             return focusRoomState(hour: 22)
+        case "room-session-idle":
+            return focusRoomState(hour: 14)
+        case "room-session-focus":
+            return activeState()
+        case "room-session-break":
+            return activeBreakState()
+        case "room-session-finished":
+            return PreviewSupport.completedSession().state
         case "room-collectibles":
             return roomWithPlacedCollectibles()
         case "active-autumn":
@@ -563,6 +572,37 @@ enum DemoLaunch {
             activeSession: true,
             clockStart: screenshotActiveSessionStart
         )
+        if let id = state.activeSession?.id {
+            state.router.go(to: .activeSession(id))
+        }
+        return state
+    }
+
+    /// A real Pomodoro transition advanced through the injected clock. This is
+    /// visual review of an existing local timer phase, not a simulated break.
+    private static func activeBreakState() -> AppState {
+        let state = PreviewSupport.appState(
+            populated: true,
+            clockStart: screenshotDate(hour: 14, minute: 0)
+        )
+        var preset = state.currentPreset
+        preset.timer = TimerConfiguration(
+            mode: .pomodoro,
+            focusDuration: 5 * 60,
+            breakDuration: 5 * 60,
+            longBreakDuration: 10 * 60,
+            longBreakInterval: 4,
+            cycleCount: 2,
+            autoStartBreaks: true,
+            autoStartFocus: false,
+            routineID: nil
+        )
+        state.savePreset(preset)
+        state.startFocus(source: .manual)
+        if let clock = state.container.clock as? ManualClock {
+            clock.advance(by: 6 * 60)
+        }
+        state.tick()
         if let id = state.activeSession?.id {
             state.router.go(to: .activeSession(id))
         }

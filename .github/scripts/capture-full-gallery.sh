@@ -89,6 +89,14 @@ shoot "room-phase-afternoon" "proof-room-phase-afternoon"
 shoot "room-phase-dusk" "proof-room-phase-dusk"
 shoot "room-phase-night" "proof-room-phase-night"
 
+# Item 40: the same shared room on real local timer routes. The live break
+# fixture advances a Pomodoro through its focus boundary before capture; it is
+# not a standalone decorative break mock.
+shoot "room-session-idle" "proof-room-session-idle"
+shoot "room-session-focus" "proof-room-session-focus"
+shoot "room-session-break" "proof-room-session-break"
+shoot "room-session-finished" "proof-room-session-finished"
+
 for screen in break journal me scenes; do
   shoot_midpoint "$screen" "$(printf '%02d' "$n")-$screen-midpoint"
   n=$((n + 1))

@@ -246,6 +246,14 @@ struct RoomCollectionState: Codable, Equatable {
         placements = try c.decodeIfPresent([RoomPlacement].self, forKey: .placements) ?? []
         schemaVersion = try c.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? Self.currentSchemaVersion
     }
+
+    /// Unlocks remain durable, but the completion surface needs a stable,
+    /// human-scale presentation order for the items not yet shown. The catalog
+    /// order is deliberate; set iteration would make the acknowledgement jump
+    /// around between launches.
+    func unacknowledgedObjects(in catalog: [RoomObject] = RoomObjectCatalog.all) -> [RoomObject] {
+        catalog.filter { unlockedObjectIDs.contains($0.id) && !acknowledgedObjectIDs.contains($0.id) }
+    }
 }
 
 enum RoomPlacementFailure: Error, Equatable { case unknownObject, locked, wrongSlot }

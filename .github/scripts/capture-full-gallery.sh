@@ -97,6 +97,13 @@ shoot "room-session-focus" "proof-room-session-focus"
 shoot "room-session-break" "proof-room-session-break"
 shoot "room-session-finished" "proof-room-session-finished"
 
+# Item 42: a real first completed local session evaluates the catalog and
+# exposes the original Pencil cup in the completion acknowledgement before the
+# normal "Choose where it goes" collection destination. The collection route
+# shows the same earned object without an entitlement or inventory stand-in.
+shoot "complete-unlock" "proof-progression-completion-unlock"
+shoot "room-collection-unlock" "proof-progression-collection-unlock"
+
 for screen in break journal me scenes; do
   shoot_midpoint "$screen" "$(printf '%02d' "$n")-$screen-midpoint"
   n=$((n + 1))

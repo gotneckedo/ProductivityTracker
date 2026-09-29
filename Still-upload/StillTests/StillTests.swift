@@ -2522,6 +2522,32 @@ final class RoomCollectionTests: XCTestCase {
         XCTAssertEqual(state.unlockedObjectIDs, [.deskLamp, .globe])
     }
 
+    func testUnacknowledgedObjectsUseCatalogOrderRatherThanSetOrder() {
+        let state = RoomCollectionState(
+            unlockedObjectIDs: [.trailingPlant, .pencilCup, .deskLamp],
+            acknowledgedObjectIDs: [.deskLamp]
+        )
+        XCTAssertEqual(state.unacknowledgedObjects().map(\.id), [.pencilCup, .trailingPlant])
+    }
+
+    func testFirstCompletedFocusSessionExposesOwnedPencilCupUntilCollectionAcknowledgement() {
+        let clock = ManualClock(referenceDate)
+        let container = makeContainer(clock: clock)
+        container.preferences.completeOnboarding(goal: .focusBetter)
+        let session = container.focus.start(presetID: .defaultPreset, taskID: nil, source: .manual).session
+        clock.advance(by: 25 * 60)
+        container.focus.tick()
+
+        let state = AppState(container: container)
+        XCTAssertEqual(state.newlyUnlockedRoomObjects.map(\.id), [.pencilCup])
+        XCTAssertTrue(state.roomCollection.unlockedObjectIDs.contains(.pencilCup))
+
+        state.acknowledgeRoomUnlocks()
+        XCTAssertTrue(state.newlyUnlockedRoomObjects.isEmpty)
+        XCTAssertTrue(state.roomCollection.unlockedObjectIDs.contains(.pencilCup), "Acknowledging a completion surface never revokes an earned object.")
+        XCTAssertEqual(state.session(session.id)?.state, .completed)
+    }
+
     private func histories(around rule: RoomUnlockRule) -> (before: RoomActivityHistory, at: RoomActivityHistory) {
         var before = RoomActivityHistory.empty
         var at = RoomActivityHistory.empty

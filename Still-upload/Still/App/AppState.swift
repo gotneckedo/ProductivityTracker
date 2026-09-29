@@ -239,9 +239,7 @@ final class AppState {
     var animationIntensity: AnimationIntensity { preferences.animationIntensity }
 
     var newlyUnlockedRoomObjects: [RoomObject] {
-        RoomObjectCatalog.all.filter {
-            roomCollection.unlockedObjectIDs.contains($0.id) && !roomCollection.acknowledgedObjectIDs.contains($0.id)
-        }
+        roomCollection.unacknowledgedObjects()
     }
 
     func placedRoomObjects(in sceneID: SceneID) -> [RoomPlacement] {

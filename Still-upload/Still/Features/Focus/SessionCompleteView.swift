@@ -28,8 +28,8 @@ struct SessionCompleteView: View {
 
                     metrics(session: session)
 
-                    if let object = appState.newlyUnlockedRoomObjects.first {
-                        newUnlock(object)
+                    if !appState.newlyUnlockedRoomObjects.isEmpty {
+                        newUnlocks(appState.newlyUnlockedRoomObjects)
                     }
 
                     if let task = appState.task(session?.taskID) {
@@ -177,29 +177,50 @@ struct SessionCompleteView: View {
         .accessibilityHint("Opens optional preferences in Me. You can also skip them.")
     }
 
-    private func newUnlock(_ object: RoomObject) -> some View {
+    private func newUnlocks(_ objects: [RoomObject]) -> some View {
+        let displayedObjects = Array(objects.prefix(3))
+        let primary = objects[0]
         Button {
             appState.router.completion = nil
             appState.router.go(to: .roomCollection)
         } label: {
-            HStack(spacing: StillTheme.Spacing.s) {
-                Image(systemName: "sparkles")
-                    .font(StillTypography.title3)
-                    .foregroundStyle(StillDayPhase.dusk.accent)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(Copy.Completion.newRoomThing)
-                        .font(StillTypography.caption)
-                        .foregroundStyle(StillTheme.textSecondary)
-                    Text(object.name)
+            VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+                HStack(alignment: .top, spacing: StillTheme.Spacing.s) {
+                    Image(systemName: "sparkles")
                         .font(StillTypography.title3)
-                        .foregroundStyle(StillTheme.textPrimary)
-                    Text(Copy.Completion.placeNewThing)
-                        .font(StillTypography.footnote)
-                        .foregroundStyle(StillTheme.textTertiary)
+                        .foregroundStyle(StillDayPhase.dusk.accent)
+                        .frame(width: 30, height: 30)
+                        .background(StillDayPhase.dusk.accent.opacity(0.12), in: Circle())
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(objects.count == 1 ? Copy.Completion.newRoomThing : "New things for your room")
+                            .font(StillTypography.caption)
+                            .foregroundStyle(StillTheme.textSecondary)
+                        Text(objects.count == 1 ? primary.name : "\(objects.count) earned objects")
+                            .font(StillTypography.title3)
+                            .foregroundStyle(StillTheme.textPrimary)
+                        Text(Copy.Completion.placeNewThing)
+                            .font(StillTypography.footnote)
+                            .foregroundStyle(StillTheme.textTertiary)
+                    }
+                    Spacer(minLength: StillTheme.Spacing.xs)
+                    Image(systemName: "arrow.right")
+                        .foregroundStyle(StillTheme.textSecondary)
+                        .accessibilityHidden(true)
                 }
-                Spacer()
-                Image(systemName: "arrow.right")
-                    .foregroundStyle(StillTheme.textSecondary)
+                HStack(spacing: StillTheme.Spacing.s) {
+                    ForEach(displayedObjects) { object in
+                        CompletionUnlockObjectTile(object: object)
+                    }
+                    if objects.count > displayedObjects.count {
+                        Text("+\(objects.count - displayedObjects.count)")
+                            .font(StillTypography.caption.weight(.semibold))
+                            .foregroundStyle(StillTheme.textSecondary)
+                            .frame(width: 52, height: 52)
+                            .background(StillTheme.surfaceSunken, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                            .accessibilityLabel("\(objects.count - displayedObjects.count) more earned objects")
+                    }
+                }
             }
             .padding(StillTheme.Spacing.m)
             .stillGlass(radius: StillTheme.Radius.medium, phase: .dusk)
@@ -209,7 +230,7 @@ struct SessionCompleteView: View {
         .opacity(unlockIsVisible ? 1 : 0)
         .animation(reduceMotion ? .easeOut(duration: 0.16) : .spring(response: 0.34, dampingFraction: 0.62), value: unlockIsVisible)
         .onAppear { unlockIsVisible = true }
-        .accessibilityLabel("\(Copy.Completion.newRoomThing): \(object.name). \(Copy.Completion.placeNewThing).")
+        .accessibilityLabel("\(objects.count == 1 ? Copy.Completion.newRoomThing : "New room objects"): \(objects.map(\.name).joined(separator: ", ")). \(Copy.Completion.placeNewThing).")
     }
 
     private func metrics(session: FocusSession?) -> some View {
@@ -296,6 +317,48 @@ private struct CompletionMetric: View {
                 .foregroundStyle(StillTheme.textSecondary)
         }
         .frame(maxWidth: .infinity, minHeight: 58, alignment: .leading)
+    }
+}
+
+/// A completion acknowledgement uses the exact original object sprite that
+/// will be available in the room collection. It is informative—not a reward
+/// chest, inventory currency, or progress meter—and never gates returning to
+/// the room or taking a break.
+private struct CompletionUnlockObjectTile: View {
+    let object: RoomObject
+
+    var body: some View {
+        VStack(spacing: 3) {
+            Group {
+                if let assetName = object.spriteAssetName {
+                    Image(assetName)
+                        .resizable()
+                        .interpolation(.none)
+                        .scaledToFit()
+                        .padding(5)
+                } else {
+                    Image(systemName: "sparkles")
+                        .font(StillTypography.title3)
+                        .foregroundStyle(StillDayPhase.dusk.accent)
+                }
+            }
+            .frame(width: 48, height: 38)
+            Text(object.name)
+                .font(StillTypography.caption)
+                .foregroundStyle(StillTheme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+                .frame(maxWidth: .infinity)
+        }
+        .padding(StillTheme.Spacing.xs)
+        .frame(width: 92, height: 78)
+        .background(StillTheme.surfaceSunken, in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .stroke(StillDayPhase.dusk.accent.opacity(0.22), lineWidth: StillTheme.Stroke.hairline)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Earned object: \(object.name). \(object.summary)")
     }
 }
 

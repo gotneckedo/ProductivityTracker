@@ -29,7 +29,7 @@ struct FocusHomeView: View {
         let preset = appState.currentPreset
         let scene = displayScene(for: preset)
         let catState = CatCompanion.state(hour: Calendar.autoupdatingCurrent.component(.hour, from: appState.container.clock.now))
-        StillScreen {
+        StillScreen(phase: roomPhase) {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.m) {

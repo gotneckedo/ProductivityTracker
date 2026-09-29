@@ -450,10 +450,12 @@ private struct RoomAmbientOverlay: View {
 
             ZStack {
                 LinearGradient(
-                    colors: [tint.opacity(dimmed ? 0.34 : 1), .clear],
+                    colors: [ambientWash.opacity(dimmed ? 0.12 : 0.30), .clear],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 )
+
+                windowPane(in: proxy.size, at: windowPoint)
 
                 RadialGradient(
                     colors: [windowLight.opacity(dimmed ? 0.16 : 0.42), .clear],
@@ -471,33 +473,48 @@ private struct RoomAmbientOverlay: View {
         .accessibilityHidden(true)
     }
 
+    private func windowPane(in size: CGSize, at point: CGPoint) -> some View {
+        let width = max(54, size.width * 0.145)
+        let height = max(62, size.height * 0.175)
+        return RoundedRectangle(cornerRadius: 3, style: .continuous)
+            .fill(LinearGradient(colors: windowPaneColors, startPoint: .top, endPoint: .bottom))
+            .overlay {
+                Rectangle()
+                    .stroke(Color.white.opacity(dimmed ? 0.08 : 0.30), lineWidth: 1)
+                    .padding(2)
+            }
+            .opacity(dimmed ? 0.28 : 0.68)
+            .frame(width: width, height: height)
+            .position(point)
+    }
+
     @ViewBuilder
     private func phaseDetail(in size: CGSize, windowPoint: CGPoint) -> some View {
         switch state {
         case .morning:
-            ForEach([CGFloat(-0.07), 0.02, 0.10], id: \.self) { offset in
+            ForEach([CGFloat(-0.09), -0.04, 0.02, 0.08], id: \.self) { offset in
                 Circle()
                     .fill(Color.white.opacity(dimmed ? 0.12 : 0.42))
-                    .frame(width: 3, height: 3)
+                    .frame(width: 5, height: 5)
                     .position(x: windowPoint.x + size.width * offset, y: windowPoint.y + size.height * (0.03 - offset / 2))
             }
         case .afternoon:
             RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(Color.white.opacity(dimmed ? 0.05 : 0.18))
-                .frame(width: size.width * 0.29, height: max(4, size.height * 0.018))
+                .fill(Color(hex: 0xFFF0A8).opacity(dimmed ? 0.08 : 0.30))
+                .frame(width: size.width * 0.31, height: max(7, size.height * 0.024))
                 .rotationEffect(.degrees(-22))
                 .position(x: windowPoint.x + size.width * 0.09, y: windowPoint.y + size.height * 0.11)
         case .dusk:
             Circle()
                 .fill(Color(hex: 0xFFB275).opacity(dimmed ? 0.14 : 0.52))
-                .frame(width: max(8, size.width * 0.052), height: max(8, size.width * 0.052))
+                .frame(width: max(18, size.width * 0.070), height: max(18, size.width * 0.070))
                 .position(x: windowPoint.x + size.width * 0.075, y: windowPoint.y - size.height * 0.06)
         case .night:
             let points = [CGPoint(x: -0.09, y: -0.07), CGPoint(x: 0.04, y: -0.10), CGPoint(x: 0.11, y: 0.02)]
             ForEach(Array(points.enumerated()), id: \.offset) { _, point in
                 Circle()
                     .fill(Color(hex: 0xDCEBFF).opacity(dimmed ? 0.16 : 0.72))
-                    .frame(width: 3, height: 3)
+                    .frame(width: 5, height: 5)
                     .position(x: windowPoint.x + size.width * point.x, y: windowPoint.y + size.height * point.y)
             }
         case .focus:
@@ -508,13 +525,23 @@ private struct RoomAmbientOverlay: View {
         }
     }
 
-    private var tint: Color {
+    private var ambientWash: Color {
         switch state {
-        case .morning: return Color(hex: 0xFFE0A8).opacity(0.18)
-        case .afternoon: return Color(hex: 0xF5F0BA).opacity(0.13)
-        case .dusk: return Color(hex: 0xA65A83).opacity(0.17)
-        case .night: return Color(hex: 0x13234B).opacity(0.33)
-        case .focus: return Color(hex: 0x2D1E4A).opacity(0.30)
+        case .morning: return Color(hex: 0xFFE0A8)
+        case .afternoon: return Color(hex: 0xBEE5F0)
+        case .dusk: return Color(hex: 0xB65D85)
+        case .night: return Color(hex: 0x13234B)
+        case .focus: return Color(hex: 0x2D1E4A)
+        }
+    }
+
+    private var windowPaneColors: [Color] {
+        switch state {
+        case .morning: return [Color(hex: 0xFFF3C3), Color(hex: 0xF5B877)]
+        case .afternoon: return [Color(hex: 0xDFFFFF), Color(hex: 0x75BED8)]
+        case .dusk: return [Color(hex: 0xEF9B9A), Color(hex: 0x9B527B)]
+        case .night: return [Color(hex: 0x3456A0), Color(hex: 0x162450)]
+        case .focus: return [Color(hex: 0x805A9C), Color(hex: 0x2F234B)]
         }
     }
 

@@ -18,9 +18,11 @@ final class RoomAmbientStateTests: XCTestCase {
             let description = state.accessibilityDescription.lowercased()
             XCTAssertTrue(description.contains("window") || state == .focus)
             XCTAssertFalse(description.isEmpty)
+            XCTAssertFalse(state.visualDetail.isEmpty)
         }
         XCTAssertNotEqual(RoomAmbientState.morning.accessibilityDescription, RoomAmbientState.dusk.accessibilityDescription)
         XCTAssertNotEqual(RoomAmbientState.afternoon.accessibilityDescription, RoomAmbientState.night.accessibilityDescription)
+        XCTAssertEqual(Set(RoomAmbientState.allCases.map(\.visualDetail)).count, RoomAmbientState.allCases.count)
     }
 
     func testDesignSystemPhaseNamesRemainForwardCompatible() {

@@ -24,18 +24,28 @@ enum RoomAmbientState: String, CaseIterable, Codable, Equatable {
         self = Self(rawValue: dayPhaseName) ?? .night
     }
 
+    var visualDetail: String {
+        switch self {
+        case .morning: return "soft dust motes"
+        case .afternoon: return "a long sunbeam"
+        case .dusk: return "a low rose sun"
+        case .night: return "three distant stars"
+        case .focus: return "a low desk glow"
+        }
+    }
+
     var accessibilityDescription: String {
         switch self {
         case .morning:
-            return "Morning light at a clear window with soft dust motes."
+            return "Morning light at a clear window with \(visualDetail)."
         case .afternoon:
-            return "Afternoon light at an open window with a long sunbeam."
+            return "Afternoon light at an open window with \(visualDetail)."
         case .dusk:
-            return "Dusk light at a rosy window with a small evening glow."
+            return "Dusk light at a rosy window with \(visualDetail)."
         case .night:
-            return "Night light at a deep-blue window with small distant lights."
+            return "Night light at a deep-blue window with \(visualDetail)."
         case .focus:
-            return "A quiet focused room with a low, warm desk glow."
+            return "A quiet focused room with \(visualDetail)."
         }
     }
 }

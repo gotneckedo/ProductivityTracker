@@ -108,6 +108,7 @@ shoot "room-collection-unlock" "proof-progression-collection-unlock"
 # long-press preview of each named room object. It proves the second layer
 # without trying to automate a system context-menu gesture in CI.
 shoot "context-previews" "proof-room-second-layer"
+shoot_bottom "context-previews" "proof-room-second-layer-bottom"
 
 for screen in break journal me scenes; do
   shoot_midpoint "$screen" "$(printf '%02d' "$n")-$screen-midpoint"

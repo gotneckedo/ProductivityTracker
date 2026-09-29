@@ -180,7 +180,7 @@ struct SessionCompleteView: View {
     private func newUnlocks(_ objects: [RoomObject]) -> some View {
         let displayedObjects = Array(objects.prefix(3))
         let primary = objects[0]
-        Button {
+        return Button {
             appState.router.completion = nil
             appState.router.go(to: .roomCollection)
         } label: {

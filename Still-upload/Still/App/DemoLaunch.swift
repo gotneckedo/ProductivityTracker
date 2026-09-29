@@ -223,7 +223,9 @@ enum DemoLaunch {
             return PreviewSupport.completedSession().state
         case "room-collection-unlock":
             let completion = PreviewSupport.completedSession()
-            completion.state.router.go(to: .roomCollection)
+            // Follow the real acknowledgement path so bootstrap cannot reopen
+            // the pending completion cover over the owned Pencil cup.
+            completion.state.openRoomCollectionFromCompletion()
             return completion.state
         case "complete-first-run":
             return PreviewSupport.completedSession().state

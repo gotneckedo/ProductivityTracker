@@ -18,6 +18,10 @@ struct SessionCompleteView: View {
                     completionHero(session: session)
                     transitionRitual
 
+                    if !appState.newlyUnlockedRoomObjects.isEmpty {
+                        newUnlocks(appState.newlyUnlockedRoomObjects)
+                    }
+
                     if FirstRunExperience.offersPersonalization(
                         completedSessions: appState.completedSessionCount,
                         goal: appState.preferences.onboardingGoal,
@@ -27,10 +31,6 @@ struct SessionCompleteView: View {
                     }
 
                     metrics(session: session)
-
-                    if !appState.newlyUnlockedRoomObjects.isEmpty {
-                        newUnlocks(appState.newlyUnlockedRoomObjects)
-                    }
 
                     if let task = appState.task(session?.taskID) {
                         taskLine(task)
@@ -181,8 +181,7 @@ struct SessionCompleteView: View {
         let displayedObjects = Array(objects.prefix(3))
         let primary = objects[0]
         return Button {
-            appState.router.completion = nil
-            appState.router.go(to: .roomCollection)
+            appState.openRoomCollectionFromCompletion()
         } label: {
             VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
                 HStack(alignment: .top, spacing: StillTheme.Spacing.s) {

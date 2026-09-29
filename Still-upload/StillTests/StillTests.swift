@@ -525,6 +525,22 @@ final class AppFlowTests: XCTestCase {
         XCTAssertNil(state.router.completion)
     }
 
+    func testCollectionHandoffAcknowledgesCompletionWithoutRevokingEarnedObject() {
+        state.completeOnboarding(goal: .focusBetter)
+        state.startFocus()
+        clock.advance(by: minutes(25))
+        state.tick()
+
+        XCTAssertEqual(state.newlyUnlockedRoomObjects.map(\.id), [.pencilCup])
+        state.openRoomCollectionFromCompletion()
+
+        XCTAssertNil(state.router.completion)
+        XCTAssertNil(state.preferences.pendingCompletionSessionID)
+        XCTAssertEqual(state.router.selectedTab, .focus)
+        XCTAssertEqual(state.router.focusPath, [.roomCollection])
+        XCTAssertTrue(state.roomCollection.unlockedObjectIDs.contains(.pencilCup))
+    }
+
     func testPendingCompletionReopensAfterRelaunch() {
         state.completeOnboarding(goal: .focusBetter)
         state.startFocus()

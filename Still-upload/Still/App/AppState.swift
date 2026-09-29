@@ -408,6 +408,15 @@ final class AppState {
         router.go(to: .breakShelf)
     }
 
+    /// The completion moment may lead straight to a newly earned room object.
+    /// Clear only the transient completion presentation first—the object itself
+    /// remains locally owned and is then shown by the normal collection screen.
+    func openRoomCollectionFromCompletion() {
+        container.focus.acknowledgeCompletion(returningToFocus: false)
+        reload()
+        router.go(to: .roomCollection)
+    }
+
     func returnToFocusFromCompletion() {
         container.focus.acknowledgeCompletion(returningToFocus: true)
         reload()

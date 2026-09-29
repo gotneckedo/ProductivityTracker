@@ -4,6 +4,7 @@ struct RoomCollectionView: View {
     @Environment(AppState.self) private var appState
     @State private var selectedSceneID: SceneID = .rainyBedroom
     @State private var selectedSlot: RoomSlot = .desk
+    @State private var justEarned: [RoomObject] = []
 
     private var scene: SceneDefinition { appState.scene(selectedSceneID) }
     private var placements: [RoomPlacement] { appState.placedRoomObjects(in: selectedSceneID) }
@@ -13,6 +14,9 @@ struct RoomCollectionView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                     header
+                    if let object = justEarned.first {
+                        newlyEarned(object)
+                    }
                     RoomHeroView(
                         sceneName: scene.name,
                         sceneID: scene.id,
@@ -41,6 +45,10 @@ struct RoomCollectionView: View {
         .toolbar(.visible, for: .navigationBar)
         .onAppear {
             selectedSceneID = appState.currentPreset.sceneID
+            justEarned = appState.newlyUnlockedRoomObjects
+            if let object = justEarned.first {
+                selectedSlot = object.slot
+            }
             appState.acknowledgeRoomUnlocks()
         }
     }
@@ -56,6 +64,36 @@ struct RoomCollectionView: View {
                 .foregroundStyle(StillTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// A calm local cue makes the item that brought a person here visible
+    /// before the full catalog, then preselects its valid slot below.
+    private func newlyEarned(_ object: RoomObject) -> some View {
+        HStack(spacing: StillTheme.Spacing.s) {
+            RoomObjectThumbnail(object: object, locked: false)
+                .frame(width: 76, height: 64)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Just added")
+                    .font(StillTypography.caption)
+                    .foregroundStyle(StillTheme.textSecondary)
+                Text(object.name)
+                    .font(StillTypography.title3)
+                    .foregroundStyle(StillTheme.textPrimary)
+                Text("Ready for the \(object.slot.displayName.lowercased()) slot")
+                    .font(StillTypography.footnote)
+                    .foregroundStyle(StillTheme.textTertiary)
+            }
+            Spacer(minLength: StillTheme.Spacing.xs)
+            Image(systemName: "arrow.down")
+                .font(StillTypography.callout.weight(.semibold))
+                .foregroundStyle(StillDayPhase.dusk.accent)
+                .accessibilityHidden(true)
+        }
+        .padding(StillTheme.Spacing.m)
+        .stillGlass(radius: StillTheme.Radius.medium, phase: .dusk)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Just added: \(object.name). Ready for the \(object.slot.displayName.lowercased()) slot.")
     }
 
     private var roomPicker: some View {
@@ -197,10 +235,18 @@ private struct RoomObjectThumbnail: View {
         ZStack {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(.white.opacity(locked ? 0.08 : 0.24))
-            Image(systemName: symbol)
-                .font(.system(size: 30, weight: .regular))
-                .foregroundStyle(locked ? StillTheme.textTertiary.opacity(0.55) : StillTheme.accent)
-                .shadow(color: locked ? .clear : StillTheme.accent.opacity(0.18), radius: 8)
+            if !locked, let assetName = object.spriteAssetName {
+                Image(assetName)
+                    .resizable()
+                    .interpolation(.none)
+                    .scaledToFit()
+                    .padding(8)
+            } else {
+                Image(systemName: symbol)
+                    .font(.system(size: 30, weight: .regular))
+                    .foregroundStyle(locked ? StillTheme.textTertiary.opacity(0.55) : StillTheme.accent)
+                    .shadow(color: locked ? .clear : StillTheme.accent.opacity(0.18), radius: 8)
+            }
         }
     }
 

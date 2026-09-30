@@ -99,11 +99,6 @@ struct BoxBreathingActivityView: View {
         TimelineView(.animation(minimumInterval: reduceMotion ? 1 : 1.0 / 24, paused: isFinished)) { timeline in
             let state = pattern.state(at: timeline.date.timeIntervalSince(startedAt))
             VStack(spacing: StillTheme.Spacing.l) {
-                Text("Follow the square. Four counts each side.")
-                    .font(StillTypography.callout)
-                    .foregroundStyle(StillTheme.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
                 ZStack {
                     if reduceMotion {
                         RoundedRectangle(cornerRadius: 18, style: .continuous)

@@ -102,6 +102,13 @@ struct SudokuGame: Codable, Hashable {
     func placedCount(of number: Int) -> Int {
         values.filter { $0 == number }.count
     }
+
+    /// The number pad only retires a digit after all six instances are present
+    /// on this 6×6 board. A fresh puzzle therefore always presents every digit
+    /// at full strength.
+    func isDigitComplete(_ number: Int) -> Bool {
+        placedCount(of: number) >= puzzle.size
+    }
 }
 
 /// Counts solutions by backtracking, stopping at `limit`. Used by tests to

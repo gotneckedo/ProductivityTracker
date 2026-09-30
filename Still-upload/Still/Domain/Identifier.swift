@@ -4,8 +4,8 @@ import Foundation
 ///
 /// `Tag` is a phantom type, so a `SceneID` can never be passed where a
 /// `BreakActivityID` is expected. Identifiers encode as a bare string, which
-/// keeps persisted payloads readable and lets future content (seasonal scenes,
-/// new activities) arrive as data without an enum migration.
+/// keeps persisted payloads readable and lets future content (new scene
+/// palettes, new activities) arrive as data without an enum migration.
 struct Identifier<Tag>: Hashable, Codable, ExpressibleByStringLiteral, CustomStringConvertible {
     let rawValue: String
 

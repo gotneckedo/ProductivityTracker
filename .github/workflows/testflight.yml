@@ -1,0 +1,130 @@
+name: TestFlight
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upload:
+    name: Archive and upload to TestFlight
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      SIGNING_CERTIFICATE_P12_BASE64: ${{ secrets.SIGNING_CERTIFICATE_P12_BASE64 }}
+      SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+      APP_PROVISIONING_PROFILE_BASE64: ${{ secrets.APP_PROVISIONING_PROFILE_BASE64 }}
+      WIDGET_PROVISIONING_PROFILE_BASE64: ${{ secrets.WIDGET_PROVISIONING_PROFILE_BASE64 }}
+      KEYCHAIN_PASSWORD: still-ci-${{ github.run_id }}
+
+    steps:
+      - name: Validate required secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          missing=()
+          for name in \
+            ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 \
+            SIGNING_CERTIFICATE_P12_BASE64 SIGNING_CERTIFICATE_PASSWORD \
+            APP_PROVISIONING_PROFILE_BASE64 WIDGET_PROVISIONING_PROFILE_BASE64; do
+            if [[ -z "${!name:-}" ]]; then missing+=("$name"); fi
+          done
+          if (( ${#missing[@]} )); then
+            echo "TestFlight is not configured. Add these repository secrets:" >&2
+            printf '  - %s\n' "${missing[@]}" >&2
+            echo "See Still-upload/TESTFLIGHT_SETUP.md for step-by-step setup." >&2
+            exit 1
+          fi
+
+      - name: Check out the repository
+        uses: actions/checkout@v4
+
+      - name: Install App Store Connect key
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          printf '%s' "$ASC_KEY_P8" > "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+          chmod 600 "$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
+
+      - name: Install signing certificate and profiles
+        id: signing
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$RUNNER_TEMP/still-signing"
+          mkdir -p "$work" "$HOME/Library/MobileDevice/Provisioning Profiles"
+          printf '%s' "$SIGNING_CERTIFICATE_P12_BASE64" | base64 -D > "$work/distribution.p12"
+          printf '%s' "$APP_PROVISIONING_PROFILE_BASE64" | base64 -D > "$work/app.mobileprovision"
+          printf '%s' "$WIDGET_PROVISIONING_PROFILE_BASE64" | base64 -D > "$work/widget.mobileprovision"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$work/build.keychain-db"
+          security set-keychain-settings -lut 21600 "$work/build.keychain-db"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$work/build.keychain-db"
+          security import "$work/distribution.p12" -P "$SIGNING_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$work/build.keychain-db"
+          security list-keychain -d user -s "$work/build.keychain-db" login.keychain-db
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$work/build.keychain-db"
+
+          install_profile() {
+            local source="$1" prefix="$2" plist="$work/$prefix.plist"
+            security cms -D -i "$source" > "$plist"
+            local uuid name team
+            uuid=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$plist")
+            name=$(/usr/libexec/PlistBuddy -c 'Print Name' "$plist")
+            team=$(/usr/libexec/PlistBuddy -c 'Print TeamIdentifier:0' "$plist")
+            cp "$source" "$HOME/Library/MobileDevice/Provisioning Profiles/$uuid.mobileprovision"
+            echo "${prefix}_name=$name" >> "$GITHUB_OUTPUT"
+            echo "team_id=$team" >> "$GITHUB_OUTPUT"
+          }
+          install_profile "$work/app.mobileprovision" app
+          install_profile "$work/widget.mobileprovision" widget
+
+      - name: Archive Still
+        working-directory: Still-upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild archive \
+            -project Still.xcodeproj \
+            -scheme Still \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Still.xcarchive" \
+            DEVELOPMENT_TEAM='${{ steps.signing.outputs.team_id }}' \
+            CODE_SIGN_STYLE=Automatic
+
+      - name: Export signed IPA
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>teamID</key><string>${{ steps.signing.outputs.team_id }}</string>
+            <key>provisioningProfiles</key><dict>
+              <key>com.cocomedia.still</key><string>${{ steps.signing.outputs.app_name }}</string>
+              <key>com.cocomedia.still.widgets</key><string>${{ steps.signing.outputs.widget_name }}</string>
+            </dict>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          PLIST
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Still.xcarchive" \
+            -exportPath "$RUNNER_TEMP/StillExport" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Upload to TestFlight
+        shell: bash
+        run: |
+          set -euo pipefail
+          ipa=$(find "$RUNNER_TEMP/StillExport" -maxdepth 1 -name '*.ipa' -print -quit)
+          if [[ -z "$ipa" ]]; then echo "Export finished without an IPA." >&2; exit 1; fi
+          xcrun altool --upload-app --type ios --file "$ipa" \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"

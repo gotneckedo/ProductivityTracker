@@ -6,25 +6,26 @@ import SwiftUI
 import WidgetKit
 
 struct StillLiveActivityWidget: Widget {
-    private let ink = Color(red: 0.98, green: 0.95, blue: 0.86)
-    private let background = Color(red: 0.12, green: 0.15, blue: 0.22)
+    private let ink = Color(red: 0.96, green: 0.93, blue: 0.97)
+    private let accent = Color(red: 0.56, green: 0.86, blue: 0.75)
+    private let background = Color(red: 0.07, green: 0.07, blue: 0.13)
 
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: StillActivityAttributes.self) { context in
             HStack(spacing: 14) {
                 Image(systemName: context.state.isBreak ? "cup.and.saucer" : "leaf")
                     .font(.title2)
-                    .foregroundStyle(ink.opacity(0.8))
+                    .foregroundStyle(accent)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(context.state.headline)
-                        .font(.headline)
+                        .font(.system(.headline, design: .serif))
                     Text(detail(context.state))
                         .font(.caption)
                         .foregroundStyle(ink.opacity(0.7))
                 }
                 Spacer()
                 LiveTimerText(state: context.state)
-                    .font(.system(.title, design: .rounded).weight(.light).monospacedDigit())
+                    .font(.system(.title, design: .serif).weight(.light).monospacedDigit())
             }
             .foregroundStyle(ink)
             .padding(16)
@@ -38,7 +39,7 @@ struct StillLiveActivityWidget: Widget {
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     LiveTimerText(state: context.state)
-                        .font(.system(.title3, design: .rounded).monospacedDigit())
+                        .font(.system(.title3, design: .serif).monospacedDigit())
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     Text(detail(context.state))

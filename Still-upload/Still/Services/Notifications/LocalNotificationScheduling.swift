@@ -17,30 +17,6 @@ protocol LocalNotificationScheduling: AnyObject {
     func cancelAll()
 }
 
-/// Wording for phase-end reminders. Plain, adult, no exclamation marks.
-enum NotificationCopy {
-    static let categoryIdentifier = "still.phase-end"
-
-    static func content(for boundary: PhaseBoundary) -> (title: String, body: String) {
-        switch (boundary.endingKind, boundary.nextKind, boundary.requiresUserToContinue) {
-        case (_, nil, _):
-            return ("Session complete", "Choose something finite to do instead.")
-        case (.focus, _, false):
-            return ("Focus block done", "Your break has started. Step away for a few minutes.")
-        case (.focus, _, true):
-            return ("Focus block done", "Your break is ready when you are.")
-        case (_, _, false):
-            return ("Back to focus", "Your next block has started.")
-        case (_, _, true):
-            return ("Break's over", "Come back when you're ready for the next block.")
-        }
-    }
-
-    static func identifier(sessionID: UUID, phaseIndex: Int) -> String {
-        "still.session.\(sessionID.uuidString).phase.\(phaseIndex)"
-    }
-}
-
 /// Used in tests and previews. Records what would have been scheduled.
 final class RecordingNotificationScheduler: LocalNotificationScheduling {
     var authorization: NotificationAuthorization

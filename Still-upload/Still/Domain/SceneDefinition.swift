@@ -5,10 +5,13 @@ extension Identifier where Tag == SceneTag {
     static let libraryLight: SceneID = "libraryLight"
     static let trainWindow: SceneID = "trainWindow"
     static let nightCity: SceneID = "nightCity"
+    static let autumnWindow: SceneID = "autumnWindow"
+    static let snowDay: SceneID = "snowDay"
+    static let springRain: SceneID = "springRain"
 }
 
-/// Which drawing routine renders a scene. Several scenes may share a kind;
-/// seasonal variants would reuse a kind with a new palette.
+/// Which drawing routine renders a scene. Several permanent palette variants
+/// may share a kind with different colors.
 enum SceneRendererKind: String, Codable, Hashable {
     case rainyBedroom
     case libraryLight
@@ -67,7 +70,10 @@ struct SceneDefinition: Codable, Identifiable, Hashable {
     var soundAffinity: AmbientSourceID?
     var motionElements: [SceneMotionElement]
     var accessibilityDescription: String
-    /// V3 cosmetics. Always nil in V1; there is no purchasable content.
+    /// Name of Still's original raster room sprite. Nil preserves the
+    /// code-drawn renderer as a safe fallback for future or imported scenes.
+    var spriteAssetName: String?
+    /// Cosmetic entitlement only. Every session-earned scene keeps this nil.
     var entitlementKey: String?
     var sortOrder: Int
 }

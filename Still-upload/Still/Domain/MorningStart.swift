@@ -45,12 +45,6 @@ struct MorningStartPlan: Codable, Hashable {
     }
 }
 
-enum MorningStartCopy {
-    static let title = "Good morning"
-    static let body = "Pick one thing for today. Still has a session ready when you are."
-    static let identifierPrefix = "still.morning."
-}
-
 /// Schedules the repeating morning prompt.
 protocol MorningStartScheduling: AnyObject {
     func scheduleMorningStart(_ plan: MorningStartPlan)

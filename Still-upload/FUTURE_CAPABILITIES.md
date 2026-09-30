@@ -1,134 +1,45 @@
 # Future capabilities
 
-Where each roadmap item stands, what's left, and the next safe step. Items are
-grouped by what blocks them: nothing (shipped), Apple approval or hardware
-(built and gated), or decisions and outside setup (remaining).
+This document is the release boundary for Still. **A user-installable build must not describe a capability it cannot perform.** Still is Apple-framework-only, local-first, and has no account, backend, analytics SDK, or remote entitlement service.
 
-Quick map of the extension points:
+## Current release truth
 
-| Boundary | File |
-|---|---|
-| Feature flags | `Domain/Navigation/AppRoute.swift` → `FeatureFlags.current` |
-| Routes and tabs | `AppRoute`, `AppTab.visibleTabs`, `RouteResolver` |
-| Service protocols | `Services/**` (`FocusBlockingService`, `NFCFocusPresetRouting`, `LiveActivityUpdating`, `EventTracking`, `CalendarAdapter`, `SpeechTaskCapturing`, `MorningStartScheduling`, `WidgetSnapshotWriting`, `BookLibrary`) |
-| Hardware/approval boundaries | `Services/Future/FutureBoundaries.swift` |
-| Persistence | `RecordStore` + repositories in `Data/` |
-| Dependency wiring | `App/DependencyContainer.swift`, `DependencyContainer+Live.swift` |
+| Capability | Release behavior today | Not a release claim | Required before expanding it |
+|---|---|---|---|
+| Focus sessions, tasks, Today, Break, journal, habits, doodles, books | Local data and local workflows work on-device. Four earned core rooms stay free. | None. | Routine device testing and accessibility review. |
+| Ambient sound | Four authored local loops—Rain, Café, Fireplace, Waves—play with independent levels and fades. Silence is a soundscape. Eight modeled layers are visibly unavailable and disabled because no audio is bundled for them. | Extra layers or a paid audio catalog. | Author/clear each layer, add it to the bundle, test background audio on an iPhone, then decide its entitlement. |
+| Room collection | Twenty authored object sprites, local unlock history, and per-room placement are real. | A social or network collection. | None; preserve provenance for new art. |
+| Extra rooms and cat coats | Their lock state is present. Entitled local/StoreKit test sessions resolve to the selected room rather than falling back. | A purchase path in release. | App Store Connect products, StoreKit product loading, sandbox and restore testing on a physical device, subscription metadata, and App Review approval. |
+| Still+ | The information page describes the intended optional benefits and states it is unavailable when StoreKit supplies no product. No price, purchase, or restore control appears in that state. | That someone can subscribe in the current release build. | Create `com.cocomedia.still.plus.monthly` and `com.cocomedia.still.plus.yearly` in App Store Connect; confirm $2.99/month and $24.99/year, disclosures/localizations, transaction verification, restore, and device sandbox behavior. |
+| Focus Card setup | Free. A compatible writable NFC tag containing a `still://start-focus?preset=…` link can route to a local preset; links can be copied and simulated. | A card sale, fulfillment, or digital-feature unlock. | NFC capability/physical-device testing for in-app writing; a separate fulfillment design if a branded card is ever offered. The branded physical card—not basic tag setup—may be a future Still+ benefit. |
+| Morning Start | A recurring local notification plan. On iOS 17–25 it follows silent mode and Focus and can be dismissed normally. | An alarm, a card-gated wake-up flow, a wake checklist, or an alarm that cannot be stopped. | A separately designed and Apple-approved alarm capability plus real-device testing. Until then, production exposes Button as the only stop method. |
+| App limits and scheduled blocking | No active shielding claim in release. Times and presets can be saved, but a saved schedule cannot shield apps while Still is closed. | “iOS shields apps at that time” or card-only schedule dismissal. | Family Controls Distribution entitlement, matching app/extension entitlements, a DeviceActivity monitor extension that starts/ends shielding, selection persistence, physical-device tests, and an explicit release-flag audit. |
+| Widgets and Live Activity | Code exists and local snapshots are written. | That App Group provisioning is verified for every signing team. | Paid Apple Developer signing and real-device Lock Screen/Dynamic Island validation. |
+| Apple Calendar | Read-only EventKit access is requested in context. | Direct Google OAuth or remote calendar sync. | Google OAuth, privacy policy, consent verification, Keychain lifecycle, disconnect/deletion behavior—if ever deliberately added. |
 
----
+## Debug and CI only
 
-## Shipped (on in `FeatureFlags.current`)
+`FeatureFlags.preview` enables the visual stand-ins below **only in DEBUG builds**. CI can compile a Release configuration with `STILL_PROOF` solely to navigate deterministic screenshots; its feature flags remain `.release` and it does not activate preview products, a mock wake-up flow, or a card offering.
 
-| Item | Where | Notes |
-|---|---|---|
-| One-line journal | `Features/Journal/`, `JournalController` | One entry per day; saving again replaces it. Optional mood. Text never reaches analytics (tested). |
-| Habit tracking | `HabitController`, `StoredHabitRepository`, Journal tab | Up to five habits. Check-ins are per day; missing days are never shown as failures. Kept separate from `TaskItem`. |
-| Plant growth stages | `ProgressionEvaluator.plantStage`, `CalmPlantArtwork` | Sprout (<3 sessions), leafy (<10), full. Only grows. |
-| Custom presets | `PresetsView`, `PreferencesController.createPreset/rename/delete` | Deep Work and Quick Focus built in; up to 10 total. Custom IDs are `custom-xxxxxxxx`; analytics reports them as `custom`. Deleting the default falls back to Default. |
-| Homework, due dates, day view | `TaskDetailView`, `DayTimelineView`, `DueDateDescriber`, `DayTimelineBuilder` | Capture stays one line; details are optional. |
-| Apple Calendar (read-only) | `EventKitCalendarAdapter` | Asked from the timeline, never at launch. All-day events are skipped. |
-| Voice task capture | `SpeechRecognizerCapture`, `SpokenTaskParser`, `VoiceCaptureView` | On-device when available. Understands "…today/tomorrow/by Friday". Nothing is saved until the person taps Add. |
-| Pixel doodle + gallery | `PixelDoodleActivityView`, `DoodleGalleryView`, `ActivityArtifact` | 16×16, 8-color palette, pen/fill/eraser, autosaves. |
-| EPUB reader | `Services/Reading/` (Inflate, ZipArchive, EPUBParser, FileBookLibrary), Short Read | Pure Swift, no third-party code. Chapters split into ~700-word sittings; a sitting is one activity. Import from Files; no books bundled. |
-| Morning Start | `MorningStartView`, `UserNotificationScheduler.scheduleMorningStart` | Repeating local notification. Phase reminders and Morning Start use separate identifiers so one never clears the other. |
-| Home-screen widget | `StillWidgets/StillFocusSummaryWidget.swift`, `Shared/WidgetSnapshot.swift` | Small, medium, and Lock Screen sizes. Tap starts the default preset. Needs the App Group (paid account) to show real numbers. |
-| Live Activity / Dynamic Island | `StillWidgets/StillLiveActivityWidget.swift` | Now part of the project. No task titles on the Lock Screen. |
+- Local StoreKit entitlement (`LocalPurchaseService`) for entitlement and room-rendering proof
+- Wake-up opening/card-tap simulation
+- Sample Google Calendar events
+- Branded Focus Card artwork and Get a Card design screen
+- `DemoLaunch` routes, scroll positions, and screenshot fixtures
 
----
+## Apple, account, and hardware checklist
 
-## Built, waiting on Apple or hardware
+1. Join the paid Apple Developer Program before requesting entitlement distribution or App Store/TestFlight upload.
+2. Enroll in Apple’s Small Business Program before App Store Connect subscription setup, if eligible.
+3. Create the App Store Connect record and both Still+ subscription products before showing a release purchase path.
+4. Apply for Family Controls Distribution only when the DeviceActivity extension design is ready to review.
+5. Test notifications, background audio, NFC, StoreKit purchases/restores, widgets, Live Activity, and Screen Time behavior on physical iPhones.
+6. Do not add an NFC Tag Reading or Associated Domains capability until the signing and hosted-domain requirements are actually available.
 
-### App/category blocking with emergency override
+## Non-negotiable product boundaries
 
-- **Done:** `FamilyControlsBlockingService` (authorization, per-preset
-  `FamilyActivitySelection` stored via `BlockingSelectionStore`,
-  `ManagedSettingsStore` shields on session start, cleared on end),
-  `BlockingSetupView` with `FamilyActivityPicker`, a Blocking section in Session
-  options, and "End blocking now" on the running session (logs
-  `blocking_override`, no app names). All behind `FeatureFlags.appBlocking`.
-- **Needed:**
-  1. Request the **Family Controls (Distribution)** entitlement from Apple.
-     Development builds can use the development entitlement with a paid account.
-  2. Add `com.apple.developer.family-controls` to `Still/Still.entitlements`
-     and set `appBlocking: true` in `FeatureFlags.current`.
-  3. Add a **DeviceActivity monitor extension** (`StillShieldMonitor`) so
-     shields lift when a session's end time passes even if Still was closed:
-     when a session starts, `DeviceActivityCenter().startMonitoring(.init("still.session"), during: DeviceActivitySchedule(intervalStart:intervalEnd:repeats: false))`
-     with the session's end; in the extension's `intervalDidEnd`, call
-     `ManagedSettingsStore(named: .init("still.focus")).clearAllSettings()`.
-     The extension needs the same entitlement.
-- **Privacy:** selections are opaque tokens that stay on the device.
-- **Next safe step:** apply for the entitlement now; the wait is the long pole.
-
-### NFC tag writing in the app
-
-- **Done:** `CoreNFCTagWriter` (checks the tag is writable and big enough,
-  writes an NDEF URI record) and a "Write to a tag" button on the Focus Card
-  screen, both compiled only with `-DSTILL_CORENFC`.
-- **Needed:** a paid account, the NFC Tag Reading capability
-  (`com.apple.developer.nfc.readersession.formats = [NDEF]`), the Swift flag,
-  and a physical iPhone. `NFCReaderUsageDescription` is already in Info.plist.
-- **Next safe step:** write one tag with any NFC app first; that already works
-  through the URL scheme.
-
-### Voice capture on hardware
-
-Works in code and is on, but should be checked on a real iPhone (simulator
-microphone input is unreliable).
-
----
-
-## Remaining
-
-### AlarmKit wake-up (a real alarm)
-
-- **Today:** Morning Start is a notification, so it follows silent mode.
-- **Needed:** AlarmKit (iOS 26+) and its usage description. The system owns
-  the stop button, so "can't dismiss until you do X" isn't possible; the alarm
-  should open Still to today's tasks and a queued session. Adopt
-  `WakeUpScheduling` with an AlarmKit implementation, gated by
-  `#available(iOS 26, *)`, and keep the notification version for iOS 17–25.
-- **Next safe step:** a small spike app confirming AlarmKit behavior on device.
-
-### Google Calendar
-
-EventKit covers calendars synced to the iPhone (including Google accounts added
-in Settings). A direct Google integration needs OAuth, a privacy policy, and
-Google's review; V1 has no backend by design.
-
-### Universal Links and a branded NFC card
-
-Cards should carry `https://<your-domain>/start-focus?preset=…` rather than
-`still://`. Needs a domain, an `apple-app-site-association` file, the
-Associated Domains capability, and the host added to
-`DeepLinkParser.universalLinkHosts`. Card design and printing are separate.
-
-### Bundled public-domain books
-
-The reader is ready; the shelf starts empty. Add verified public-domain EPUBs
-to `Still/Resources/` (each with its source and status recorded per
-`ASSET_AND_CONTENT_POLICY.md`) and they appear as "Public domain".
-
-### Cosmetics, seasonal scenes, IAP
-
-`SceneDefinition.entitlementKey` exists (nil). Needs StoreKit 2 design and
-products in App Store Connect. Keep session-earned unlocks free and
-non-punitive; don't add locked paid content before then.
-
----
-
-## Analytics destination (any release)
-
-- **In place:** `EventTracking` with a bounded local log, typed
-  `AppEventName`, properties that can only come from typed values
-  (`EventProperties`), a token sanitizer (`SafeToken`), anonymized
-  preset/activity IDs, and duration buckets. `EventDestination` exists; none is
-  registered.
-- **Next safe step:** an opt-in, user-reviewable export (e.g. aggregate weekly
-  counts), added as an `EventDestination`. Update the privacy copy in Me first.
-
-## Explicitly cut
-
-Android, a launcher/dumbphone mode, animal companions, chess vs Stockfish, a
-multi-source book library, weather, news, and licensed modern books. Do not add
-placeholder UI for any of them.
+- All data remains on-device unless the product deliberately changes its privacy model and its copy is updated first.
+- The Focus Card never unlocks digital features.
+- Break activities are finite and remain free; no feed, urgency, streak pressure, leaderboard, coin economy, or missed-day penalty.
+- Earned core rooms and history are never revoked or paywalled.
+- Every new visual/audio asset requires original/cleared provenance in `ASSET_AND_CONTENT_POLICY.md`.

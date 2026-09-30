@@ -70,6 +70,15 @@ final class JournalController {
         }
     }
 
+    /// Restores an exact prior line after a local undo action.
+    func restore(_ entry: JournalEntry) {
+        do {
+            try journal.save(entry)
+        } catch {
+            onPersistenceError?(error)
+        }
+    }
+
     /// Days in a row with a line, counting today or yesterday. Never shaming:
     /// the UI only mentions it when it's above one.
     func currentRun() -> Int {

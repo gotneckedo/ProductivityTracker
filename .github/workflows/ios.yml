@@ -4,12 +4,27 @@ name: iOS build, tests & screenshots
 
 on:
   push:
-    branches: [main]
+    branches: [main, "redesign", "redesign/**"]
+  pull_request:
+  # A weekly broad visual-regression pass supplements the compact push gate.
+  # It is deliberately separate because the hosted runner limits each job to
+  # 45 minutes and the P0 Release captures must never be starved by the gallery.
+  schedule:
+    - cron: "30 7 * * 1"
   workflow_dispatch:
+    inputs:
+      full_gallery:
+        description: "Also run the complete visual-regression gallery"
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
-  group: ios-${{ github.ref }}
-  cancel-in-progress: true
+  # Push-time compact gates supersede each other. Scheduled and explicitly
+  # dispatched full galleries are never cancelled by a later implementation
+  # push, otherwise the broad regression check would not finish.
+  group: ios-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'push' || github.event_name == 'pull_request' }}
 
 jobs:
   ios:
@@ -102,23 +117,161 @@ jobs:
 
           shoot() {
             xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" > /dev/null
-            sleep 6
+            # A demo state performs local fixture setup and SwiftUI layout on a
+            # cold process. Ten seconds leaves room for Release proof under
+            # the hosted runner's hard cap without racing the initial render.
+            sleep 10
+            xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
+            echo "Captured $2"
+          }
+
+          # The feature views recognize this DEBUG-only argument and scroll
+          # their own root tab to its final row. These captures prove that the
+          # floating tab bar leaves enough bottom clearance.
+          shoot_bottom() {
+            xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" -still-scroll-bottom "$1" > /dev/null
+            sleep 10
+            xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
+            echo "Captured $2"
+          }
+
+          # These midpoint captures show the status-bar material fade against
+          # real scrolled content; they are separate from the bottom-clearance
+          # captures so neither proof relies on an inferred scroll position.
+          shoot_midpoint() {
+            xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" -still-scroll-midpoint "$1" > /dev/null
+            sleep 12
+            xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
+            echo "Captured $2"
+          }
+
+          # The app scopes this override to DEBUG/CI. It reaches the same
+          # Accessibility environment values that iOS provides in production.
+          shoot_reduced_motion() {
+            xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" -still-reduce-motion > /dev/null
+            sleep 10
             xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
             echo "Captured $2"
           }
 
           xcrun simctl ui "$UDID" appearance light
           n=1
-          for screen in onboarding home calm active complete break sudoku wordsearch picross breathing read doodle journal tasks timeline presets gallery morning me scenes card; do
+          # The screenshot job is deliberately a compact, current P0 matrix.
+          # Historical accepted artifacts retain the prior visual-regression
+          # gallery; running all its duplicates here exceeded the hosted
+          # runner's hard 45-minute cap before release proof could begin.
+          for screen in today mixer mixer-top active-autumn break sudoku wordsearch picross breathing read doodle journal habits gallery gallery-empty gallery-one gallery-several gallery-error me scenes card get-card; do
             shoot "$screen" "$(printf '%02d' $n)-$screen"
             n=$((n + 1))
           done
 
-          xcrun simctl ui "$UDID" appearance dark
-          for screen in home active complete journal me; do
-            shoot "$screen" "$(printf '%02d' $n)-$screen-dark"
+          # These final rows prove P0 navigation and shelf completeness.
+          for screen in today break read; do
+            shoot_bottom "$screen" "$(printf '%02d' $n)-$screen-bottom"
             n=$((n + 1))
           done
+
+          # Named P0 proofs. Screenshots, rather than Swift tests, decide
+          # whether the following release and visual claims are complete.
+          shoot "break" "proof-break-all-top"
+          shoot_bottom "break" "proof-break-all-bottom"
+          shoot "journal" "proof-journal-navigation"
+          shoot "habits" "proof-habits-navigation"
+          shoot_bottom "today" "proof-today-reflection-link"
+          shoot "read" "proof-short-read-top"
+          shoot_bottom "read" "proof-short-read-bottom"
+          # Item 33: this route seeds no completed sessions, so Library, Train,
+          # and City are genuinely locked earned rooms rather than a populated
+          # scene collection that happens to include the word “locked” in its
+          # historical proof filename.
+          shoot "scenes-locked-core" "proof-scenes-locked-core"
+          shoot "mixer-available" "proof-ambient-available"
+          shoot "mixer" "proof-ambient-unavailable"
+          # Block C static evidence. Motion and haptics are recorded in the
+          # next queue item; these named frames pin the visual end states.
+          shoot "active-final-minute" "proof-interaction-final-minute"
+          shoot "complete" "proof-interaction-complete"
+          shoot "room-collectibles" "proof-interaction-room"
+          shoot "tasks-complete" "proof-interaction-task"
+          shoot "sudoku-invalid" "proof-interaction-invalid-entry"
+          shoot_reduced_motion "active-final-minute" "proof-reduce-motion-focus"
+          shoot "accessibility-feedback" "proof-accessibility-feedback"
+          shoot "undo-task" "proof-swipe-undo-task"
+          shoot "context-previews" "proof-long-press-previews"
+          shoot "scenes-edit" "proof-edit-scenes"
+          shoot "break-edit" "proof-edit-break-shelf"
+          shoot "today-routine" "proof-edit-today-routine"
+          shoot "history-search" "proof-search-history"
+          shoot "short-read-search" "proof-search-short-read"
+          shoot "history-full" "proof-history-full"
+          shoot "history-empty" "proof-history-empty"
+          shoot "today-refreshed" "proof-pull-today"
+          shoot "break-reshuffled" "proof-pull-break"
+          shoot "ax3-today" "proof-ax3-today"
+          shoot "ax3-focus" "proof-ax3-focus"
+          shoot "ax3-break" "proof-ax3-break"
+          shoot "ax3-me" "proof-ax3-me"
+          # Item 34: the Focus route exposes the production RoomHero arrow
+          # controls only for this CI review. Puzzle keypads remain in the
+          # numbered compact captures (06-sudoku, 07-wordsearch, 08-picross).
+          shoot "touch-targets" "proof-touch-targets-room"
+          # Item 35: CI routes inject the same SwiftUI accessibility
+          # environments iOS provides for Bold Text and Increase Contrast.
+          shoot "bold-today" "proof-bold-text-today"
+          shoot "contrast-me" "proof-increased-contrast-me"
+          shoot "contrast-sudoku" "proof-increased-contrast-sudoku"
+          # Item 37: each boundary is a real unavailable/fallback state. CI
+          # only injects local no-op services; it never writes a tag, requests
+          # Family Controls permission, shields an app, or disables storage.
+          shoot "error-audio" "proof-error-audio-missing"
+          shoot "error-nfc" "proof-error-nfc-unavailable"
+          shoot "error-family-controls" "proof-error-family-controls"
+          shoot "error-storage" "proof-error-storage-degraded"
+          # Item 38's five static first-run frames are deliberately captured
+          # by the manual/scheduled broad gallery. Adding them here pushed the
+          # compact P0 matrix over the hosted runner's screenshot time budget
+          # and starved the Release truth captures before they could run.
+          # Item 33: the intentionally incomplete preference fixture verifies
+          # that actionable “Not set” values are readable rather than treated
+          # as disabled gray text on the glass control group.
+          shoot "me-preferences" "proof-contrast-me-preferences"
+
+          # Truth-pass release proof. This is a Release configuration compiled
+          # with only the internal STILL_PROOF navigation condition; FeatureFlags
+          # remain `.release`, so these cannot accidentally prove DEBUG stand-ins.
+          xcodebuild build \
+            -project Still.xcodeproj \
+            -scheme Still \
+            -configuration Release \
+            -destination "id=$UDID" \
+            -derivedDataPath release-proof \
+            CODE_SIGNING_ALLOWED=NO \
+            OTHER_SWIFT_FLAGS='$(inherited) -DSTILL_PROOF' \
+            > release-proof-build.log 2>&1
+          RELEASE_APP=$(find release-proof/Build/Products -path "*iphonesimulator*" -name "Still.app" -maxdepth 3 | head -1)
+          echo "Release proof app: $RELEASE_APP"
+          xcrun simctl install "$UDID" "$RELEASE_APP"
+
+          shoot_release() {
+            xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" > /dev/null
+            sleep 10
+            xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
+            echo "Captured release proof $2"
+          }
+          shoot_release_bottom() {
+            xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE_ID" -still-demo "$1" -still-scroll-bottom "$1" > /dev/null
+            sleep 10
+            xcrun simctl io "$UDID" screenshot "$GITHUB_WORKSPACE/screenshots/$2.png"
+            echo "Captured release bottom proof $2"
+          }
+          shoot_release "release-home" "proof-release-focus-home"
+          shoot_release "release-blocking" "proof-release-blocking"
+          shoot_release "release-morning" "proof-release-morning"
+          shoot_release_bottom "release-morning" "proof-release-morning-delivery-note"
+          shoot_release "release-plus" "proof-release-still-plus"
+          shoot_release "release-locked-room" "proof-release-locked-room"
+          shoot_release "release-card" "proof-release-focus-card"
+          shoot_release "release-me-your-days" "proof-release-me-your-days"
 
       - name: Upload screenshots
         if: always()
@@ -136,4 +289,101 @@ jobs:
           path: |
             ${{ steps.loc.outputs.dir }}/xcodebuild.log
             ${{ steps.loc.outputs.dir }}/TestResults.xcresult
+          if-no-files-found: ignore
+
+  # The wide gallery is intentionally not a push-time job. It exercises the
+  # screens that commonly regress outside an active ticket: safe areas, dark
+  # mode, every room, cats, scenes, and the bottom of long screens. Run weekly
+  # and on explicit workflow dispatch with full_gallery=true.
+  full-gallery:
+    name: Full visual regression gallery
+    if: >-
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && inputs.full_gallery == true)
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      BUNDLE_ID: com.cocomedia.still
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v5
+
+      - name: Find the project folder
+        id: loc
+        run: |
+          PROJ=$(find . -maxdepth 4 -name "Still.xcodeproj" -type d -not -path "*/build/*" | head -1)
+          if [ -z "$PROJ" ]; then
+            echo "::error::Still.xcodeproj is not in this repo."
+            exit 1
+          fi
+          echo "dir=$(dirname "$PROJ")" >> "$GITHUB_OUTPUT"
+
+      - name: Use the latest stable Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Pick an iPhone simulator
+        id: sim
+        run: |
+          DEVICES=$(xcrun simctl list devices available -j)
+          UDID=$(echo "$DEVICES" | jq -r '[.devices | to_entries[] | select(.key | test("iOS")) | .value[] | select(.name | test("^iPhone [0-9]+ Pro$"))] | last | .udid')
+          if [ -z "$UDID" ] || [ "$UDID" = "null" ]; then
+            UDID=$(echo "$DEVICES" | jq -r '[.devices | to_entries[] | select(.key | test("iOS")) | .value[] | select(.name | test("^iPhone")) | select(.name | test("SE") | not)] | last | .udid')
+          fi
+          if [ -z "$UDID" ] || [ "$UDID" = "null" ]; then
+            echo "No current iPhone simulator found"; exit 1
+          fi
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Build app and run simulator tests
+        working-directory: ${{ steps.loc.outputs.dir }}
+        run: |
+          xcodebuild test \
+            -project Still.xcodeproj \
+            -scheme Still \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -derivedDataPath full-gallery-build \
+            -resultBundlePath FullGalleryTestResults.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            > full-gallery-xcodebuild.log 2>&1 && STATUS=0 || STATUS=$?
+          grep -E "error:|Test Suite .*(passed|failed)|Executed [0-9]+ tests|\*\* (BUILD|TEST)" full-gallery-xcodebuild.log || true
+          if [ "$STATUS" -ne 0 ]; then tail -80 full-gallery-xcodebuild.log; fi
+          exit $STATUS
+
+      - name: Capture complete visual regression gallery
+        working-directory: ${{ steps.loc.outputs.dir }}
+        run: |
+          UDID="${{ steps.sim.outputs.udid }}"
+          APP=$(find full-gallery-build/Build/Products -path "*iphonesimulator*" -name "Still.app" -maxdepth 3 | head -1)
+          test -n "$APP"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          xcrun simctl status_bar "$UDID" override --time "9:41" --batteryState charged --batteryLevel 100 || true
+          xcrun simctl install "$UDID" "$APP"
+          chmod +x ../.github/scripts/capture-full-gallery.sh
+          UDID="$UDID" BUNDLE_ID="$BUNDLE_ID" GITHUB_WORKSPACE="$GITHUB_WORKSPACE" \
+            ../.github/scripts/capture-full-gallery.sh
+
+      - name: Upload full gallery
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: still-full-gallery
+          # capture-full-gallery.sh writes directly to GITHUB_WORKSPACE so the
+          # gallery is independent of the nested Xcode project location.
+          path: ${{ github.workspace }}/full-gallery/
+          # A warning would allow the job to look green while silently losing
+          # the very regression evidence this job exists to preserve.
+          if-no-files-found: error
+
+      - name: Upload full gallery build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: still-full-gallery-build-log
+          path: |
+            ${{ steps.loc.outputs.dir }}/full-gallery-xcodebuild.log
+            ${{ steps.loc.outputs.dir }}/FullGalleryTestResults.xcresult
           if-no-files-found: ignore

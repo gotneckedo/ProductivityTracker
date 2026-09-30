@@ -21,49 +21,54 @@ struct PresetsView: View {
                 VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
                         Text("Presets")
-                            .font(StillTypography.title)
+                            .font(StillTypography.display)
                             .foregroundStyle(StillTheme.textPrimary)
                             .accessibilityAddTraits(.isHeader)
-                        Text("A preset is a timer, a scene, and a sound. Tap one to make it your default. Each one has its own Focus Card link.")
-                            .font(StillTypography.callout)
-                            .foregroundStyle(StillTheme.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
                     }
 
-                    VStack(spacing: StillTheme.Spacing.s) {
-                        ForEach(appState.presets) { preset in
-                            PresetRow(
-                                preset: preset,
-                                isDefault: preset.id == appState.currentPreset.id,
-                                onSelect: { appState.setDefaultPreset(preset.id) },
-                                onDuplicate: { beginNaming(.create(basedOn: preset)) },
-                                onRename: { beginNaming(.rename(preset)) },
-                                onDelete: { deleting = preset }
-                            )
+                    StillInsetList {
+                        VStack(spacing: 0) {
+                            ForEach(Array(appState.presets.enumerated()), id: \.element.id) { index, preset in
+                                PresetRow(
+                                    preset: preset,
+                                    isDefault: preset.id == appState.currentPreset.id,
+                                    onSelect: { appState.setDefaultPreset(preset.id) },
+                                    onDuplicate: { beginNaming(.create(basedOn: preset)) },
+                                    onRename: { beginNaming(.rename(preset)) },
+                                    onDelete: { deleting = preset },
+                                    onSwipeDelete: { appState.deletePresetWithUndo(preset) }
+                                )
+                                if index < appState.presets.count - 1 {
+                                    InsetRowDivider(leading: 46)
+                                }
+                            }
+                            if appState.canCreatePreset {
+                                InsetRowDivider(leading: 46)
+                                Button {
+                                    beginNaming(.create(basedOn: appState.currentPreset))
+                                } label: {
+                                    Label("New preset", systemImage: "plus")
+                                        .font(StillTypography.bodyEmphasis)
+                                        .foregroundStyle(StillTheme.accent)
+                                        .stillInsetRow()
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            InsetRowDivider(leading: 46)
+                            Button {
+                                appState.router.go(to: .focusConfiguration)
+                            } label: {
+                                SettingRow(symbol: "slider.horizontal.3", title: "Edit \(appState.currentPreset.name)", value: "Session options")
+                                    .stillInsetRow()
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
-
-                    if appState.canCreatePreset {
-                        Button {
-                            beginNaming(.create(basedOn: appState.currentPreset))
-                        } label: {
-                            Label("New preset", systemImage: "plus")
-                        }
-                        .buttonStyle(QuietSecondaryButtonStyle())
-                    } else {
-                        QuietNote(text: "Ten presets is the limit. Delete one to make room.")
-                    }
-
-                    Button {
-                        appState.router.go(to: .focusConfiguration)
-                    } label: {
-                        SettingRow(symbol: "slider.horizontal.3", title: "Edit \(appState.currentPreset.name)", value: "Session options")
-                    }
-                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, StillTheme.Spacing.screen)
                 .padding(.vertical, StillTheme.Spacing.m)
             }
+            .stillScrollableViewport()
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
@@ -76,7 +81,7 @@ struct PresetsView: View {
         }
         .confirmationDialog("Delete this preset?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }), titleVisibility: .visible) {
             Button("Delete \(deleting?.name ?? "preset")", role: .destructive) {
-                if let preset = deleting { appState.deletePreset(preset.id) }
+                if let preset = deleting { appState.deletePresetWithUndo(preset) }
                 deleting = nil
             }
             Button("Cancel", role: .cancel) { deleting = nil }
@@ -130,6 +135,7 @@ private struct PresetRow: View {
     let onDuplicate: () -> Void
     let onRename: () -> Void
     let onDelete: () -> Void
+    let onSwipeDelete: () -> Void
 
     var body: some View {
         HStack(spacing: StillTheme.Spacing.s) {
@@ -172,16 +178,14 @@ private struct PresetRow: View {
             }
             .accessibilityLabel("More for \(preset.name)")
         }
-        .padding(.horizontal, StillTheme.Spacing.s)
-        .padding(.vertical, StillTheme.Spacing.xs)
-        .background(
-            RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
-                .fill(StillTheme.surface)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
-                .strokeBorder(isDefault ? StillTheme.accent : StillTheme.border, lineWidth: StillTheme.Stroke.hairline)
-        )
+        .stillInsetRow(verticalPadding: StillTheme.Spacing.s)
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            if !preset.isBuiltIn {
+                Button(role: .destructive, action: onSwipeDelete) {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
     }
 
     private var detail: String {
@@ -211,8 +215,9 @@ struct PresetChips: View {
                             .lineLimit(1)
                             .padding(.horizontal, StillTheme.Spacing.m)
                             .frame(minHeight: 38)
-                            .background(Capsule(style: .continuous).fill(isSelected ? StillTheme.surface : StillTheme.surfaceSunken))
-                            .overlay(Capsule(style: .continuous).strokeBorder(isSelected ? StillTheme.accent : Color.clear, lineWidth: StillTheme.Stroke.hairline))
+                            .background(Capsule(style: .continuous).fill(.ultraThinMaterial))
+                            .overlay(Capsule(style: .continuous).fill(isSelected ? Color.white.opacity(0.30) : Color.white.opacity(0.08)))
+                            .overlay(Capsule(style: .continuous).strokeBorder(isSelected ? StillTheme.accent : StillTheme.border, lineWidth: StillTheme.Stroke.hairline))
                             .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)

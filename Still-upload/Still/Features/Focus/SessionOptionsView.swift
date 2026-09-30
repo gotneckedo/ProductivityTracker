@@ -1,33 +1,50 @@
 import SwiftUI
 
-/// Everything that would crowd the Focus screen: preset, task, timer,
-/// environment, and sound. Edits save to the selected preset immediately.
+/// Edits the selected preset. Controls are grouped by what they change, while
+/// the navigation title remains the page's only heading.
 struct SessionOptionsView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
     @State private var draft: FocusPreset?
+    @State private var savedSoundscapeName = ""
+    @State private var isNamingSoundscape = false
 
     var body: some View {
         NavigationStack {
             StillScreen {
-                ScrollView {
-                    if let preset = draft {
-                        VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
-                            presetSection(preset)
-                            taskSection
-                            timerSection
-                            environmentSection(preset)
-                            soundSection
-                            if appState.container.flags.appBlocking {
-                                blockingSection
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        if let preset = draft {
+                            VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+                                presetAndTaskSection(preset)
+                                timerSection
+                                roomSection(preset)
+                                soundSection
+                                if appState.container.flags.appBlocking {
+                                    blockingSection
+                                }
+                                Color.clear.frame(height: 1).id("soundscape-proof")
                             }
+                            .padding(.horizontal, StillTheme.Spacing.screen)
+                            .padding(.vertical, StillTheme.Spacing.m)
                         }
-                        .padding(.horizontal, StillTheme.Spacing.screen)
-                        .padding(.vertical, StillTheme.Spacing.m)
+                    }
+                    .stillScrollableViewport(reservingFloatingTabBar: false)
+                    .onAppear {
+                        #if DEBUG || STILL_PROOF
+                        switch DemoLaunch.requestedScreen {
+                        case "mixer":
+                            DispatchQueue.main.async { proxy.scrollTo("soundscape-proof", anchor: .bottom) }
+                        case "mixer-available", "error-audio":
+                            DispatchQueue.main.async { proxy.scrollTo("soundscape-available-proof", anchor: .top) }
+                        default:
+                            break
+                        }
+                        #endif
                     }
                 }
             }
-            .navigationTitle("Session options")
+            .navigationTitle("Session setup")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -46,8 +63,6 @@ struct SessionOptionsView: View {
         .presentationDragIndicator(.visible)
     }
 
-    // MARK: Bindings into the draft
-
     private func binding<Value>(_ keyPath: WritableKeyPath<FocusPreset, Value>, fallback: Value) -> Binding<Value> {
         Binding(
             get: { draft?[keyPath: keyPath] ?? fallback },
@@ -62,122 +77,147 @@ struct SessionOptionsView: View {
         )
     }
 
-    // MARK: Sections
-
-    private func presetSection(_ preset: FocusPreset) -> some View {
-        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            HStack(alignment: .firstTextBaseline) {
-                SectionHeader(title: "Preset", detail: "Focus starts with this preset. Changes below apply to it.")
-                Button("Manage") {
-                    appState.router.go(to: .presets)
+    private func presetAndTaskSection(_ preset: FocusPreset) -> some View {
+        GlassControlGroup {
+            VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+                HStack(alignment: .firstTextBaseline) {
+                    SectionHeader(title: "Preset")
+                    Button("Manage") { appState.router.go(to: .presets) }
+                        .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
+                        .accessibilityHint("Opens presets to add, rename, or delete them.")
                 }
-                .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
-                .accessibilityHint("Opens your presets to add, rename, or delete them.")
+                PresetChips(presets: appState.presets, selectedID: preset.id) { id in
+                    appState.setDefaultPreset(id)
+                    draft = appState.presets.first { $0.id == id }
+                }
+                InsetRowDivider()
+                Button {
+                    appState.router.go(to: .tasks)
+                } label: {
+                    SettingRow(
+                        symbol: "checklist",
+                        title: appState.selectedTask?.title ?? "No task",
+                        value: appState.selectedTask == nil ? "Choose" : "Change"
+                    )
+                    .stillInsetRow()
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Task")
             }
-            PresetChips(presets: appState.presets, selectedID: preset.id) { id in
-                appState.setDefaultPreset(id)
-                draft = appState.presets.first { $0.id == id }
-            }
-        }
-    }
-
-    private var taskSection: some View {
-        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Task")
-            Button {
-                appState.router.go(to: .tasks)
-            } label: {
-                SettingRow(symbol: "checklist", title: appState.selectedTask?.title ?? "No task", value: appState.selectedTask == nil ? "Choose" : "Change")
-            }
-            .buttonStyle(.plain)
         }
     }
 
     private var timerSection: some View {
         let mode = binding(\.timer.mode, fallback: .countdown)
-        return VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Timer")
-            SelectionPill(options: TimerMode.allCases, selection: mode, title: { $0.displayName })
-
-            StillCard {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-                    if mode.wrappedValue == .countUp {
-                        Text("Count up runs until you finish. Sessions under 5 minutes aren't counted.")
-                            .font(StillTypography.footnote)
-                            .foregroundStyle(StillTheme.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } else {
-                        minuteStepper(title: mode.wrappedValue == .pomodoro ? "Focus block" : "Focus",
-                                      value: minutesBinding(\.timer.focusDuration), range: 5...180, step: 5)
+        return GlassControlGroup {
+            VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+                SectionHeader(title: "Timer")
+                SelectionPill(options: TimerMode.allCases, selection: mode, title: { $0.displayName })
+                InsetRowDivider()
+                if mode.wrappedValue != .countUp {
+                    minuteStepper(
+                        title: mode.wrappedValue == .pomodoro ? "Focus block" : "Focus",
+                        value: minutesBinding(\.timer.focusDuration),
+                        range: 5...180,
+                        step: 5
+                    )
+                }
+                if mode.wrappedValue == .pomodoro {
+                    InsetRowDivider()
+                    minuteStepper(title: "Break", value: minutesBinding(\.timer.breakDuration), range: 1...60, step: 1)
+                    InsetRowDivider()
+                    Stepper(value: binding(\.timer.cycleCount, fallback: 4), in: TimerConfiguration.cycleRange) {
+                        stepperLabel("Blocks", value: "\(draft?.timer.cycleCount ?? 4)")
                     }
-                    if mode.wrappedValue == .pomodoro {
-                        Divider()
-                        minuteStepper(title: "Break", value: minutesBinding(\.timer.breakDuration), range: 1...60, step: 1)
-                        Divider()
-                        Stepper(value: binding(\.timer.cycleCount, fallback: 4), in: TimerConfiguration.cycleRange) {
-                            stepperLabel("Blocks", value: "\(draft?.timer.cycleCount ?? 4)")
-                        }
-                        Divider()
-                        Toggle("Start breaks automatically", isOn: binding(\.timer.autoStartBreaks, fallback: true))
-                            .font(StillTypography.body)
-                        Toggle("Start next focus automatically", isOn: binding(\.timer.autoStartFocus, fallback: false))
-                            .font(StillTypography.body)
-                    }
+                    .stillInsetRow()
+                    InsetRowDivider()
+                    Toggle("Start breaks automatically", isOn: binding(\.timer.autoStartBreaks, fallback: true))
+                        .font(StillTypography.body)
+                        .stillInsetRow()
+                    InsetRowDivider()
+                    Toggle("Start next focus automatically", isOn: binding(\.timer.autoStartFocus, fallback: false))
+                        .font(StillTypography.body)
+                        .stillInsetRow()
                 }
             }
         }
     }
 
-    private func environmentSection(_ preset: FocusPreset) -> some View {
-        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Environment", detail: "Calm keeps a still plant and puts the timer first.")
-            SelectionPill(options: RenderMode.allCases, selection: binding(\.renderMode, fallback: .scene), title: { $0.displayName })
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: StillTheme.Spacing.s) {
-                    ForEach(SceneCatalog.all.filter { appState.isUnlocked($0) }) { scene in
-                        SceneChoice(scene: scene, isSelected: scene.id == preset.sceneID) {
-                            draft?.sceneID = scene.id
-                            draft?.renderMode = .scene
+    private func roomSection(_ preset: FocusPreset) -> some View {
+        GlassControlGroup {
+            VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+                SectionHeader(title: "Room")
+                SelectionPill(options: RenderMode.allCases, selection: binding(\.renderMode, fallback: .scene), title: { $0.displayName })
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: StillTheme.Spacing.s) {
+                        ForEach(SceneCatalog.completeCatalog.filter { appState.isUnlocked($0) }) { scene in
+                            SceneChoice(scene: scene, isSelected: scene.id == preset.sceneID) {
+                                draft?.sceneID = scene.id
+                                draft?.renderMode = .scene
+                                StillInteractionFeedback.fire(.roomChanged, preferences: appState.preferences)
+                            }
                         }
                     }
                 }
-            }
-            if let next = appState.nextLockedScene {
-                Text("\(next.scene.name) opens after \(next.remaining) more \(next.remaining == 1 ? "session" : "sessions").")
-                    .font(StillTypography.footnote)
-                    .foregroundStyle(StillTheme.textTertiary)
             }
         }
     }
 
     private var soundSection: some View {
-        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Sound")
-            AmbientMixEditor(mix: binding(\.ambientMix, fallback: .silent), status: appState.audioStatus) { source in
-                appState.container.audio.isAssetAvailable(source)
+        GlassControlGroup {
+            VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+                SectionHeader(title: "Soundscape")
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: StillTheme.Spacing.xs) {
+                        ForEach(SoundscapeCatalog.builtIns) { soundscape in
+                            SoundscapeChip(name: soundscape.name) { draft?.ambientMix = soundscape.mix }
+                        }
+                        ForEach(appState.savedSoundscapes) { soundscape in
+                            SoundscapeChip(name: soundscape.name, isCustom: true) { draft?.ambientMix = soundscape.mix }
+                        }
+                    }
+                }
+                InsetRowDivider()
+                AmbientMixEditor(mix: binding(\.ambientMix, fallback: .silent), status: appState.audioStatus) { source in
+                    appState.container.audio.isAssetAvailable(source)
+                }
+                .id("soundscape-available-proof")
+                Button("Save this soundscape") {
+                    savedSoundscapeName = ""
+                    isNamingSoundscape = true
+                }
+                .buttonStyle(QuietSecondaryButtonStyle())
             }
+        }
+        .alert("Save soundscape", isPresented: $isNamingSoundscape) {
+            TextField("Name", text: $savedSoundscapeName)
+            Button("Save") { appState.saveSoundscape(name: savedSoundscapeName, mix: draft?.ambientMix ?? .silent) }
+            Button("Cancel", role: .cancel) {}
         }
     }
 
     private var blockingSection: some View {
-        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Blocking", detail: "What this preset shields while a session runs. You can end blocking early at any time.")
-            SelectionPill(options: BlockerIntent.allCases, selection: binding(\.blockerIntent, fallback: .none), title: { $0.displayName })
-            Button {
-                appState.router.go(to: .blockingSetup)
-            } label: {
-                SettingRow(symbol: "shield", title: "Choose apps", value: nil)
+        GlassControlGroup {
+            VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+                SectionHeader(title: "Blocking")
+                SelectionPill(options: BlockerIntent.allCases, selection: binding(\.blockerIntent, fallback: .none), title: { $0.displayName })
+                InsetRowDivider()
+                Button {
+                    appState.router.go(to: .blockingSetup)
+                } label: {
+                    SettingRow(symbol: "shield", title: "Choose apps", value: nil)
+                        .stillInsetRow()
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
     }
-
-    // MARK: Small pieces
 
     private func minuteStepper(title: String, value: Binding<Int>, range: ClosedRange<Int>, step: Int) -> some View {
         Stepper(value: value, in: range, step: step) {
             stepperLabel(title, value: "\(value.wrappedValue) min")
         }
+        .stillInsetRow()
         .accessibilityValue("\(value.wrappedValue) minutes")
     }
 
@@ -202,17 +242,31 @@ private struct SceneChoice: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
-                PixelSceneView(scene: scene, mode: .scene, intensity: .still)
-                    .frame(width: 112, height: 100)
+                RoomHeroView(
+                    sceneName: scene.name,
+                    sceneID: scene.id,
+                    allowsCatInteraction: false,
+                    plantStage: .full,
+                    showsControls: false
+                )
+                    .frame(width: 112, height: 112)
                     .clipShape(RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: StillTheme.Radius.medium, style: .continuous)
                             .strokeBorder(isSelected ? StillTheme.accent : StillTheme.border,
                                           lineWidth: isSelected ? 2 : StillTheme.Stroke.hairline)
                     )
-                Text(scene.name)
-                    .font(StillTypography.caption)
-                    .foregroundStyle(StillTheme.textPrimary)
+                HStack(spacing: 4) {
+                    Text(scene.name)
+                        .font(StillTypography.caption)
+                        .foregroundStyle(StillTheme.textPrimary)
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(StillTypography.caption.weight(.semibold))
+                            .foregroundStyle(StillTheme.accent)
+                            .accessibilityHidden(true)
+                    }
+                }
             }
         }
         .buttonStyle(.plain)
@@ -222,39 +276,45 @@ private struct SceneChoice: View {
     }
 }
 
-/// Restrained sound controls: an on/off switch, a master level, and one
-/// level per source. No meters or visualizers.
+/// Restrained local sound controls. Their parent supplies the one surrounding
+/// glass control group; this editor does not manufacture a nested card.
 struct AmbientMixEditor: View {
     @Binding var mix: AmbientMix
     let status: AmbientAudioStatus
     let isAvailable: (AmbientSourceID) -> Bool
+    @Environment(AppState.self) private var appState
 
     var body: some View {
-        StillCard {
-            VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-                if status == .assetsMissing {
-                    QuietNote(text: AmbientAudioCopy.assetsMissing)
-                } else if status == .unavailable {
-                    QuietNote(text: AmbientAudioCopy.unavailable)
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            if status == .assetsMissing {
+                QuietNote(text: AmbientAudioCopy.assetsMissing)
+            } else if status == .unavailable {
+                QuietNote(text: AmbientAudioCopy.unavailable)
+            }
+            Toggle("Ambient sound", isOn: $mix.isEnabled)
+                .font(StillTypography.body)
+                .stillInsetRow()
+                .onChange(of: mix.isEnabled) { _, _ in
+                    StillInteractionFeedback.fire(.soundscapeToggled, preferences: appState.preferences)
                 }
-                Toggle("Ambient sound", isOn: $mix.isEnabled)
-                    .font(StillTypography.body)
-                if mix.isEnabled {
-                    levelRow(title: "Volume", value: Binding(get: { mix.masterVolume }, set: { mix.setMasterVolume($0) }), note: nil)
-                    Divider()
-                    ForEach(AmbientSource.all) { source in
-                        levelRow(
-                            title: source.displayName,
-                            value: Binding(get: { mix.level(for: source.id) }, set: { mix.setLevel($0, for: source.id) }),
-                            note: (status == .ready && !isAvailable(source.id)) ? AmbientAudioCopy.sourceMissing : nil
-                        )
-                    }
+            if mix.isEnabled {
+                InsetRowDivider()
+                levelRow(title: "Volume", value: Binding(get: { mix.masterVolume }, set: { mix.setMasterVolume($0) }), note: nil)
+                ForEach(AmbientSource.all) { source in
+                    InsetRowDivider()
+                    levelRow(
+                        title: source.displayName,
+                        value: Binding(get: { mix.level(for: source.id) }, set: { mix.setLevel($0, for: source.id) }),
+                        note: (status == .ready && !isAvailable(source.id)) ? AmbientAudioCopy.sourceUnavailable : nil,
+                        isAvailable: status != .ready || isAvailable(source.id),
+                        source: source
+                    )
                 }
             }
         }
     }
 
-    private func levelRow(title: String, value: Binding<Double>, note: String?) -> some View {
+    private func levelRow(title: String, value: Binding<Double>, note: String?, isAvailable: Bool = true, source: AmbientSource? = nil) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
                 Text(title)
@@ -268,16 +328,69 @@ struct AmbientMixEditor: View {
             Slider(value: value, in: 0...1)
                 .accessibilityLabel(title)
                 .accessibilityValue(value.wrappedValue < 0.01 ? "Off" : "\(Int((value.wrappedValue * 100).rounded())) percent")
+                .disabled(!isAvailable)
             if let note {
                 Text(note)
                     .font(StillTypography.caption)
                     .foregroundStyle(StillTheme.textTertiary)
             }
         }
+        .stillInsetRow()
+        .opacity(isAvailable ? 1 : 0.58)
+        .contextMenu {
+            if let source, isAvailable {
+                Button("Set \(title) to 50%") { mix.setLevel(0.5, for: source.id) }
+                Button("Mute \(title)") { mix.setLevel(0, for: source.id) }
+            }
+        } preview: {
+            AmbientLayerContextPreview(title: title, level: value.wrappedValue, isAvailable: isAvailable)
+        }
+        .accessibilityHint(isAvailable ? "" : "Unavailable because this build has no audio file for this layer.")
     }
 }
 
-#Preview("Session options") {
-    SessionOptionsView()
-        .environment(PreviewSupport.appState(populated: true))
+private struct AmbientLayerContextPreview: View {
+    let title: String
+    let level: Double
+    let isAvailable: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            Image(systemName: isAvailable ? "waveform" : "speaker.slash")
+                .font(StillTypography.title3)
+                .foregroundStyle(isAvailable ? StillTheme.calm : StillTheme.textTertiary)
+            Text(title)
+                .font(StillTypography.title3)
+                .foregroundStyle(StillTheme.textPrimary)
+            Text(isAvailable ? "\(Int((level * 100).rounded()))% volume" : "Unavailable in this build")
+                .font(StillTypography.footnote)
+                .foregroundStyle(StillTheme.textSecondary)
+        }
+        .frame(width: 210, alignment: .leading)
+        .padding(StillTheme.Spacing.m)
+        .background(StillTheme.surface, in: RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous))
+    }
+}
+
+private struct SoundscapeChip: View {
+    let name: String
+    var isCustom = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: isCustom ? "person.crop.circle" : "cloud")
+                Text(name)
+            }
+            .font(StillTypography.caption)
+            .foregroundStyle(StillTheme.textPrimary)
+            .padding(.horizontal, StillTheme.Spacing.s)
+            .frame(minHeight: StillTheme.minimumTapSize)
+            .background(StillTheme.accentSoft.opacity(0.32), in: Capsule())
+            .contentShape(Capsule())
+        }
+        .buttonStyle(StillRowButtonStyle(feedback: .soundscapeToggled))
+        .accessibilityLabel(isCustom ? "Custom soundscape: \(name)" : "Soundscape: \(name)")
+    }
 }

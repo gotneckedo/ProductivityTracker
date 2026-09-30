@@ -9,7 +9,9 @@ import Foundation
 /// a calm "ready when sound files are added" note.
 final class AVAmbientAudioPlayer: AmbientAudioPlaying {
     static let fileExtensions = ["m4a", "caf", "wav", "mp3"]
-    private static let fadeDuration: TimeInterval = 0.8
+    /// A calm entrance; individual layer changes share the same short fade.
+    private static let fadeDuration: TimeInterval = 3.5
+    private static let stopFadeDuration: TimeInterval = 6
 
     private var players: [AmbientSourceID: AVAudioPlayer] = [:]
     private var mix: AmbientMix = .silent
@@ -90,12 +92,17 @@ final class AVAmbientAudioPlayer: AmbientAudioPlaying {
     }
 
     func stop() {
-        players.values.forEach { player in
-            player.stop()
-            player.currentTime = 0
-        }
+        let activePlayers = Array(players.values)
+        activePlayers.forEach { $0.setVolume(0, fadeDuration: Self.stopFadeDuration) }
         isPlaying = false
-        deactivateSession()
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.stopFadeDuration) { [weak self] in
+            guard let self, !self.isPlaying else { return }
+            activePlayers.forEach { player in
+                player.stop()
+                player.currentTime = 0
+            }
+            self.deactivateSession()
+        }
     }
 
     private func activateSession() {

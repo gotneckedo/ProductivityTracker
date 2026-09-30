@@ -12,6 +12,7 @@ struct ShortReadActivityView: View {
     @State private var openBook: OpenSitting?
     @State private var isImporting = false
     @State private var removingBook: BookSummary?
+    @State private var query = ""
 
     /// A book sitting being read.
     struct OpenSitting: Equatable {
@@ -35,30 +36,38 @@ struct ShortReadActivityView: View {
             ReadingItemView(item: item, finishTitle: "Finish reading", onFinish: onFinished,
                             onChooseAnother: { selectedID = nil })
         } else {
-            VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-                Text("Pick one. Each is a few minutes long, and each one ends.")
-                    .font(StillTypography.callout)
-                    .foregroundStyle(StillTheme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                ForEach(library.allItems()) { item in
-                    Button {
-                        selectedID = item.id
-                    } label: {
-                        StillCard {
-                            VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
-                                Text(item.title)
-                                    .font(StillTypography.bodyEmphasis)
-                                    .foregroundStyle(StillTheme.textPrimary)
-                                Text("\(item.readMinutes) min read · \(item.license.displayName)")
-                                    .font(StillTypography.footnote)
-                                    .foregroundStyle(StillTheme.textSecondary)
+            StillInsetList(padding: StillTheme.Spacing.s) {
+                VStack(spacing: 0) {
+                    ForEach(Array(filteredItems.enumerated()), id: \.element.id) { index, item in
+                        Button {
+                            selectedID = item.id
+                        } label: {
+                            HStack(spacing: StillTheme.Spacing.s) {
+                                Image(systemName: "doc.text")
+                                    .foregroundStyle(StillTheme.accent)
+                                    .frame(width: 28)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.title)
+                                        .font(StillTypography.bodyEmphasis)
+                                        .foregroundStyle(StillTheme.textPrimary)
+                                    Text("\(item.readMinutes) min read · \(item.license.displayName)")
+                                        .font(StillTypography.footnote)
+                                        .foregroundStyle(StillTheme.textSecondary)
+                                }
+                                Spacer(minLength: 0)
+                                Image(systemName: "chevron.right")
+                                    .font(StillTypography.caption.weight(.semibold))
+                                    .foregroundStyle(StillTheme.textTertiary)
                             }
+                            .stillInsetRow()
                         }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("Opens this reading.")
+                        if index < filteredItems.count - 1 { InsetRowDivider(leading: 44) }
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityHint("Opens this reading.")
+                    if !filteredItems.isEmpty && !filteredBooks.isEmpty { InsetRowDivider(leading: 0) }
+                    bookRows
                 }
-                booksSection
             }
             .fileImporter(isPresented: $isImporting, allowedContentTypes: [.epub]) { result in
                 if case .success(let url) = result {
@@ -74,33 +83,94 @@ struct ShortReadActivityView: View {
             } message: {
                 Text("It's deleted from Still on this device. The original file isn't touched.")
             }
+            .searchable(text: $query, prompt: "Search this reading shelf")
+            .onAppear {
+                #if DEBUG || STILL_PROOF
+                if DemoLaunch.requestedScreen == "short-read-search" {
+                    query = "the"
+                }
+                #endif
+            }
         }
     }
 
-    private var booksSection: some View {
-        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Books", detail: "One sitting is a few minutes. Your place is kept for next time.")
-                .padding(.top, StillTheme.Spacing.m)
-            ForEach(appState.books) { book in
+    private var bookRows: some View {
+        let bundledBooks = filteredBooks.filter { $0.origin == .bundled }
+        let importedBooks = filteredBooks.filter { $0.origin == .imported }
+        return VStack(alignment: .leading, spacing: 0) {
+            if !filteredItems.isEmpty || !filteredBooks.isEmpty || query.isEmpty {
+                Text("Books")
+                    .font(StillTypography.bodyEmphasis)
+                    .foregroundStyle(StillTheme.textPrimary)
+                    .stillInsetRow()
+            }
+            if bundledBooks.isEmpty && query.isEmpty {
+                Text("Bundled books are loading. If this stays empty, try reopening Still.")
+                    .font(StillTypography.footnote)
+                    .foregroundStyle(StillTheme.textSecondary)
+                    .stillInsetRow()
+            }
+            ForEach(Array(bundledBooks.enumerated()), id: \.element.id) { index, book in
+                InsetRowDivider(leading: 44)
                 BookCard(
                     book: book,
                     progress: appState.readingProgress(bookID: book.id),
                     onOpen: { open(book) },
                     onRestart: { appState.restartBook(book.id) },
-                    onRemove: book.origin == .imported ? { removingBook = book } : nil
+                    onRemove: nil
                 )
             }
+            if !importedBooks.isEmpty {
+                InsetRowDivider(leading: 0)
+                Text("From your files")
+                    .font(StillTypography.footnote.weight(.semibold))
+                    .foregroundStyle(StillTheme.textSecondary)
+                    .stillInsetRow()
+                ForEach(importedBooks) { book in
+                    InsetRowDivider(leading: 44)
+                    BookCard(
+                        book: book,
+                        progress: appState.readingProgress(bookID: book.id),
+                        onOpen: { open(book) },
+                        onRestart: { appState.restartBook(book.id) },
+                        onRemove: { removingBook = book }
+                    )
+                }
+            }
+            if bundledBooks.isEmpty && importedBooks.isEmpty && !query.isEmpty {
+                Text("No books match this search.")
+                    .font(StillTypography.footnote)
+                    .foregroundStyle(StillTheme.textSecondary)
+                    .stillInsetRow()
+            }
+            InsetRowDivider(leading: 0)
             Button {
                 isImporting = true
             } label: {
                 Label("Add an EPUB from Files", systemImage: "plus")
             }
-            .buttonStyle(QuietSecondaryButtonStyle())
+            .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.accent))
             .accessibilityHint("Imports a DRM-free EPUB book. It stays on this device.")
-            Text("Public-domain books, like those from Project Gutenberg or Standard Ebooks, work well.")
-                .font(StillTypography.caption)
-                .foregroundStyle(StillTheme.textTertiary)
-                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var filteredItems: [ReadingItem] {
+        filter(appState.container.readingLibrary.allItems()) { item in
+            [item.title, item.author, item.source]
+        }
+    }
+
+    private var filteredBooks: [BookSummary] {
+        filter(appState.books) { book in
+            [book.title, book.author]
+        }
+    }
+
+    private func filter<T>(_ values: [T], text: (T) -> [String]) -> [T] {
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !needle.isEmpty else { return values }
+        return values.filter { value in
+            text(value).contains { $0.localizedCaseInsensitiveContains(needle) }
         }
     }
 
@@ -124,29 +194,34 @@ private struct BookCard: View {
 
     var body: some View {
         Button(action: onOpen) {
-            StillCard {
-                HStack(alignment: .top, spacing: StillTheme.Spacing.s) {
-                    Image(systemName: "book.closed")
-                        .font(StillTypography.title3)
+            HStack(alignment: .top, spacing: StillTheme.Spacing.s) {
+                Image(systemName: "book.closed")
+                    .font(StillTypography.title3)
+                    .foregroundStyle(StillTheme.textSecondary)
+                    .frame(width: 32)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
+                    Text(book.title)
+                        .font(StillTypography.bodyEmphasis)
+                        .foregroundStyle(StillTheme.textPrimary)
+                        .lineLimit(2)
+                    Text(book.author)
+                        .font(StillTypography.footnote)
                         .foregroundStyle(StillTheme.textSecondary)
-                        .frame(width: 32)
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
-                        Text(book.title)
-                            .font(StillTypography.bodyEmphasis)
-                            .foregroundStyle(StillTheme.textPrimary)
-                            .lineLimit(2)
-                        Text(book.author)
-                            .font(StillTypography.footnote)
-                            .foregroundStyle(StillTheme.textSecondary)
-                        Text(status)
-                            .font(StillTypography.caption)
-                            .foregroundStyle(StillTheme.textTertiary)
-                        PixelProgressRow(progress: fraction, count: 16)
-                            .padding(.top, 2)
-                    }
+                    Text(book.license.displayName)
+                        .font(StillTypography.caption.weight(.semibold))
+                        .foregroundStyle(StillTheme.textSecondary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(StillTheme.accentSoft.opacity(0.58), in: Capsule())
+                    Text(status)
+                        .font(StillTypography.caption)
+                        .foregroundStyle(StillTheme.textTertiary)
+                    PixelProgressRow(progress: fraction, count: 16)
+                        .padding(.top, 2)
                 }
             }
+            .stillInsetRow()
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)

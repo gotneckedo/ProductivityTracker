@@ -44,7 +44,7 @@ struct StillFocusSummaryWidget: Widget {
         StaticConfiguration(kind: WidgetSnapshotStore.summaryKind, provider: FocusSummaryProvider()) { entry in
             FocusSummaryView(entry: entry)
                 .containerBackground(for: .widget) {
-                    WidgetPalette.background
+                    WidgetBackground()
                 }
                 .widgetURL(URL(string: "still://start-focus?preset=default"))
         }
@@ -54,30 +54,45 @@ struct StillFocusSummaryWidget: Widget {
     }
 }
 
-/// Fixed pastel tones that read well on the home screen in both appearances.
+/// A self-contained version of Still's soft-premium glow for the widget target.
+/// The extension cannot import the app's SwiftUI design system.
 enum WidgetPalette {
-    static let background = Color(uiColor: UIColor { traits in
-        traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.106, green: 0.122, blue: 0.169, alpha: 1)
-            : UIColor(red: 0.969, green: 0.949, blue: 0.918, alpha: 1)
-    })
     static let ink = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.925, green: 0.902, blue: 0.863, alpha: 1)
-            : UIColor(red: 0.169, green: 0.192, blue: 0.251, alpha: 1)
+            ? UIColor(red: 0.961, green: 0.933, blue: 0.972, alpha: 1)
+            : UIColor(red: 0.180, green: 0.145, blue: 0.188, alpha: 1)
     })
     static let inkSecondary = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.725, green: 0.702, blue: 0.663, alpha: 1)
-            : UIColor(red: 0.357, green: 0.380, blue: 0.447, alpha: 1)
+            ? UIColor(red: 0.785, green: 0.741, blue: 0.818, alpha: 1)
+            : UIColor(red: 0.326, green: 0.291, blue: 0.352, alpha: 1)
     })
-    static let sage = Color(red: 0.561, green: 0.686, blue: 0.541)
-    static let sageSoft = Color(uiColor: UIColor { traits in
+    static let accent = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .dark
-            ? UIColor(red: 0.180, green: 0.231, blue: 0.192, alpha: 1)
-            : UIColor(red: 0.878, green: 0.918, blue: 0.859, alpha: 1)
+            ? UIColor(red: 0.561, green: 0.863, blue: 0.753, alpha: 1)
+            : UIColor(red: 0.243, green: 0.561, blue: 0.455, alpha: 1)
     })
-    static let onSage = Color(red: 0.137, green: 0.161, blue: 0.122)
+    static let accentSoft = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.235, green: 0.354, blue: 0.352, alpha: 1)
+            : UIColor(red: 0.842, green: 0.937, blue: 0.897, alpha: 1)
+    })
+    static let onAccent = Color(red: 0.085, green: 0.150, blue: 0.124)
+}
+
+private struct WidgetBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        LinearGradient(
+            colors: colorScheme == .dark
+                ? [Color(red: 0.11, green: 0.10, blue: 0.20), Color(red: 0.20, green: 0.15, blue: 0.32)]
+                : [Color(red: 0.98, green: 0.84, blue: 0.76), Color(red: 0.84, green: 0.91, blue: 0.96)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+        .overlay(.white.opacity(colorScheme == .dark ? 0.06 : 0.30))
+    }
 }
 
 struct FocusSummaryView: View {
@@ -154,14 +169,14 @@ struct FocusSummaryView: View {
         VStack(alignment: .leading, spacing: 2) {
             Label("Still", systemImage: "leaf")
                 .font(.system(.caption, design: .rounded).weight(.semibold))
-                .foregroundStyle(WidgetPalette.sage)
+                .foregroundStyle(WidgetPalette.accent)
             Spacer(minLength: 4)
-            Text(entry.hasData ? todayText : "Ready")
-                .font(.system(.title2, design: .rounded).weight(.semibold))
+            Text(entry.snapshot.nextTaskTitle ?? (entry.hasData ? todayText : "Ready"))
+                .font(.system(.title3, design: .serif).weight(.semibold))
                 .foregroundStyle(WidgetPalette.ink)
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
-            Text(entry.hasData ? "focused today" : "when you are")
+            Text(entry.snapshot.nextTaskTitle == nil ? (entry.hasData ? "focused today" : "when you are") : "Next thing · \(todayText) today")
                 .font(.system(.caption, design: .rounded))
                 .foregroundStyle(WidgetPalette.inkSecondary)
             if let streakText, family == .systemMedium {
@@ -176,10 +191,10 @@ struct FocusSummaryView: View {
     private var startCapsule: some View {
         Text(startText)
             .font(.system(.caption, design: .rounded).weight(.semibold))
-            .foregroundStyle(WidgetPalette.onSage)
+            .foregroundStyle(WidgetPalette.onAccent)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(Capsule().fill(WidgetPalette.sage))
+            .background(Capsule().fill(WidgetPalette.accent))
             .accessibilityLabel("\(startText) of focus")
     }
 }
@@ -193,7 +208,7 @@ struct WeekBars: View {
         HStack(alignment: .bottom, spacing: 4) {
             ForEach(Array(minutes.enumerated()), id: \.offset) { entry in
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(entry.element > 0 ? WidgetPalette.sage : WidgetPalette.sageSoft)
+                    .fill(entry.element > 0 ? WidgetPalette.accent : WidgetPalette.accentSoft)
                     .frame(width: 9, height: max(4, 54 * CGFloat(entry.element) / CGFloat(peak)))
             }
         }

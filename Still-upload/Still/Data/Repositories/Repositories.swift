@@ -48,6 +48,7 @@ protocol ArtifactRepository: AnyObject {
 /// Where a reader is in each book. Keyed by book ID.
 protocol ReadingProgressRepository: AnyObject {
     func progress(bookID: String) -> ReadingProgress?
+    func allProgress() -> [ReadingProgress]
     func save(_ progress: ReadingProgress) throws
     func delete(bookID: String) throws
 }
@@ -318,6 +319,10 @@ final class StoredReadingProgressRepository: ReadingProgressRepository {
 
     func progress(bookID: String) -> ReadingProgress? {
         collection.element(id: bookID)
+    }
+
+    func allProgress() -> [ReadingProgress] {
+        collection.all()
     }
 
     func save(_ progress: ReadingProgress) throws {

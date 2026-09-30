@@ -22,9 +22,9 @@ protocol AmbientAudioPlaying: AnyObject {
 }
 
 enum AmbientAudioCopy {
-    static let assetsMissing = "Ambient audio is ready when sound files are added."
+    static let assetsMissing = "No ambient audio files are available in this build. You can edit this mix, but it stays silent until sound files are added."
     static let unavailable = "Ambient audio isn't available right now."
-    static let sourceMissing = "Sound file not added yet"
+    static let sourceUnavailable = "Unavailable — audio not included in this build"
 }
 
 /// A no-op player for tests, previews, and platforms without AVFoundation.

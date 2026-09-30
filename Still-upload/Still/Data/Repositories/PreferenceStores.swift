@@ -19,6 +19,11 @@ final class CodablePreferencesStore: PreferencesStore {
               let preferences = try? RecordCoding.decoder().decode(UserPreferences.self, from: data) else {
             return UserPreferences()
         }
+        if preferences.schemaVersion == UserPreferences.currentSchemaVersion,
+           let migratedData = try? RecordCoding.encoder().encode(preferences),
+           migratedData != data {
+            store.set(migratedData, forKey: key)
+        }
         return preferences
     }
 

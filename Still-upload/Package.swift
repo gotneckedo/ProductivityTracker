@@ -46,7 +46,10 @@ let package = Package(
         .testTarget(
             name: "StillCoreTests",
             dependencies: ["StillCore"],
-            path: "StillTests"
+            path: "StillTests",
+            resources: [
+                .copy("Resources/PublicDomainBooks")
+            ]
         )
     ]
 )

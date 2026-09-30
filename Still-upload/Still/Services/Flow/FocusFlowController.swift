@@ -40,6 +40,7 @@ final class FocusFlowController {
     private let liveActivity: LiveActivityUpdating
     private let events: EventTracking
     private let scenes: [SceneDefinition]
+    private let purchases: PurchaseService
     private let progression = ProgressionEvaluator()
 
     private(set) var activeSession: FocusSession?
@@ -58,7 +59,8 @@ final class FocusFlowController {
         blocking: FocusBlockingService,
         liveActivity: LiveActivityUpdating,
         events: EventTracking,
-        scenes: [SceneDefinition] = SceneCatalog.all
+        scenes: [SceneDefinition] = SceneCatalog.completeCatalog,
+        purchases: PurchaseService = NoPurchaseService()
     ) {
         self.clock = clock
         self.timer = timer
@@ -72,6 +74,7 @@ final class FocusFlowController {
         self.liveActivity = liveActivity
         self.events = events
         self.scenes = scenes
+        self.purchases = purchases
     }
 
     // MARK: - Lifecycle
@@ -124,7 +127,7 @@ final class FocusFlowController {
         }()
 
         let scene = scenes.first { $0.id == preset.sceneID }
-        let sceneID = scene.map { progression.isUnlocked($0, completedSessions: completedSessionCount) } == true
+        let sceneID = scene.map(isAvailableForSession) == true
             ? preset.sceneID
             : SceneCatalog.rainyBedroom.id
 
@@ -161,6 +164,11 @@ final class FocusFlowController {
         return requested == nil ? .startedWithFallback(session, requested: presetID) : .started(session)
     }
 
+    private func isAvailableForSession(_ scene: SceneDefinition) -> Bool {
+        let hasRequiredEntitlement = scene.entitlementKey == nil || purchases.hasStillPlus
+        return hasRequiredEntitlement && progression.isUnlocked(scene, completedSessions: completedSessionCount)
+    }
+
     // MARK: - Ticking
 
     /// Advances the running session to now. Call once a second while visible
@@ -195,6 +203,23 @@ final class FocusFlowController {
         scheduleNotifications()
         updateLiveActivity()
         events.track(.focusResumed, EventProperties().timerMode(resumed.configuration.mode).userInitiated(true))
+    }
+
+    /// Adds a small, explicit amount of time to a fixed focus session. The
+    /// current session keeps the change; presets and past sessions are untouched.
+    func addFiveMinutes() {
+        guard var session = activeSession,
+              session.state.isLive,
+              session.currentPhase?.kind == .focus,
+              session.configuration.mode == .countdown else { return }
+        session.configuration.focusDuration = min(
+            session.configuration.focusDuration + 5 * 60,
+            TimerConfiguration.focusRange.upperBound
+        )
+        activeSession = session
+        persist(session)
+        scheduleNotifications()
+        updateLiveActivity()
     }
 
     @discardableResult
@@ -235,6 +260,16 @@ final class FocusFlowController {
         } else if mix.isSilent {
             audio.pause()
         }
+    }
+
+    /// A brief local capture during focus. It remains attached to this session
+    /// and never becomes an analytics event.
+    func setNote(_ raw: String) {
+        guard var session = activeSession else { return }
+        let cleaned = String(raw.trimmingCharacters(in: .whitespacesAndNewlines).prefix(500))
+        session.note = cleaned.isEmpty ? nil : cleaned
+        activeSession = session
+        persist(session)
     }
 
     // MARK: - Completion moment

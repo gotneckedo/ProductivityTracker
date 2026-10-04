@@ -156,7 +156,7 @@ struct MorningStartView: View {
         case .button:
             return "When Still opens, the queued session is ready right away."
         case .focusCard:
-            return "After Still opens, the queued session and morning checklist wait for a card tap. The system alarm can still be dismissed with its own controls."
+            return "After Still opens, the queued session waits for a card tap. The system alarm can still be dismissed with its own controls."
         }
     }
 

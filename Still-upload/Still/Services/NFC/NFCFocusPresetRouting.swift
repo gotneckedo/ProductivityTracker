@@ -31,7 +31,7 @@ struct DeepLinkPresetRouter: NFCFocusPresetRouting {
 
 /// The honest setup guide shown on the Focus Card screen.
 enum FocusCardGuide {
-    static let summary = "A Focus Card is any writable NFC tag programmed with a Still link. Tap it with your iPhone to start a preset."
+    static let summary = "Keep a card where you work. Tap it with your iPhone and Still opens straight into the session you chose, instead of a home screen full of everything else. Any writable NFC tag works."
 
     static let steps: [String] = [
         "Get a writable NFC tag (NTAG213 or similar). A blank tag does nothing on its own.",

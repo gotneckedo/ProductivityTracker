@@ -5,6 +5,14 @@ extension Identifier where Tag == AmbientSourceTag {
     static let cafe: AmbientSourceID = "cafe"
     static let fireplace: AmbientSourceID = "fireplace"
     static let waves: AmbientSourceID = "waves"
+    static let forest: AmbientSourceID = "forest"
+    static let wind: AmbientSourceID = "wind"
+    static let train: AmbientSourceID = "train"
+    static let library: AmbientSourceID = "library"
+    static let thunder: AmbientSourceID = "thunder"
+    static let fan: AmbientSourceID = "fan"
+    static let brownNoise: AmbientSourceID = "brownNoise"
+    static let whiteNoise: AmbientSourceID = "whiteNoise"
 }
 
 /// A named ambient sound source and the bundle file it expects.
@@ -20,7 +28,15 @@ struct AmbientSource: Hashable, Identifiable {
         AmbientSource(id: .rain, displayName: "Rain", assetBaseName: "ambient_rain"),
         AmbientSource(id: .cafe, displayName: "Café", assetBaseName: "ambient_cafe"),
         AmbientSource(id: .fireplace, displayName: "Fireplace", assetBaseName: "ambient_fireplace"),
-        AmbientSource(id: .waves, displayName: "Waves", assetBaseName: "ambient_waves")
+        AmbientSource(id: .waves, displayName: "Waves", assetBaseName: "ambient_waves"),
+        AmbientSource(id: .forest, displayName: "Forest", assetBaseName: "ambient_forest"),
+        AmbientSource(id: .wind, displayName: "Wind", assetBaseName: "ambient_wind"),
+        AmbientSource(id: .train, displayName: "Train", assetBaseName: "ambient_train"),
+        AmbientSource(id: .library, displayName: "Library", assetBaseName: "ambient_library"),
+        AmbientSource(id: .thunder, displayName: "Thunder", assetBaseName: "ambient_thunder"),
+        AmbientSource(id: .fan, displayName: "Fan", assetBaseName: "ambient_fan"),
+        AmbientSource(id: .brownNoise, displayName: "Brown Noise", assetBaseName: "ambient_brown_noise"),
+        AmbientSource(id: .whiteNoise, displayName: "White Noise", assetBaseName: "ambient_white_noise")
     ]
 
     static func named(_ id: AmbientSourceID) -> AmbientSource? {
@@ -68,6 +84,16 @@ struct AmbientMix: Codable, Hashable {
 
     mutating func setMasterVolume(_ volume: Double) {
         masterVolume = min(max(volume, 0), 1)
+    }
+
+    /// Old locally saved presets contained four channels. Preserve their levels
+    /// and add every newer layer at zero so a product update never starts sound.
+    func normalized() -> AmbientMix {
+        var result = self
+        for source in AmbientSource.all where !result.channels.contains(where: { $0.sourceID == source.id }) {
+            result.channels.append(AmbientChannel(sourceID: source.id, level: 0))
+        }
+        return result
     }
 
     /// Sources that will actually be audible.

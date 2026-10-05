@@ -46,6 +46,13 @@ final class HabitController {
         persist { try habits.save(habit) }
     }
 
+    /// Reinstates an archived habit without touching its existing check-ins.
+    func unarchive(_ archivedHabit: HabitDefinition) {
+        var habit = archivedHabit
+        habit.archivedAt = nil
+        persist { try habits.save(habit) }
+    }
+
     func delete(id: UUID) {
         persist { try habits.delete(id: id) }
     }
@@ -77,18 +84,24 @@ final class HabitController {
 
     /// Today's list, in order, with runs and the last seven days.
     func today() -> [HabitDay] {
-        let today = calendar.startOfDay(for: clock.now)
+        days(on: clock.now)
+    }
+
+    /// State for a selected day. This lets the timeline show honest historic or
+    /// future check-in state rather than relabeling today's values.
+    func days(on selectedDate: Date) -> [HabitDay] {
+        let selectedDay = calendar.startOfDay(for: selectedDate)
         let streaks = StreakCalculator(calendar: calendar)
         return activeHabits.map { habit in
             let days = Set(habits.checkIns(habitID: habit.id).map { calendar.startOfDay(for: $0.day) })
             let lastSeven: [Bool] = (0..<7).reversed().map { offset in
-                guard let day = calendar.date(byAdding: .day, value: -offset, to: today) else { return false }
+                guard let day = calendar.date(byAdding: .day, value: -offset, to: selectedDay) else { return false }
                 return days.contains(day)
             }
             return HabitDay(
                 habit: habit,
-                isDoneToday: days.contains(today),
-                currentRun: streaks.currentStreak(days: days, today: clock.now),
+                isDoneToday: days.contains(selectedDay),
+                currentRun: streaks.currentStreak(days: days, today: selectedDate),
                 lastSevenDays: lastSeven
             )
         }

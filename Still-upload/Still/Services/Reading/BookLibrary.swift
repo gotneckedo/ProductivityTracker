@@ -138,6 +138,18 @@ final class FileBookLibrary: BookLibrary {
         var result: [BookSummary] = []
         for url in bundledURLs.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }) {
             let id = Self.bundledID(for: url)
+            if let metadata = BundledBookLocator.metadata(for: url) {
+                // The bundled catalog is verified at build/test time. Do not
+                // inflate and parse four large EPUB archives while the app is
+                // drawing its first screen; `sittings(bookID:)` parses one
+                // selected title lazily when the reader actually opens it.
+                result.append(BookSummary(id: id, title: metadata.title, author: metadata.author, origin: .bundled,
+                                          sittingCount: metadata.sittingCount, fileName: url.lastPathComponent,
+                                          addedAt: .distantPast))
+                continue
+            }
+            // Keep the generic library usable in tests and for any future
+            // verified bundle that has not yet been added to the catalog.
             guard let data = try? Data(contentsOf: url), let book = try? EPUBParser.parse(data: data) else { continue }
             let sittings = SittingPlanner.sittings(for: book)
             cache[id] = sittings

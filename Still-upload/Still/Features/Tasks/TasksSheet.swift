@@ -1,105 +1,115 @@
 import SwiftUI
 
-/// Today's tasks. Type a title, press return, and it's selected for the next
-/// session. Marking done is separate from finishing a session. Details (a due
-/// date, a time, a class) are optional and one tap away.
+/// A small, immediate task surface: add a thought, choose a next session task,
+/// and optionally keep a few checkable steps beneath it.
 struct TasksSheet: View {
     @Environment(AppState.self) private var appState
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var newTitle = ""
     @State private var isCapturingVoice = false
     @State private var detailTaskID: UUID?
     @FocusState private var isFieldFocused: Bool
 
     var body: some View {
+        let phase = StillDayPhase.automatic(colorScheme: colorScheme)
         NavigationStack {
-            List {
-                Section {
-                    HStack(spacing: StillTheme.Spacing.s) {
-                        Image(systemName: "plus")
-                            .foregroundStyle(StillTheme.textTertiary)
-                            .accessibilityHidden(true)
-                        TextField("Add a task", text: $newTitle)
-                            .font(StillTypography.body)
-                            .submitLabel(.done)
-                            .focused($isFieldFocused)
-                            .onSubmit(addTask)
-                        if !newTitle.trimmingCharacters(in: .whitespaces).isEmpty {
-                            Button("Add", action: addTask)
-                                .font(StillTypography.callout.weight(.semibold))
-                        } else if appState.canCaptureByVoice {
-                            Button {
-                                isCapturingVoice = true
-                            } label: {
-                                Image(systemName: "mic")
-                                    .frame(minWidth: StillTheme.minimumTapSize, minHeight: StillTheme.minimumTapSize)
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(StillTheme.textSecondary)
-                            .accessibilityLabel("Say a task")
-                        }
-                    }
-                    .listRowBackground(StillTheme.surface)
-                } footer: {
-                    Text("New tasks are chosen for your next session.")
-                        .font(StillTypography.caption)
-                }
+            StillScreen(phase: phase) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+                            Text("Today")
+                                .font(StillTypography.display)
+                                .foregroundStyle(StillTheme.textPrimary)
 
-                Section {
-                    if appState.todaysTasks.isEmpty {
-                        EmptyState(symbol: "checklist", title: "No tasks yet", message: "A task is optional. One is usually enough.")
-                            .listRowBackground(Color.clear)
-                    } else {
-                        ForEach(appState.todaysTasks) { task in
-                            TaskListRow(
-                                task: task,
-                                detailLine: detailLine(for: task),
-                                isSelected: appState.preferences.selectedTaskID == task.id && !task.isCompleted,
-                                onSelect: { toggleSelection(task) },
-                                onToggleDone: { appState.setTaskCompleted(task.id, !task.isCompleted) },
-                                onDetails: { detailTaskID = task.id }
-                            )
-                            .listRowBackground(StillTheme.surface)
-                            .swipeActions(edge: .trailing) {
-                                Button(role: .destructive) {
-                                    appState.deleteTask(task.id)
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+                            addBox(phase: phase)
+                            if appState.todaysTasks.isEmpty {
+                                EmptyState(
+                                    symbol: "checklist",
+                                    title: "Nothing here yet",
+                                    message: "A task is optional. One clear thing is usually enough."
+                                )
+                                .padding(.vertical, StillTheme.Spacing.xl)
+                            } else {
+                                StillInsetList {
+                                    VStack(spacing: 0) {
+                                        ForEach(Array(appState.todaysTasks.enumerated()), id: \.element.id) { index, task in
+                                            TaskFocusCard(
+                                                task: task,
+                                                detailLine: detailLine(for: task),
+                                                isSelected: appState.preferences.selectedTaskID == task.id && !task.isCompleted,
+                                                onSelect: { toggleSelection(task) },
+                                                onToggleDone: {
+                                                    appState.setTaskCompleted(task.id, !task.isCompleted)
+                                                    if !task.isCompleted {
+                                                        StillInteractionFeedback.fire(.taskMarkedDone, preferences: appState.preferences)
+                                                    }
+                                                },
+                                                onToggleStep: { step in appState.toggleTaskStep(taskID: task.id, stepID: step.id) },
+                                                onDetails: { detailTaskID = task.id },
+                                                onDelete: { appState.deleteTaskWithUndo(task) },
+                                                phase: phase
+                                            )
+                                            if index < appState.todaysTasks.count - 1 {
+                                                InsetRowDivider(leading: StillTheme.minimumTapSize + StillTheme.Spacing.s)
+                                            }
+                                        }
+                                    }
                                 }
                             }
+                            Color.clear.frame(height: 1).id("tasks-bottom")
                         }
+                        .padding(.horizontal, StillTheme.Spacing.screen)
+                        .padding(.vertical, StillTheme.Spacing.m)
                     }
-                } header: {
-                    Text("Today")
-                        .font(StillTypography.footnote.weight(.semibold))
+                    .stillScrollableViewport(reservingFloatingTabBar: false)
+                    .onAppear {
+                        #if DEBUG
+                        guard DemoLaunch.shouldScrollToBottom("tasks") else { return }
+                        DispatchQueue.main.async { proxy.scrollTo("tasks-bottom", anchor: .bottom) }
+                        #endif
+                    }
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(StillTheme.background)
             .navigationTitle("Tasks")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(item: $detailTaskID) { taskID in
-                TaskDetailView(taskID: taskID)
-            }
+            .navigationDestination(item: $detailTaskID) { TaskDetailView(taskID: $0) }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    NavigationLink {
-                        DayTimelineView(showsDoneButton: false)
-                    } label: {
+                    NavigationLink { DayTimelineView(showsDoneButton: false) } label: {
                         Label("Day", systemImage: "calendar.day.timeline.left")
                     }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
-        .sheet(isPresented: $isCapturingVoice) {
-            VoiceCaptureView()
-                .environment(appState)
+        .sheet(isPresented: $isCapturingVoice) { VoiceCaptureView().environment(appState) }
+    }
+
+    private func addBox(phase: StillDayPhase) -> some View {
+        HStack(spacing: StillTheme.Spacing.s) {
+            Image(systemName: "plus")
+                .foregroundStyle(StillTheme.accent)
+                .frame(width: StillTheme.minimumTapSize, height: StillTheme.minimumTapSize)
+                .background(StillTheme.accentSoft, in: Circle())
+            TextField("Add a task", text: $newTitle)
+                .font(StillTypography.body)
+                .submitLabel(.done)
+                .focused($isFieldFocused)
+                .onSubmit(addTask)
+            if !newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Button("Add", action: addTask)
+                    .buttonStyle(QuietSecondaryButtonStyle(foreground: StillTheme.accent))
+            } else if appState.canCaptureByVoice {
+                Button { isCapturingVoice = true } label: { Image(systemName: "mic") }
+                    .buttonStyle(QuietTextButtonStyle(foreground: StillTheme.textSecondary))
+                    .accessibilityLabel("Say a task")
+            }
         }
+        .padding(StillTheme.Spacing.s)
+        .stillGlass(radius: StillTheme.Radius.medium, phase: phase)
     }
 
     /// "Due Friday · Biology · 2 sessions"
@@ -107,82 +117,164 @@ struct TasksSheet: View {
         var parts: [String] = []
         if let due = appState.dueLine(for: task) { parts.append(due) }
         if let at = task.scheduledAt, !task.isCompleted { parts.append("At \(appState.timeText(at))") }
-        if let course = task.homework?.course { parts.append(course) }
-        if task.completedSessionCount > 0 {
-            parts.append("\(task.completedSessionCount) \(task.completedSessionCount == 1 ? "session" : "sessions")")
-        }
+        if let subject = task.subject { parts.append(subject.name) }
+        if task.completedSessionCount > 0 { parts.append(Copy.Count.session(task.completedSessionCount)) }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     private func addTask() {
-        if appState.createTask(title: newTitle) != nil {
-            newTitle = ""
-        }
+        if appState.createTask(title: newTitle) != nil { newTitle = "" }
     }
 
     private func toggleSelection(_ task: TaskItem) {
         guard !task.isCompleted else { return }
-        let isSelected = appState.preferences.selectedTaskID == task.id
-        appState.selectTask(isSelected ? nil : task.id)
+        appState.selectTask(appState.preferences.selectedTaskID == task.id ? nil : task.id)
     }
 }
 
-private struct TaskListRow: View {
+private struct TaskFocusCard: View {
     let task: TaskItem
     let detailLine: String?
     let isSelected: Bool
     let onSelect: () -> Void
     let onToggleDone: () -> Void
+    let onToggleStep: (TaskStep) -> Void
     let onDetails: () -> Void
+    let onDelete: () -> Void
+    let phase: StillDayPhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        HStack(spacing: StillTheme.Spacing.s) {
-            Button(action: onToggleDone) {
-                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                    .font(StillTypography.title3)
-                    .foregroundStyle(task.isCompleted ? StillTheme.accent : StillTheme.textTertiary)
-                    .frame(minWidth: StillTheme.minimumTapSize, minHeight: StillTheme.minimumTapSize)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(task.isCompleted ? "Mark not done" : "Mark done")
-            .accessibilityValue(task.title)
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
+            HStack(alignment: .top, spacing: StillTheme.Spacing.s) {
+                Button(action: onToggleDone) {
+                    completionSymbol
+                }
+                .buttonStyle(StillRowButtonStyle())
+                .accessibilityLabel(task.isCompleted ? "Mark not done" : "Mark done")
 
-            Button(action: onSelect) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(task.title)
-                            .font(StillTypography.body)
-                            .strikethrough(task.isCompleted, color: StillTheme.textTertiary)
-                            .foregroundStyle(task.isCompleted ? StillTheme.textTertiary : StillTheme.textPrimary)
+                Button(action: onSelect) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 7) {
+                            Circle().fill(subjectTint).frame(width: 8, height: 8)
+                            Text(task.title)
+                                .font(StillTypography.bodyEmphasis)
+                                .strikethrough(task.isCompleted, color: StillTheme.textTertiary)
+                                .foregroundStyle(task.isCompleted ? StillTheme.textTertiary : StillTheme.textPrimary)
+                                .multilineTextAlignment(.leading)
+                        }
                         if let detailLine {
                             Text(detailLine)
                                 .font(StillTypography.caption)
-                                .foregroundStyle(StillTheme.textTertiary)
+                                .foregroundStyle(StillTheme.textSecondary)
+                                .lineLimit(2)
                         }
                     }
-                    Spacer()
-                    if isSelected {
-                        Text("Next session")
-                            .font(StillTypography.caption.weight(.medium))
-                            .foregroundStyle(StillTheme.accent)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .buttonStyle(StillRowButtonStyle())
+                .disabled(task.isCompleted)
+                Spacer(minLength: 0)
+                Menu {
+                    Button("Details", action: onDetails)
+                    Button("Delete", role: .destructive, action: onDelete)
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .foregroundStyle(StillTheme.textTertiary)
+                        .frame(width: StillTheme.minimumTapSize, height: StillTheme.minimumTapSize)
+                }
+            }
+            if isSelected {
+                Text("Next focus")
+                    .font(StillTypography.caption)
+                    .foregroundStyle(StillTheme.accent)
+                    .padding(.leading, StillTheme.minimumTapSize + StillTheme.Spacing.s)
+            }
+            if !task.steps.isEmpty {
+                Divider().opacity(0.45)
+                VStack(alignment: .leading, spacing: 5) {
+                    ForEach(task.steps) { step in
+                        Button { onToggleStep(step) } label: {
+                            HStack(spacing: StillTheme.Spacing.xs) {
+                                Image(systemName: step.isCompleted ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(step.isCompleted ? StillTheme.accent : StillTheme.textTertiary)
+                                Text(step.title)
+                                    .font(StillTypography.footnote)
+                                    .strikethrough(step.isCompleted, color: StillTheme.textTertiary)
+                                    .foregroundStyle(step.isCompleted ? StillTheme.textTertiary : StillTheme.textPrimary)
+                                Spacer()
+                            }
+                            .frame(minHeight: 28)
+                        }
+                        .buttonStyle(StillRowButtonStyle())
                     }
                 }
-                .contentShape(Rectangle())
+                .padding(.leading, StillTheme.minimumTapSize + StillTheme.Spacing.s)
             }
-            .buttonStyle(.plain)
-            .disabled(task.isCompleted)
-            .accessibilityLabel(task.title)
-            .accessibilityValue(isSelected ? "Chosen for the next session" : "")
-            .accessibilityHint(task.isCompleted ? "" : "Chooses this task for the next session.")
-
-            Button(action: onDetails) {
-                Image(systemName: "info.circle")
-                    .foregroundStyle(StillTheme.textTertiary)
-                    .frame(minWidth: StillTheme.minimumTapSize, minHeight: StillTheme.minimumTapSize)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Details for \(task.title)")
         }
+        .stillInsetRow(verticalPadding: StillTheme.Spacing.s)
+        .offset(y: task.isCompleted ? 2 : 0)
+        .animation(StillMotion.ease(reduceMotion, duration: 0.24), value: task.isCompleted)
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .contextMenu {
+            if !task.isCompleted {
+                Button("Use for next focus", action: onSelect)
+            }
+            Button("Details", action: onDetails)
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete task", systemImage: "trash")
+            }
+        } preview: {
+            TaskContextPreview(task: task, detailLine: detailLine)
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private var completionSymbol: some View {
+        let symbol = Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+            .font(StillTypography.title3)
+            .foregroundStyle(task.isCompleted ? StillTheme.accent : StillTheme.textTertiary)
+            .frame(width: StillTheme.minimumTapSize, height: StillTheme.minimumTapSize)
+        if reduceMotion {
+            symbol.contentTransition(.opacity)
+        } else {
+            symbol
+                .contentTransition(.symbolEffect(.replace))
+                .symbolEffect(.bounce, value: task.isCompleted)
+        }
+    }
+
+    private var subjectTint: Color {
+        task.subject.map { Color(hex: $0.color.hex) } ?? StillTheme.textTertiary.opacity(0.55)
+    }
+}
+
+private struct TaskContextPreview: View {
+    let task: TaskItem
+    let detailLine: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+            Label(task.isCompleted ? "Done" : "Task", systemImage: task.isCompleted ? "checkmark.circle.fill" : "checklist")
+                .font(StillTypography.caption.weight(.semibold))
+                .foregroundStyle(StillTheme.accent)
+            Text(task.title)
+                .font(StillTypography.title3)
+                .foregroundStyle(StillTheme.textPrimary)
+            if let detailLine {
+                Text(detailLine)
+                    .font(StillTypography.footnote)
+                    .foregroundStyle(StillTheme.textSecondary)
+            }
+        }
+        .frame(width: 240, alignment: .leading)
+        .padding(StillTheme.Spacing.m)
+        .background(StillTheme.surface, in: RoundedRectangle(cornerRadius: StillTheme.Radius.large, style: .continuous))
     }
 }
 

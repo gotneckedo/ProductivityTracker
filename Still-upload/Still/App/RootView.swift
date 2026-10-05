@@ -1,10 +1,20 @@
 import SwiftUI
 import UIKit
+import Combine
 
 /// Onboarding until answered, then the tab app. Modal presentation for the
 /// whole app is decided here from router state, never in leaf views.
 struct RootView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.dynamicTypeSize) private var systemDynamicTypeSize
+    @State private var isBoldTextEnabled = UIAccessibility.isBoldTextEnabled
+
+    private var requestsBoldLegibility: Bool {
+        AccessibilityVisualPolicy.shouldRequestBoldLegibility(
+            systemBoldText: isBoldTextEnabled,
+            proofOverride: DemoLaunch.forcesBoldText
+        )
+    }
 
     var body: some View {
         Group {
@@ -14,10 +24,56 @@ struct RootView: View {
                 OnboardingView()
             }
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            StorageDegradedBanner()
+        }
         .overlay(alignment: .top) {
             NoticeBanner()
         }
-        .tint(StillTheme.accent)
+        .tint(Color(hex: appState.preferences.appAccentPalette.accentHex))
+        .environment(\.stillReduceMotionOverride, DemoLaunch.forcesReduceMotion)
+        .environment(\.stillIncreaseContrastOverride, DemoLaunch.forcesIncreaseContrast)
+        .dynamicTypeSize(DemoLaunch.forcesAccessibilityTextSize ? .accessibility3 : systemDynamicTypeSize)
+        // Custom bundled fonts do not all have authored bold faces. Applying the
+        // same environment weight here lets iOS synthesize the requested
+        // legibility weight consistently rather than leaving serif displays
+        // visually lighter than the surrounding system text.
+        .fontWeight(requestsBoldLegibility ? .bold : nil)
+        .onReceive(NotificationCenter.default.publisher(for: UIAccessibility.boldTextStatusDidChangeNotification)) { _ in
+            isBoldTextEnabled = UIAccessibility.isBoldTextEnabled
+        }
+    }
+}
+
+/// Unlike a transient write warning, a storage fallback remains visible while
+/// the app is using memory-only storage. It tells the person exactly what will
+/// happen without blocking the session they can still use in the moment.
+private struct StorageDegradedBanner: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        if let detail = appState.container.storageNotice {
+            HStack(alignment: .top, spacing: StillTheme.Spacing.s) {
+                Image(systemName: "externaldrive.badge.exclamationmark")
+                    .font(StillTypography.callout.weight(.semibold))
+                    .accessibilityHidden(true)
+                Text(detail)
+                    .font(StillTypography.footnote.weight(.medium))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(StillTheme.textPrimary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, StillTheme.Spacing.screen)
+            .padding(.vertical, StillTheme.Spacing.xs)
+            .background(StillTheme.attentionSoft)
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(StillTheme.attention.opacity(0.55))
+                    .frame(height: StillTheme.Stroke.hairline)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Storage unavailable. \(detail)")
+        }
     }
 }
 
@@ -26,11 +82,18 @@ struct MainTabView: View {
 
     var body: some View {
         let router = appState.router
-        TabView(selection: Binding(get: { router.selectedTab }, set: { router.selectedTab = $0 })) {
-            ForEach(router.visibleTabs, id: \.self) { tab in
-                tabContent(tab)
-                    .tabItem { Label(tab.title, systemImage: tab.systemImage) }
-                    .tag(tab)
+        ZStack {
+            tabContent(router.selectedTab)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if appState.activeSession == nil {
+                FloatingTabBar(tabs: router.visibleTabs, selection: Binding(
+                    get: { router.selectedTab },
+                    set: { router.selectedTab = $0 }
+                ))
+                .padding(.horizontal, StillTheme.Spacing.screen)
+                .padding(.top, StillTheme.Spacing.xs)
+                .padding(.bottom, StillTheme.Spacing.xs)
             }
         }
         .sheet(item: Binding(get: { router.sheet }, set: { router.sheet = $0 })) { sheet in
@@ -46,6 +109,12 @@ struct MainTabView: View {
                     }
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
+                case .nextStep:
+                    NextStepGuideView()
+                case .journal:
+                    JournalView()
+                        .presentationDetents([.large])
+                        .presentationDragIndicator(.visible)
                 }
             }
             .environment(appState)
@@ -59,15 +128,58 @@ struct MainTabView: View {
     @ViewBuilder
     private func tabContent(_ tab: AppTab) -> some View {
         switch tab {
+        case .today:
+            TodayTab()
         case .focus:
             FocusTab()
         case .breakShelf:
             BreakTab()
         case .me:
             MeTab()
-        case .journal:
-            JournalTab()
         }
+    }
+}
+
+private struct FloatingTabBar: View {
+    let tabs: [AppTab]
+    @Binding var selection: AppTab
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    /// Four long tab names do not form a usable label row at accessibility
+    /// sizes. The system still exposes each title to VoiceOver; visually the
+    /// bar becomes a familiar icon rail and keeps its 44-point hit targets.
+    private var usesIconOnlyLayout: Bool {
+        dynamicTypeSize.isAccessibilitySize
+    }
+
+    var body: some View {
+        HStack(spacing: 2) {
+            ForEach(tabs, id: \.self) { tab in
+                let isSelected = selection == tab
+                Button {
+                    selection = tab
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: tab.systemImage)
+                            .font(StillTypography.callout.weight(.semibold))
+                        if !usesIconOnlyLayout {
+                            Text(tab.title)
+                                .font(StillTypography.caption)
+                        }
+                    }
+                    .foregroundStyle(isSelected ? StillTheme.textPrimary : StillTheme.textSecondary)
+                    .frame(maxWidth: .infinity, minHeight: 54)
+                    .background(isSelected ? Color.white.opacity(0.54) : .clear, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(tab.title)
+                .accessibilityAddTraits(isSelected ? .isSelected : [])
+            }
+        }
+        .padding(5)
+        .stillGlass(radius: 26)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Main navigation")
     }
 }
 
@@ -105,13 +217,13 @@ struct BreakTab: View {
     }
 }
 
-struct JournalTab: View {
+struct TodayTab: View {
     @Environment(AppState.self) private var appState
 
     var body: some View {
         let router = appState.router
-        NavigationStack(path: Binding(get: { router.journalPath }, set: { router.journalPath = $0 })) {
-            JournalView()
+        NavigationStack(path: Binding(get: { router.todayPath }, set: { router.todayPath = $0 })) {
+            TodayView()
                 .navigationDestination(for: AppRoute.self) { route in
                     RouteView(route: route)
                 }
@@ -139,22 +251,44 @@ struct RouteView: View {
 
     var body: some View {
         switch route {
+        case .today, .nextStep:
+            EmptyView()
         case .breakActivity(let id, let context):
             ActivityContainerView(activityID: id, context: context)
         case .nfcSetup:
             FocusCardView()
         case .sceneCollection:
             SceneCollectionView()
+        case .roomCollection:
+            RoomCollectionView()
+        case .spriteContactSheet:
+            SpriteContactSheetView()
+        case .contextPreviewReview:
+            ContextPreviewReviewView()
         case .presets:
             PresetsView()
         case .doodleGallery:
             DoodleGalleryView()
+        case .history:
+            HistoryView()
         case .morningStart:
             MorningStartView()
         case .blockingSetup:
             BlockingSetupView()
+        case .calendarSettings:
+            CalendarSettingsView()
+        case .getFocusCard:
+            GetFocusCardView()
+        case .stillPlus:
+            StillPlusView()
         case .habits:
             HabitsScreen()
+        case .onboardingGoalPreference:
+            OnboardingPreferenceEditorView(kind: .goal)
+        case .onboardingBreakPreference:
+            OnboardingPreferenceEditorView(kind: .breakAppeal)
+        case .onboardingLookPreference:
+            OnboardingPreferenceEditorView(kind: .look)
         case .focusHome, .focusConfiguration, .activeSession, .sessionComplete, .breakShelf, .tasks, .me, .journal, .dayTimeline:
             // These are tab roots or modals, never pushed.
             EmptyView()
@@ -171,6 +305,7 @@ struct HabitsScreen: View {
                     .padding(.horizontal, StillTheme.Spacing.screen)
                     .padding(.vertical, StillTheme.Spacing.m)
             }
+            .stillScrollableViewport()
         }
         .navigationTitle("Habits")
         .navigationBarTitleDisplayMode(.inline)
@@ -184,12 +319,21 @@ struct NoticeBanner: View {
 
     var body: some View {
         if let notice = appState.notice {
-            Text(notice.text)
-                .font(StillTypography.footnote.weight(.medium))
-                .foregroundStyle(StillTheme.textPrimary)
-                .multilineTextAlignment(.center)
+            HStack(spacing: StillTheme.Spacing.s) {
+                Text(notice.text)
+                    .font(StillTypography.footnote.weight(.medium))
+                    .foregroundStyle(StillTheme.textPrimary)
+                    .multilineTextAlignment(.leading)
+                if let undo = appState.undo {
+                    Button("Undo") { appState.performUndo(undo.id) }
+                        .font(StillTypography.footnote.weight(.bold))
+                        .foregroundStyle(StillTheme.accent)
+                        .frame(minHeight: StillTheme.minimumTapSize)
+                        .accessibilityHint("Restores the action that was just removed.")
+                }
+            }
                 .padding(.horizontal, StillTheme.Spacing.m)
-                .padding(.vertical, StillTheme.Spacing.s)
+                .padding(.vertical, StillTheme.Spacing.xs)
                 .background(Capsule(style: .continuous).fill(StillTheme.surface))
                 .overlay(Capsule(style: .continuous).strokeBorder(StillTheme.border, lineWidth: StillTheme.Stroke.hairline))
                 .shadow(color: StillTheme.Shadow.color, radius: StillTheme.Shadow.radius, y: StillTheme.Shadow.y)
@@ -204,6 +348,7 @@ struct NoticeBanner: View {
                     try? await Task.sleep(nanoseconds: 4_000_000_000)
                     if appState.notice?.id == notice.id {
                         appState.notice = nil
+                        appState.undo = nil
                     }
                 }
                 .accessibilityAddTraits(.isButton)

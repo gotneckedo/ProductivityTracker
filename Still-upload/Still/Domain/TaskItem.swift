@@ -11,8 +11,26 @@ enum TaskCaptureSource: String, Codable, Hashable {
 
 /// V3 homework metadata. Always nil in V1; present so the model does not need a rewrite.
 struct HomeworkMetadata: Codable, Hashable {
+    /// Legacy storage only. New presentation and edits use `TaskItem.subject`.
     var course: String?
     var assignmentKind: String?
+}
+
+/// A tiny, optional checklist within a task. Steps stay local and are separate
+/// from the task's own completed state, so a focus session can surface the next
+/// concrete action without making completion automatic.
+struct TaskStep: Codable, Hashable, Identifiable {
+    var id: UUID
+    var title: String
+    var completedAt: Date?
+
+    init(id: UUID = UUID(), title: String, completedAt: Date? = nil) {
+        self.id = id
+        self.title = title
+        self.completedAt = completedAt
+    }
+
+    var isCompleted: Bool { completedAt != nil }
 }
 
 /// A deliberately small, typed task.
@@ -28,10 +46,23 @@ struct TaskItem: Codable, Identifiable, Hashable {
     /// How many completed sessions were spent on this task.
     var completedSessionCount: Int
     var captureSource: TaskCaptureSource
+    /// Optional, short checklist used on the task card and active focus slab.
+    var steps: [TaskStep]
+    /// First-class presentation data. Older `homework.course` records migrate
+    /// here while decoding and remain readable without a destructive rewrite.
+    var subject: Subject?
 
     // MARK: Future capacity (unused in V1 UI)
     var scheduledAt: Date?
     var dueAt: Date?
+    /// Used by timed capsules; nil means the calm 30-minute default.
+    var plannedDuration: TimeInterval?
+    /// Placement for an untimed task in the day view.
+    var dayPeriod: TaskDayPeriod
+    var repeatRule: TaskRepeatRule
+    /// Calendar days completed for a repeating task. A single `completedAt`
+    /// cannot safely represent multiple occurrences.
+    var completedOccurrenceDays: [Date]
     var calendarEventID: String?
     var homework: HomeworkMetadata?
 
@@ -47,8 +78,14 @@ struct TaskItem: Codable, Identifiable, Hashable {
         attachedSessionID: UUID? = nil,
         completedSessionCount: Int = 0,
         captureSource: TaskCaptureSource = .typed,
+        steps: [TaskStep] = [],
+        subject: Subject? = nil,
         scheduledAt: Date? = nil,
         dueAt: Date? = nil,
+        plannedDuration: TimeInterval? = nil,
+        dayPeriod: TaskDayPeriod = .anytime,
+        repeatRule: TaskRepeatRule = .once,
+        completedOccurrenceDays: [Date] = [],
         calendarEventID: String? = nil,
         homework: HomeworkMetadata? = nil
     ) {
@@ -59,10 +96,46 @@ struct TaskItem: Codable, Identifiable, Hashable {
         self.attachedSessionID = attachedSessionID
         self.completedSessionCount = completedSessionCount
         self.captureSource = captureSource
+        self.steps = steps
+        self.subject = subject ?? homework?.course.flatMap(Subject.migrated(fromCourse:))
         self.scheduledAt = scheduledAt
         self.dueAt = dueAt
+        self.plannedDuration = plannedDuration
+        self.dayPeriod = dayPeriod
+        self.repeatRule = repeatRule
+        self.completedOccurrenceDays = completedOccurrenceDays
         self.calendarEventID = calendarEventID
         self.homework = homework
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, title, createdAt, completedAt, attachedSessionID, completedSessionCount
+        case captureSource, steps, subject, scheduledAt, dueAt, plannedDuration, dayPeriod
+        case repeatRule, completedOccurrenceDays, calendarEventID, homework
+    }
+
+    /// Older local records predate task steps. Decode those as an empty list
+    /// rather than discarding a person's existing tasks during the visual update.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        completedAt = try container.decodeIfPresent(Date.self, forKey: .completedAt)
+        attachedSessionID = try container.decodeIfPresent(UUID.self, forKey: .attachedSessionID)
+        completedSessionCount = try container.decodeIfPresent(Int.self, forKey: .completedSessionCount) ?? 0
+        captureSource = try container.decodeIfPresent(TaskCaptureSource.self, forKey: .captureSource) ?? .typed
+        steps = try container.decodeIfPresent([TaskStep].self, forKey: .steps) ?? []
+        scheduledAt = try container.decodeIfPresent(Date.self, forKey: .scheduledAt)
+        dueAt = try container.decodeIfPresent(Date.self, forKey: .dueAt)
+        plannedDuration = try container.decodeIfPresent(TimeInterval.self, forKey: .plannedDuration)
+        dayPeriod = try container.decodeIfPresent(TaskDayPeriod.self, forKey: .dayPeriod) ?? .anytime
+        repeatRule = try container.decodeIfPresent(TaskRepeatRule.self, forKey: .repeatRule) ?? .once
+        completedOccurrenceDays = try container.decodeIfPresent([Date].self, forKey: .completedOccurrenceDays) ?? []
+        calendarEventID = try container.decodeIfPresent(String.self, forKey: .calendarEventID)
+        homework = try container.decodeIfPresent(HomeworkMetadata.self, forKey: .homework)
+        subject = try container.decodeIfPresent(Subject.self, forKey: .subject)
+            ?? homework?.course.flatMap(Subject.migrated(fromCourse:))
     }
 
     /// Trims whitespace, collapses internal runs of whitespace, and caps length.

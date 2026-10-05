@@ -15,15 +15,26 @@ layouts, puzzles, or branding.
 
 | Asset | Where | Provenance | License |
 |---|---|---|---|
-| Pixel scenes (Rainy Bedroom, Library Light, Train Window, Night City) | `DesignSystem/Scenes/SceneArtwork.swift` | Drawn in code for Still | Original |
+| Pixel room package (8 rooms including extra/sleep room) | `Assets.xcassets/StillRoom*.imageset`, source PNGs in `Resources/Sprites/` | Replaced 2026-09-26 with the user-supplied `room-art-512-transparent` package: eight 512×512 RGBA transparent room bases. The supplied declaration states that these are AI-generated **originals produced for Still from written prompts**, not derived from any reference product’s art. Each asset has hardened 0/255 alpha, a shared `(34,47)` / `444×420` content envelope (minor rug/shadow variation), and a 17–24 color room palette. The app preserves its pixels and loads them through existing `StillRoom…` keys; it does not regenerate, repaint, or download them. The retired generator must not recreate these files. | Original user-supplied art; prompt/source record retained with project handoff |
+| Collectible room objects (20) | `Assets.xcassets/StillObject*.imageset`, source PNGs in `Resources/Sprites/`, supplied source sheet at `still-collectible-sprite-sheet.png` | Replaced 2026-09-26 from the matching user-supplied 512×512 transparent collectible sheet. The declared asset is an AI-generated original for Still from written prompts, not derived from a reference product. Exactly 20 disconnected opaque alpha components are dynamically row-clustered and cropped to their per-object alpha bounds plus a 3px transparent margin; no fixed-cell slicing, resampling, recoloring, or repainting is used. | Original user-supplied art; prompt/source record retained with project handoff |
+| Break, empty-state, Focus Card, and bird illustrations | `Assets.xcassets/StillBreak*.imageset`, `StillEmpty*.imageset`, `StillFocusCardSprite.imageset`, `StillPixelBird.imageset` | Generated from checked-in Still-specific pixel geometry in `Tools/generate_still_sprites.py` | Original |
+| Legacy generated sprite contact sheet | `Assets.xcassets/StillSpriteContactSheet.imageset`, `Resources/Sprites/still-sprite-contact-sheet.png` | Retained only as a historical generator output. It is not routed by the current review surface and must not be regenerated over the supplied room or collectible artwork. | Retired development artifact |
+| Code-drawn room fallback | `DesignSystem/RoomHeroView.swift` | Original fallback when a named development/future scene asset is unavailable; production catalog routes to the pixel package first | Original |
 | Calm plant nook | `DesignSystem/Scenes/SceneArtwork.swift` | Drawn in code for Still | Original |
 | App icon (pixel sprout) | `Assets.xcassets/AppIcon.appiconset` | Generated for Still from a 16×16 pixel design | Original |
 | Ambient loops (rain, café, fireplace, waves) | `Resources/AmbientAudio/*.m4a` | Procedurally generated (NumPy/SciPy, ffmpeg) | Original |
+| Ambient mixer architecture (12 independent layers, built-in combinations, locally saved mixes) | `Domain/AmbientMix.swift`, `Domain/Soundscape.swift`, `Services/Audio/AVAmbientAudioPlayer.swift` | Written for Still; no reference-app audio, interface, or branding used | Original |
+| Still cat sprite set (six poses × four coats) | `Assets.xcassets/StillCat{Ginger,Tabby,Cream,Midnight}SpriteSheet.imageset`, `StillCatSpriteContactSheet.imageset`, and the package contact sheet | Original transparent pixel-art base sheet generated from a Still-specific prompt with no character/game reference; the authored 3×2 cells map to sit, idle, walk, sleep, stretch, and look-up poses. Ginger, Tabby, Cream, and Midnight coat variants were deterministically palette-edited by `create_still_cat_coats.py`. The app’s state/reaction behavior only selects these checked-in original poses; it does not generate or download imagery at runtime. | Original |
 | Short reads (4 micro-essays) | `Data/SeedData/ReadingLibrary.swift` | Written for Still | Original, owned by the publisher |
 | Creative prompts | `Data/SeedData/ReadingLibrary.swift` | Written for Still | Original |
 | Sudoku, Picross, Word Search puzzles | `Data/SeedData/PuzzleLibrary.swift` | Generated for Still; uniqueness verified in `PuzzleTests` | Original |
 | Stretch steps and safety note | `Domain/Activities/GuidedRoutines.swift` | Written for Still, deliberately conservative | Original |
-| Font | System (SF Pro Rounded / New York) | Apple system fonts | Apple platform license |
+| Instrument Serif | `Resources/Fonts/InstrumentSerif-*.ttf` | [Instrument/instrument-serif](https://github.com/Instrument/instrument-serif), downloaded 2026-09-21 | SIL Open Font License 1.1 |
+| Outfit | `Resources/Fonts/Outfit-*.ttf` | [Outfitio/Outfit-Fonts](https://github.com/Outfitio/Outfit-Fonts), downloaded 2026-09-21 | SIL Open Font License 1.1 |
+| *Short Fiction* — E. M. Forster | `Resources/PublicDomainBooks/e-m-forster_short-fiction.epub` | [Standard Ebooks edition](https://standardebooks.org/ebooks/e-m-forster/short-fiction), compatible EPUB downloaded 2026-09-21; edition states the collection is free of U.S. copyright restrictions | Standard Ebooks CC0 1.0 dedication for edition material; underlying text public domain in the U.S. |
+| *Essays* — Henry David Thoreau | `Resources/PublicDomainBooks/henry-david-thoreau_essays.epub` | [Standard Ebooks edition](https://standardebooks.org/ebooks/henry-david-thoreau/essays), compatible EPUB downloaded 2026-09-21; edition states the collection is free of U.S. copyright restrictions | Standard Ebooks CC0 1.0 dedication for edition material; underlying text public domain in the U.S. |
+| *Travel Essays* — Robert Louis Stevenson | `Resources/PublicDomainBooks/robert-louis-stevenson_travel-essays.epub` | [Standard Ebooks edition](https://standardebooks.org/ebooks/robert-louis-stevenson/travel-essays), compatible EPUB downloaded 2026-09-21; edition states the collection is free of U.S. copyright restrictions | Standard Ebooks CC0 1.0 dedication for edition material; underlying text public domain in the U.S. |
+| *Short Fiction* — Saki | `Resources/PublicDomainBooks/saki_short-fiction.epub` | [Standard Ebooks edition](https://standardebooks.org/ebooks/saki/short-fiction), compatible EPUB downloaded 2026-09-21; edition states the collection is free of U.S. copyright restrictions | Standard Ebooks CC0 1.0 dedication for edition material; underlying text public domain in the U.S. |
 | Icons | SF Symbols | Apple | SF Symbols license (use as UI icons only) |
 
 ## Rules by asset type
@@ -89,6 +100,7 @@ bundle, trying `.m4a`, then `.caf`, `.wav`, `.mp3`:
 | Café      | `ambient_cafe`      | `ambient_cafe.m4a` (generated)        |
 | Fireplace | `ambient_fireplace` | `ambient_fireplace.m4a` (generated)   |
 | Waves     | `ambient_waves`     | `ambient_waves.m4a` (generated)       |
+| Forest, wind, train, library, thunder, fan, brown noise, white noise | See `AmbientSource.all` | Architecture is wired; original or distribution-cleared loops must be supplied before shipping each layer |
 
 ### What ships today
 

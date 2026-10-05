@@ -2,7 +2,8 @@ import SwiftUI
 import UIKit
 
 /// How a physical Focus Card works, the exact links to write, and an in-app
-/// simulator that runs the same route as a real tag.
+/// simulator that runs the same route as a real tag. Set-up is free: it is a
+/// URL scheme and works with any compatible writable tag.
 struct FocusCardView: View {
     @Environment(AppState.self) private var appState
     @State private var copiedPresetID: FocusPresetID?
@@ -12,21 +13,44 @@ struct FocusCardView: View {
 
     var body: some View {
         StillScreen {
-            ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
-                    VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
-                        Text("Focus Card")
-                            .font(StillTypography.title)
-                            .foregroundStyle(StillTheme.textPrimary)
-                            .accessibilityAddTraits(.isHeader)
-                        Text(FocusCardGuide.summary)
-                            .font(StillTypography.callout)
-                            .foregroundStyle(StillTheme.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.l) {
+                        VStack(alignment: .leading, spacing: StillTheme.Spacing.xs) {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text("Focus Card")
+                                    .font(StillTypography.title)
+                                    .foregroundStyle(StillTheme.textPrimary)
+                                    .accessibilityAddTraits(.isHeader)
+                                Spacer()
+                                if appState.container.flags.brandedFocusCardPreview { PreviewTag() }
+                            }
+                            Text(FocusCardGuide.summary)
+                                .font(StillTypography.callout)
+                                .foregroundStyle(StillTheme.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
 
-                    StillCard {
-                        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+                        if appState.container.flags.brandedFocusCardPreview {
+                            BrandedFocusCardArtwork(presetName: appState.currentPreset.name)
+                                .aspectRatio(1.6, contentMode: .fit)
+                            Button("Get a card") {
+                                appState.router.go(to: .getFocusCard)
+                            }
+                            .buttonStyle(QuietSecondaryButtonStyle())
+                            Text("Design preview only. There is no ordering or payment in Still.")
+                                .font(StillTypography.footnote)
+                                .foregroundStyle(StillTheme.textSecondary)
+                        }
+
+                        if !nfcWritingIsAvailable {
+                            QuietNote(
+                                text: "NFC writing isn't available in this build. Copy the Still link into an NFC writing app on a compatible iPhone; no tag is written by Still.",
+                                symbol: "wave.3.right"
+                            )
+                        }
+
+                        StillInsetList(padding: StillTheme.Spacing.s) {
                             ForEach(Array(FocusCardGuide.steps.enumerated()), id: \.offset) { entry in
                                 HStack(alignment: .firstTextBaseline, spacing: StillTheme.Spacing.s) {
                                     Text("\(entry.offset + 1)")
@@ -38,43 +62,66 @@ struct FocusCardView: View {
                                         .fixedSize(horizontal: false, vertical: true)
                                 }
                                 .accessibilityElement(children: .combine)
+                                .stillInsetRow()
+                                if entry.offset < FocusCardGuide.steps.count - 1 {
+                                    InsetRowDivider(leading: 32)
+                                }
                             }
                         }
-                    }
 
-                    VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-                        SectionHeader(title: "Links and simulator", detail: "Write a link to a tag, or tap Simulate to run the same route here.")
-                        ForEach(appState.presets) { preset in
-                            presetCard(preset)
+                        VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
+                            SectionHeader(title: "Links and simulator", detail: "Write a link to a tag, or tap Simulate to run the same route here.")
+                            ForEach(appState.presets) { preset in
+                                presetCard(preset)
+                            }
                         }
-                    }
 
-                    QuietNote(text: FocusCardGuide.hardwareNote)
+                        QuietNote(text: FocusCardGuide.hardwareNote)
 
-                    let blocking = appState.container.blocking
-                    StillCard(tint: StillTheme.surfaceSunken) {
-                        VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
-                            Text(BlockingCopy.title(for: blocking.capability, isShielding: blocking.isShielding))
-                                .font(StillTypography.bodyEmphasis)
-                                .foregroundStyle(StillTheme.textPrimary)
-                            Text(BlockingCopy.detail(for: blocking.capability))
-                                .font(StillTypography.footnote)
-                                .foregroundStyle(StillTheme.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
+                        let blocking = appState.container.blocking
+                        StillInsetList(padding: StillTheme.Spacing.s) {
+                            VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
+                                Text(BlockingCopy.title(for: blocking.capability, isShielding: blocking.isShielding))
+                                    .font(StillTypography.bodyEmphasis)
+                                    .foregroundStyle(StillTheme.textPrimary)
+                                Text(BlockingCopy.detail(for: blocking.capability))
+                                    .font(StillTypography.footnote)
+                                    .foregroundStyle(StillTheme.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .stillInsetRow()
                         }
+                        .accessibilityElement(children: .combine)
+                        Color.clear.frame(height: 1).id("focus-card-bottom")
                     }
-                    .accessibilityElement(children: .combine)
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.vertical, StillTheme.Spacing.m)
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.vertical, StillTheme.Spacing.m)
+                .stillScrollableViewport()
+                .onAppear {
+                    #if DEBUG || STILL_PROOF
+                    guard DemoLaunch.shouldScrollToBottom("card") else { return }
+                    DispatchQueue.main.async { proxy.scrollTo("focus-card-bottom", anchor: .bottom) }
+                    #endif
+                }
             }
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(.visible, for: .navigationBar)
+        .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+    }
+
+    private var nfcWritingIsAvailable: Bool {
+        #if canImport(CoreNFC) && os(iOS) && STILL_CORENFC
+        CoreNFCTagWriter.isAvailable
+        #else
+        false
+        #endif
     }
 
     private func presetCard(_ preset: FocusPreset) -> some View {
-        StillCard {
+        StillInsetList(padding: StillTheme.Spacing.s) {
             VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
                 HStack {
                     Text(preset.name)
@@ -102,6 +149,17 @@ struct FocusCardView: View {
                     .buttonStyle(QuietSecondaryButtonStyle())
                     .accessibilityHint("Starts \(preset.name) exactly as a tag with this link would.")
                 }
+                if appState.container.flags.brandedFocusCardPreview {
+                    Text(StillLinks.startFocusURL(presetID: preset.id).absoluteString)
+                        .font(StillTypography.caption.monospaced())
+                        .foregroundStyle(StillTheme.textTertiary)
+                        .textSelection(.enabled)
+                    Button("Simulate future universal link") {
+                        appState.simulateBrandedFocusCard(presetID: preset.id)
+                    }
+                    .buttonStyle(QuietSecondaryButtonStyle())
+                    .accessibilityHint("Tests the placeholder HTTPS link through the same deep-link parser.")
+                }
                 #if canImport(CoreNFC) && os(iOS) && STILL_CORENFC
                 if CoreNFCTagWriter.isAvailable {
                     Button("Write to a tag") {
@@ -118,6 +176,7 @@ struct FocusCardView: View {
                 }
                 #endif
             }
+            .stillInsetRow()
         }
     }
 }

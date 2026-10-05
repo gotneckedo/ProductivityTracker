@@ -1,34 +1,168 @@
 import SwiftUI
 import UIKit
 
+/// The environmental treatment for a Still screen. Focus deliberately uses a
+/// quieter violet field instead of the current time-of-day colors.
+enum StillDayPhase: String, CaseIterable, Hashable, Codable {
+    case morning
+    case afternoon
+    case dusk
+    case night
+    case focus
+
+    static func automatic(date: Date = .now, colorScheme: ColorScheme) -> StillDayPhase {
+        if colorScheme == .dark { return .night }
+        let hour = Calendar.autoupdatingCurrent.component(.hour, from: date)
+        switch hour {
+        case 5..<11: return .morning
+        case 11..<17: return .afternoon
+        case 17..<20: return .dusk
+        default: return .night
+        }
+    }
+
+    var ink: Color {
+        switch self {
+        case .morning, .afternoon: return Color(hex: 0x2E2530)
+        case .dusk: return Color(hex: 0x2A1E2C)
+        case .night, .focus: return Color(hex: 0xF5EEF8)
+        }
+    }
+
+    var secondaryInk: Color {
+        switch self {
+        case .morning, .afternoon: return Color(hex: 0x4F4651, opacity: 0.82)
+        case .dusk: return Color(hex: 0x49394B, opacity: 0.84)
+        case .night, .focus: return Color(hex: 0xF5EEF8, opacity: 0.72)
+        }
+    }
+
+    var glassFill: Color {
+        switch self {
+        // Light screens use a more opaque field than their page gradient so
+        // groups, rows, and activity canvases retain a readable value ladder.
+        case .morning, .afternoon, .dusk: return .white.opacity(0.84)
+        case .night, .focus: return .white.opacity(0.08)
+        }
+    }
+
+    var glassBorder: Color {
+        switch self {
+        case .morning, .afternoon, .dusk: return .white.opacity(0.92)
+        case .night, .focus: return .white.opacity(0.16)
+        }
+    }
+
+    /// An opaque, phase-aware fallback for compact controls when the person has
+    /// reduced transparency. It is intentionally distinct from the page field
+    /// and from the matte activity canvas.
+    var glassControlFallback: Color {
+        switch self {
+        case .morning: return Color(hex: 0xFFFDF9, opacity: 0.98)
+        case .afternoon: return Color(hex: 0xFBFCFA, opacity: 0.98)
+        case .dusk: return Color(hex: 0xFFF9F6, opacity: 0.98)
+        case .night: return Color(hex: 0x282644, opacity: 0.98)
+        case .focus: return Color(hex: 0x242038, opacity: 0.98)
+        }
+    }
+
+    /// A quiet, non-material surface for grouped rows and passive data. It
+    /// avoids turning every piece of content into floating glass.
+    var plainGroupFill: Color {
+        switch self {
+        case .morning: return Color(hex: 0xFFFDF9, opacity: 0.95)
+        case .afternoon: return Color(hex: 0xFBFCFA, opacity: 0.95)
+        case .dusk: return Color(hex: 0xFFF9F6, opacity: 0.95)
+        case .night: return Color(hex: 0x292742, opacity: 0.88)
+        case .focus: return Color(hex: 0x222035, opacity: 0.90)
+        }
+    }
+
+    /// Hairlines keep related rows readable without adding a second card
+    /// boundary or relying on a low-contrast material effect.
+    var insetSeparator: Color {
+        switch self {
+        case .morning, .afternoon, .dusk: return Color(hex: 0x5A4B58, opacity: 0.18)
+        case .night, .focus: return Color(hex: 0xF5EEF8, opacity: 0.18)
+        }
+    }
+
+    var accent: Color {
+        switch self {
+        case .night, .focus: return Color(hex: StillAccessibleColorToken.darkAccent)
+        case .morning, .afternoon, .dusk: return Color(hex: StillAccessibleColorToken.lightAccent)
+        }
+    }
+
+    var roomHalo: Color {
+        switch self {
+        case .night, .focus: return Color(hex: 0xFFC478, opacity: 0.75)
+        case .morning, .afternoon, .dusk: return Color(hex: 0xFFDEAA, opacity: 0.88)
+        }
+    }
+
+    var gradient: LinearGradient {
+        let colors: [Color]
+        switch self {
+        case .morning:
+            colors = [Color(hex: 0xFFF9F3), Color(hex: 0xFCFAF6), Color(hex: 0xF3F5F3)]
+        case .afternoon:
+            colors = [Color(hex: 0xF5F8F3), Color(hex: 0xFAFBF8), Color(hex: 0xF2F5F7)]
+        case .dusk:
+            colors = [Color(hex: 0xFCF4EF), Color(hex: 0xF9F4F5), Color(hex: 0xF1F2F7)]
+        case .night:
+            colors = [Color(hex: 0x1C2244), Color(hex: 0x2A2556), Color(hex: 0x3A2C5C)]
+        case .focus:
+            colors = [Color(hex: 0x3B2E52), Color(hex: 0x1D1B30), Color(hex: 0x121221)]
+        }
+        return LinearGradient(colors: colors, startPoint: .topTrailing, endPoint: .bottomLeading)
+    }
+}
+
+private struct StillDayPhaseKey: EnvironmentKey {
+    static let defaultValue: StillDayPhase? = nil
+}
+
+extension EnvironmentValues {
+    /// The phase resolved by the nearest `StillScreen`. Components fall back to
+    /// the clock and color scheme when they are presented on their own.
+    var stillDayPhase: StillDayPhase? {
+        get { self[StillDayPhaseKey.self] }
+        set { self[StillDayPhaseKey.self] = newValue }
+    }
+}
+
 /// Semantic design tokens. Feature views use these names, never raw values.
 enum StillTheme {
     /// Raw palette. Warm paper instead of white, navy-charcoal instead of black.
     enum Palette {
-        static let paper = Color.dynamic(light: 0xF7F2EA, dark: 0x1B1F2B)
-        static let paperRaised = Color.dynamic(light: 0xFCF9F4, dark: 0x232837)
-        static let paperSunken = Color.dynamic(light: 0xEFE8DC, dark: 0x161A24)
-        static let ink = Color.dynamic(light: 0x2B3140, dark: 0xECE6DC)
-        static let inkSecondary = Color.dynamic(light: 0x5B6172, dark: 0xB9B3A9)
-        static let inkTertiary = Color.dynamic(light: 0x7F8492, dark: 0x8D909B)
-        static let hairline = Color.dynamic(light: 0xE4DCCF, dark: 0x343A4A)
+        static let paper = Color(hex: 0xFAF6F0)
+        static let paperRaised = Color.white.opacity(0.72)
+        static let paperSunken = Color.white.opacity(0.42)
+        static let ink = Color.dynamic(light: 0x2E2530, dark: 0xF5EEF8)
+        static let inkSecondary = Color.dynamic(light: 0x4F4651, dark: 0xD9D0DE)
+        static let inkTertiary = Color.dynamic(
+            light: StillAccessibleColorToken.lightTertiary,
+            dark: StillAccessibleColorToken.darkTertiary
+        )
+        static let hairline = Color.dynamic(light: 0xFFFFFF, dark: 0x6A607A).opacity(0.72)
 
-        static let sage = Color.dynamic(light: 0x8FAF8A, dark: 0x9DBB98)
-        static let sageSoft = Color.dynamic(light: 0xE0EADB, dark: 0x2E3B31)
-        static let dustyBlue = Color.dynamic(light: 0x8FA7BF, dark: 0x9FB5CB)
-        static let dustyBlueSoft = Color.dynamic(light: 0xDEE6EE, dark: 0x283243)
-        static let peach = Color.dynamic(light: 0xECB597, dark: 0xE6B397)
-        static let peachSoft = Color.dynamic(light: 0xF8E4D8, dark: 0x3C2F29)
-        static let cream = Color.dynamic(light: 0xFBF1DC, dark: 0x2E2A22)
-        static let rose = Color.dynamic(light: 0xD39AA0, dark: 0xD8A4A9)
-        static let roseSoft = Color.dynamic(light: 0xF5E0E1, dark: 0x3A2B2F)
-        static let butter = Color.dynamic(light: 0xE3C87E, dark: 0xE0C888)
-        static let butterSoft = Color.dynamic(light: 0xF7EDCC, dark: 0x383324)
+        static let sage = Color(hex: 0x3E8F74)
+        static let sageSoft = Color(hex: 0xA6D7C4, opacity: 0.48)
+        static let dustyBlue = Color(hex: 0x759FC0)
+        static let dustyBlueSoft = Color(hex: 0xC7E0F0, opacity: 0.66)
+        static let peach = Color(hex: 0xE8A383)
+        static let peachSoft = Color(hex: 0xF8D0C0, opacity: 0.62)
+        static let cream = Color(hex: 0xFFF7EA)
+        static let rose = Color(hex: 0xD9705F)
+        static let roseSoft = Color(hex: 0xF4C4BD, opacity: 0.66)
+        static let butter = Color(hex: 0xE6BF70)
+        static let butterSoft = Color(hex: 0xF7E5AB, opacity: 0.62)
 
         /// Fixed tones for text over pixel scenes (scenes are always dusky).
-        static let sceneText = Color(hex: 0xFBF1DC)
-        static let sceneTextSecondary = Color(hex: 0xFBF1DC, opacity: 0.78)
-        static let navyShadow = Color(hex: 0x1F2537)
+        static let sceneText = Color(hex: 0xF5EEF8)
+        static let sceneTextSecondary = Color(hex: 0xF5EEF8, opacity: 0.78)
+        static let navyShadow = Color(hex: 0x1D1B30)
     }
 
     // MARK: Semantic colors
@@ -42,18 +176,56 @@ enum StillTheme {
     static let border = Palette.hairline
 
     /// Primary action fill. Paired with `onAccent` text.
-    static let accent = Palette.sage
+    static let accent = Color.dynamic(
+        light: StillAccessibleColorToken.lightAccent,
+        dark: StillAccessibleColorToken.darkAccent
+    )
     static let accentSoft = Palette.sageSoft
-    static let onAccent = Color(hex: 0x23291F)
+    static let onAccent = Color(hex: 0x3A2A22)
     /// Gentle attention (e.g. a Sudoku conflict). Never alarm red.
-    static let attention = Palette.rose
+    static let attention = Color.dynamic(
+        light: StillAccessibleColorToken.lightAttention,
+        dark: StillAccessibleColorToken.darkAttention
+    )
     static let attentionSoft = Palette.roseSoft
     static let highlight = Palette.butter
     static let highlightSoft = Palette.butterSoft
-    static let calm = Palette.dustyBlue
+    static let calm = Color.dynamic(
+        light: StillAccessibleColorToken.lightCalm,
+        dark: StillAccessibleColorToken.darkCalm
+    )
     static let calmSoft = Palette.dustyBlueSoft
-    static let warm = Palette.peach
+    static let warm = Color.dynamic(
+        light: StillAccessibleColorToken.lightWarm,
+        dark: StillAccessibleColorToken.darkWarm
+    )
     static let warmSoft = Palette.peachSoft
+    static let litButtonTop = Color(hex: 0xFFF7EA)
+    static let litButtonBottom = Color(hex: 0xF7DDBB)
+
+    static func primaryText(for phase: StillDayPhase) -> Color { phase.ink }
+    static func secondaryText(for phase: StillDayPhase) -> Color { phase.secondaryInk }
+
+    static func tertiaryText(for phase: StillDayPhase) -> Color {
+        switch phase {
+        case .night, .focus:
+            return Color(hex: StillAccessibleColorToken.darkTertiary)
+        case .morning, .afternoon, .dusk:
+            return Color(hex: StillAccessibleColorToken.lightTertiary)
+        }
+    }
+
+    /// A visible, phase-aware contour for iOS Increase Contrast. It is kept
+    /// separate from normal glass hairlines so the default calm hierarchy does
+    /// not become a dense grid of outlines.
+    static func increasedContrastBorder(for phase: StillDayPhase) -> Color {
+        switch phase {
+        case .night, .focus:
+            return phase.ink.opacity(0.68)
+        case .morning, .afternoon, .dusk:
+            return phase.ink.opacity(0.44)
+        }
+    }
 
     static func categoryTint(_ category: ActivityCategory) -> Color {
         switch category {
@@ -85,11 +257,25 @@ enum StillTheme {
         static let screen: CGFloat = 20
     }
 
+    /// Insets owned by the shared scroll viewport rather than individual
+    /// screens. These values deliberately reserve the floating navigation
+    /// capsule and its shadow while allowing content to use the system's
+    /// actual safe-area height on every phone size.
+    enum Viewport {
+        static let statusBarBreathingRoom: CGFloat = 4
+        static let statusBarChromeHeight: CGFloat = 40
+        static let topFadeHeight: CGFloat = 64
+        static let standardBottomClearance: CGFloat = Spacing.m
+        static let floatingTabBarClearance: CGFloat = 88
+    }
+
     enum Radius {
         static let small: CGFloat = 10
-        static let medium: CGFloat = 16
-        static let large: CGFloat = 26
+        static let medium: CGFloat = 20
+        static let large: CGFloat = 28
         static let scene: CGFloat = 30
+        static let home: CGFloat = 30
+        static let focusSlab: CGFloat = 34
     }
 
     enum Stroke {
@@ -98,9 +284,9 @@ enum StillTheme {
     }
 
     enum Shadow {
-        static let color = Color(hex: 0x1F2537, opacity: 0.06)
-        static let radius: CGFloat = 14
-        static let y: CGFloat = 4
+        static let color = Color(hex: 0x38274A, opacity: 0.12)
+        static let radius: CGFloat = 18
+        static let y: CGFloat = 8
     }
 
     /// Minimum comfortable touch target.

@@ -87,10 +87,57 @@ enum PresetCatalog {
         isBuiltIn: true
     )
 
-    static let builtInIDs: [FocusPresetID] = [.defaultPreset, .study, .deepWork, .quickFocus]
+    /// Low Energy deliberately asks for a small, manageable round rather than
+    /// treating a tired day as a failed normal day.
+    static let lowEnergy = FocusPreset(
+        id: .lowEnergy,
+        name: "Low Energy",
+        timer: TimerConfiguration(
+            mode: .countdown,
+            focusDuration: 10 * 60,
+            breakDuration: 3 * 60,
+            longBreakDuration: 10 * 60,
+            longBreakInterval: 0,
+            cycleCount: 1,
+            autoStartBreaks: false,
+            autoStartFocus: false,
+            routineID: nil
+        ),
+        sceneID: .rainyBedroom,
+        renderMode: .calm,
+        ambientMix: .gentleRain,
+        taskBehavior: .useSelectedTask,
+        blockerIntent: .none,
+        isBuiltIn: true
+    )
+
+    /// A two-minute on-ramp for moments when opening the task is the work.
+    static let tinyStart = FocusPreset(
+        id: .tinyStart,
+        name: "Tiny Start",
+        timer: TimerConfiguration(
+            mode: .countdown,
+            focusDuration: 5 * 60,
+            breakDuration: 2 * 60,
+            longBreakDuration: 5 * 60,
+            longBreakInterval: 0,
+            cycleCount: 1,
+            autoStartBreaks: false,
+            autoStartFocus: false,
+            routineID: nil
+        ),
+        sceneID: .rainyBedroom,
+        renderMode: .calm,
+        ambientMix: .gentleRain,
+        taskBehavior: .useSelectedTask,
+        blockerIntent: .none,
+        isBuiltIn: true
+    )
+
+    static let builtInIDs: [FocusPresetID] = [.defaultPreset, .study, .deepWork, .quickFocus, .lowEnergy, .tinyStart]
 
     static func builtIns(personalization: Personalization) -> [FocusPreset] {
-        [defaultPreset(personalization: personalization), study, deepWork, quickFocus]
+        [defaultPreset(personalization: personalization), study, deepWork, quickFocus, lowEnergy, tinyStart]
     }
 
     /// Most presets a person can keep. Enough for a card per room.

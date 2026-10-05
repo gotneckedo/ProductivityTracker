@@ -13,25 +13,26 @@ local-first. Data stays on the device.
 **This version** is V1 plus everything from the roadmap that doesn't need
 Apple's approval or special hardware:
 
-- **Journal tab:** one line a day with an optional feeling, and up to five small
-  daily habits (tap to mark today; missing a day is never mentioned).
+- **Journal and habits:** one line a day with an optional feeling, and up to
+  five small daily habits (tap to mark today; missing a day is never mentioned).
 - **Growing plant:** in Calm mode the plant grows from sprout to leafy to full
   as you complete sessions. It never wilts.
 - **Presets:** Default, Study, Deep Work (90 min) and Quick Focus (15 min),
-  plus up to ten of your own. Each one has its own Focus Card link.
+  plus up to ten of your own. Each has a private `still://` focus link that
+  can be copied to a compatible NFC tag.
 - **Tasks with details:** optional due date, a time to do it, and a class name
   for homework. A **day timeline** shows timed tasks, finished sessions and
   (if you allow it) Apple Calendar events, read-only.
 - **Say a task:** speech-to-task capture ("finish the lab report by Friday").
 - **Pixel Doodle:** a 16×16 drawing break activity, saved to a gallery in Me.
-- **Books in Short Read:** import a DRM-free EPUB; it's read in 3–4 minute
-  sittings and your place is kept.
+- **Books in Short Read:** four bundled public-domain books plus DRM-free EPUB
+  import; each is read in short sittings and your place is kept locally.
 - **Morning Start:** a gentle weekday notification with a session ready.
 - **Widgets:** a home-screen and Lock Screen summary with one-tap start, and
   the session timer on the Lock Screen and in the Dynamic Island.
-- **App blocking:** fully written (Screen Time shields per preset, plus "End
-  blocking now"), but switched off until Apple grants the Family Controls
-  entitlement. The app never claims apps are blocked when they aren't.
+- **App blocking:** not offered as active blocking in release. It needs Apple's
+  Family Controls entitlement and a DeviceActivity extension before Still can
+  truthfully start or end shields while closed.
 
 ---
 
@@ -65,7 +66,7 @@ change it if it collides with one you already use.
     -destination 'platform=iOS Simulator,name=iPhone 16'
   ```
 
-The suite has 165 tests covering timer math (countdown, count-up, Pomodoro,
+The suite has 227 tests covering timer math (countdown, count-up, Pomodoro,
 pause/resume, backgrounding, relaunch), completion vs. abandonment, streaks,
 scene unlocks, the three-suggestion engine, task/session association, deep
 links, event redaction, puzzle validity and uniqueness, persistence, the
@@ -77,8 +78,8 @@ Morning Start plans, widget snapshots, and plant growth.
 ### See it without a Mac (GitHub Actions)
 
 `.github/workflows/ios.yml` builds the app on a GitHub-hosted Mac, runs every
-test in an iPhone simulator, and uploads screenshots of 17 screens (light and
-dark) as an artifact named **still-screenshots**. It runs on every push to
+test in an iPhone simulator, and uploads a light/dark plus release-truth
+screenshot matrix as an artifact named **still-screenshots**. It runs on every push to
 `main`, or from the Actions tab → **iOS build, tests & screenshots** → Run
 workflow. Public repos run free; private repos use your included minutes (macOS
 minutes count 10×; one run takes roughly 10–20 minutes).
@@ -104,7 +105,7 @@ data (`DemoLaunch.swift`), e.g.
    What do you want to do instead?"** with exactly three suggestions.
 7. Pick one → it opens inside the Break tab → finish it (Done, solve the puzzle,
    or let the timer end) → **Return to Focus**.
-8. Open **Me** to see stats, streak, break usage, and scene unlock progress.
+8. Open **Me** to see stats, break usage, journal and habit entries, and scene unlock progress.
 
 Faster testing tips: set Countdown to 5 minutes, or use Count up and tap
 Finish after 5 minutes (shorter count-up sessions are recorded as abandoned by
@@ -203,8 +204,8 @@ One visual slot, two interchangeable renderers behind
 
 Scenes are data (`SceneCatalog`): name, palette, renderer kind, unlock rule,
 sound affinity, motion metadata, accessibility description, and a reserved
-entitlement key. Unlocks: Rainy Bedroom at start, Library Light at 7, Train
-Window at 15, Night City at 25 completed sessions. Animation intensity is Full
+entitlement key. Unlocks: Rainy Bedroom at start, Library Light at 2, Train
+Window at 6, Night City at 12 completed sessions. Animation intensity is Full
 (12 fps), Gentle (6 fps), or Still; Reduce Motion always renders a still frame.
 
 ---
@@ -276,8 +277,10 @@ notifications. Reminders don't show while the app is open.
 fireplace, waves), mixed by per-source level × master volume with short fades.
 The four bundled loops are original, procedurally generated placeholders (see
 the ambient audio appendix in `ASSET_AND_CONTENT_POLICY.md` for file names, format tips, and
-licensing rules). If files are missing, controls still work and save, and the UI
-says "Ambient audio is ready when sound files are added." `UIBackgroundModes`
+licensing rules). The eight modeled but unauthored layers are visibly unavailable
+and cannot be selected; Silence is a first-class soundscape. If all files are
+missing, controls still work and save, and the UI says "Ambient audio is ready
+when sound files are added." `UIBackgroundModes`
 includes `audio`, so sound continues when the screen locks during a session.
 Mute on the active screen is temporary; the preset mix is unchanged.
 
@@ -303,14 +306,14 @@ check this. No SDKs, no network.
 
 | Capability | Status in this version | What's needed for the real thing |
 |---|---|---|
-| **App shielding** (Screen Time) | `FamilyControlsBlockingService` is complete: per-preset `FamilyActivitySelection` (from `FamilyActivityPicker`), `ManagedSettingsStore` shields while a session runs, and "End blocking now". It's off: `FeatureFlags.current.appBlocking == false`, so the app uses the honest mock and says "Nothing is blocked today." | Apple's **Family Controls** entitlement (`com.apple.developer.family-controls`; development use with a paid account, Distribution approval for the App Store). Then add it to `Still.entitlements`, set `appBlocking: true`, and add the DeviceActivity monitor extension described in FUTURE_CAPABILITIES.md so shields lift even if Still is closed. Test on a device; the simulator can't shield. |
+| **App shielding** (Screen Time) | Not offered as active blocking in release. The saved setup boundary cannot start shielding while Still is closed. | Apple's **Family Controls** entitlement (`com.apple.developer.family-controls`), a DeviceActivity monitor extension, physical-device validation, then an explicit release-flag audit. The simulator cannot shield. |
 | **NFC tags** | URL routing (`still://start-focus?preset=…`), an in-app simulator, and in-app tag **reading and writing** (`CoreNFCTagReader`, `CoreNFCTagWriter`), compiled only with `-DSTILL_CORENFC`. | A writable tag (e.g. NTAG213). Any NFC app can write the link today. For in-app writing: a paid account, the NFC Tag Reading capability, the `-DSTILL_CORENFC` Swift flag, and a physical iPhone. For direct launch without the banner, use a Universal Link (Associated Domains + `apple-app-site-association`). |
 | **Live Activities / Dynamic Island** | On. The `StillWidgets` extension renders the running timer; the app starts and updates it. | Test on a device with Dynamic Island. Lock Screen content deliberately omits task titles. |
 | **Home-screen widget** | On. The app writes a small summary to the App Group `group.com.cocomedia.still`; the widget reads it. | Signing with a **paid** account (free accounts can't use App Groups). Without the group the widget shows "Ready" and still starts a session when tapped. |
 | **Apple Calendar** | On, read-only, asked for from the day timeline (never at launch). | Nothing. Google Calendar needs OAuth and a privacy review. |
 | **Say a task** | On. On-device recognition where supported; audio isn't stored. | Test on a device; simulator speech is unreliable. |
 | **Morning Start** | On, as a repeating local notification. | A true alarm that rings through silent mode needs AlarmKit (iOS 26+); see FUTURE_CAPABILITIES.md. |
-| **Books** | EPUB import from Files, parsed on device (pure-Swift DEFLATE + ZIP + XML). No books are bundled. | To bundle books, add verified public-domain `.epub` files to `Still/Resources/` (see ASSET_AND_CONTENT_POLICY.md). DRM-protected books can't be read. |
+| **Books** | Four verified public-domain EPUBs and import from Files, parsed on device (pure-Swift DEFLATE + ZIP + XML). | Re-check territorial copyright status before every worldwide release. DRM-protected books can't be read. |
 | **Notifications** | Fully working. | Nothing. |
 
 ### Running on your own iPhone
@@ -348,7 +351,7 @@ All use in-memory data via `PreviewSupport`.
 Built in a Linux environment without Xcode:
 
 - The platform-neutral core (domain, data, services, controllers, app state,
-  router) compiles with Swift 5.10 with zero warnings, and all 165 tests pass
+  router) compiles with Swift 6.1 with zero warnings, and all 227 tests pass
   via `swift test`, including DEFLATE, ZIP and EPUB parsing against real
   fixtures.
 - Every SwiftUI file was syntax-checked with the Swift parser, then

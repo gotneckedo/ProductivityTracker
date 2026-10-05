@@ -4,30 +4,42 @@ import SwiftUI
 /// and missing a day is never mentioned.
 struct JournalView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
+        let phase = StillDayPhase.automatic(colorScheme: colorScheme)
         StillScreen {
-            ScrollView {
-                VStack(alignment: .leading, spacing: StillTheme.Spacing.xl) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: StillTheme.Spacing.xl) {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.xxs) {
                         Text("Journal")
-                            .font(StillTypography.title)
-                            .foregroundStyle(StillTheme.textPrimary)
+                            .font(StillTypography.display)
+                            .foregroundStyle(phase.ink)
                             .accessibilityAddTraits(.isHeader)
-                        Text("One line a day is plenty.")
-                            .font(StillTypography.callout)
-                            .foregroundStyle(StillTheme.textSecondary)
                     }
 
                     TodayLineCard()
+                    Color.clear.frame(height: 1).id("journal-midpoint")
                     HabitsSection()
                     PastLinesSection()
+                    Color.clear.frame(height: 1).id("journal-bottom")
+                    }
+                    .padding(.horizontal, StillTheme.Spacing.screen)
+                    .padding(.top, StillTheme.Spacing.m)
                 }
-                .padding(.horizontal, StillTheme.Spacing.screen)
-                .padding(.top, StillTheme.Spacing.m)
-                .padding(.bottom, StillTheme.Spacing.xxl)
+                .stillScrollableViewport()
+                .onAppear {
+                    #if DEBUG
+                    if DemoLaunch.shouldScrollToBottom("journal") {
+                        DispatchQueue.main.async { proxy.scrollTo("journal-bottom", anchor: .bottom) }
+                    } else if DemoLaunch.shouldScrollToMidpoint("journal") {
+                        DispatchQueue.main.async { proxy.scrollTo("journal-midpoint", anchor: .top) }
+                    }
+                    #endif
+                }
+                .scrollDismissesKeyboard(.interactively)
             }
-            .scrollDismissesKeyboard(.interactively)
         }
         .toolbar(.hidden, for: .navigationBar)
     }
@@ -49,7 +61,7 @@ private struct TodayLineCard: View {
     }
 
     var body: some View {
-        StillCard {
+        MatteActivityCanvas(tint: StillTheme.warmSoft) {
             VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
                 Text(Date().formatted(.dateTime.weekday(.wide).month(.wide).day()))
                     .font(StillTypography.footnote.weight(.medium))
@@ -81,15 +93,9 @@ private struct TodayLineCard: View {
                 }
 
                 HStack {
-                    if saved != nil && !isDirty {
-                        Label("Saved on this device", systemImage: "checkmark")
-                            .font(StillTypography.caption)
-                            .foregroundStyle(StillTheme.textTertiary)
-                    } else {
-                        Text("\(text.count)/\(JournalEntry.maximumLength)")
-                            .font(StillTypography.caption.monospacedDigit())
-                            .foregroundStyle(StillTheme.textTertiary)
-                    }
+                    Text("\(text.count)/\(JournalEntry.maximumLength)")
+                        .font(StillTypography.caption.monospacedDigit())
+                        .foregroundStyle(StillTheme.textTertiary)
                     Spacer()
                     if isDirty {
                         Button("Save", action: save)
@@ -97,6 +103,7 @@ private struct TodayLineCard: View {
                     }
                 }
             }
+            .padding(StillTheme.Spacing.m)
         }
         .onAppear(perform: load)
         .onChange(of: appState.journalToday) { _, _ in
@@ -131,7 +138,7 @@ private struct MoodChip: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .padding(.horizontal, StillTheme.Spacing.xs)
-                .frame(maxWidth: .infinity, minHeight: 36)
+                .frame(maxWidth: .infinity, minHeight: StillTheme.minimumTapSize)
                 .background(Capsule(style: .continuous).fill(isSelected ? StillTheme.accentSoft : StillTheme.surfaceSunken))
                 .overlay(Capsule(style: .continuous).strokeBorder(isSelected ? StillTheme.accent : Color.clear, lineWidth: StillTheme.Stroke.hairline))
                 .contentShape(Capsule())
@@ -152,8 +159,8 @@ struct HabitsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Small habits", detail: "Tap to mark today. A missed day doesn't count against anything.")
-            StillCard {
+            SectionHeader(title: "Small habits")
+            StillInsetList {
                 VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
                     if appState.habitDays.isEmpty {
                         Text("Try one or two: water the plants, a short walk, read a page.")
@@ -164,6 +171,9 @@ struct HabitsSection: View {
                     ForEach(appState.habitDays) { day in
                         HabitRow(day: day) {
                             appState.toggleHabit(day.habit.id)
+                            if !day.isDoneToday {
+                                StillInteractionFeedback.fire(.taskMarkedDone, preferences: appState.preferences)
+                            }
                         }
                         .contextMenu {
                             Button {
@@ -173,17 +183,24 @@ struct HabitsSection: View {
                                 Label("Rename", systemImage: "pencil")
                             }
                             Button(role: .destructive) {
-                                appState.archiveHabit(day.habit.id)
+                                appState.archiveHabitWithUndo(day.habit)
                             } label: {
                                 Label("Remove from list", systemImage: "archivebox")
                             }
                         }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                appState.archiveHabitWithUndo(day.habit)
+                            } label: {
+                                Label("Remove", systemImage: "archivebox")
+                            }
+                        }
                         if day.id != appState.habitDays.last?.id {
-                            Divider()
+                            InsetRowDivider(leading: 46)
                         }
                     }
                     if appState.canAddHabit {
-                        if !appState.habitDays.isEmpty { Divider() }
+                        if !appState.habitDays.isEmpty { InsetRowDivider(leading: 46) }
                         HStack(spacing: StillTheme.Spacing.s) {
                             Image(systemName: "plus")
                                 .foregroundStyle(StillTheme.textTertiary)
@@ -198,10 +215,6 @@ struct HabitsSection: View {
                             }
                         }
                         .frame(minHeight: StillTheme.minimumTapSize)
-                    } else {
-                        Text("Five is the limit, so the list stays light.")
-                            .font(StillTypography.caption)
-                            .foregroundStyle(StillTheme.textTertiary)
                     }
                 }
             }
@@ -226,42 +239,55 @@ struct HabitsSection: View {
 private struct HabitRow: View {
     let day: HabitDay
     let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: StillTheme.Spacing.s) {
-                Image(systemName: day.isDoneToday ? "checkmark.circle.fill" : "circle")
-                    .font(StillTypography.title3)
-                    .foregroundStyle(day.isDoneToday ? StillTheme.accent : StillTheme.textTertiary)
-                    .accessibilityHidden(true)
+                habitSymbol
                 VStack(alignment: .leading, spacing: 2) {
                     Text(day.habit.title)
                         .font(StillTypography.body)
                         .foregroundStyle(StillTheme.textPrimary)
-                    if let run = HabitController.runLine(day.currentRun) {
-                        Text(run)
-                            .font(StillTypography.caption)
-                            .foregroundStyle(StillTheme.textTertiary)
-                    }
                 }
                 Spacer(minLength: StillTheme.Spacing.xs)
-                HStack(spacing: 3) {
-                    ForEach(Array(day.lastSevenDays.enumerated()), id: \.offset) { entry in
-                        RoundedRectangle(cornerRadius: 1.5, style: .continuous)
-                            .fill(entry.element ? StillTheme.accent : StillTheme.border)
-                            .frame(width: 6, height: 6)
-                    }
-                }
-                .accessibilityHidden(true)
             }
+            .padding(.horizontal, StillTheme.Spacing.xs)
+            .padding(.vertical, StillTheme.Spacing.xxs)
             .frame(minHeight: StillTheme.minimumTapSize)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .offset(y: day.isDoneToday ? 2 : 0)
+        .animation(StillMotion.ease(reduceMotion, duration: 0.24), value: day.isDoneToday)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(day.habit.title)
         .accessibilityValue(day.isDoneToday ? "Done today" : "Not yet today")
         .accessibilityHint("Double-tap to change today. Long-press for more.")
+    }
+
+    @ViewBuilder
+    private var habitSymbol: some View {
+        let symbol = ZStack {
+            Circle()
+                .fill(day.isDoneToday ? StillTheme.accent : Color.white.opacity(0.14))
+            Circle()
+                .strokeBorder(day.isDoneToday ? StillTheme.accent : StillTheme.border, lineWidth: StillTheme.Stroke.hairline)
+            if day.isDoneToday {
+                Image(systemName: "checkmark")
+                    .font(StillTypography.caption.weight(.semibold))
+                    .foregroundStyle(StillTheme.onAccent)
+            }
+        }
+        .frame(width: 38, height: 38)
+        .accessibilityHidden(true)
+        if reduceMotion {
+            symbol.contentTransition(.opacity)
+        } else {
+            symbol
+                .contentTransition(.symbolEffect(.replace))
+                .symbolEffect(.bounce, value: day.isDoneToday)
+        }
     }
 }
 
@@ -272,23 +298,30 @@ private struct PastLinesSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
-            SectionHeader(title: "Earlier", detail: runDetail)
+            SectionHeader(title: "Earlier")
             if appState.journalPast.isEmpty {
                 QuietNote(text: "Lines from earlier days will collect here. They stay on this device.", symbol: "book.closed")
             } else {
-                StillCard {
+                StillInsetList {
                     VStack(alignment: .leading, spacing: StillTheme.Spacing.s) {
                         ForEach(appState.journalPast) { entry in
                             PastLineRow(entry: entry)
                                 .contextMenu {
                                     Button(role: .destructive) {
-                                        appState.deleteJournalEntry(entry.id)
+                                        appState.deleteJournalEntryWithUndo(entry)
                                     } label: {
                                         Label("Delete line", systemImage: "trash")
                                     }
                                 }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        appState.deleteJournalEntryWithUndo(entry)
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                }
                             if entry.id != appState.journalPast.last?.id {
-                                Divider()
+                                InsetRowDivider(leading: 60)
                             }
                         }
                     }
@@ -297,10 +330,6 @@ private struct PastLinesSection: View {
         }
     }
 
-    private var runDetail: String? {
-        let run = appState.journalRun
-        return run >= 2 ? "You've written \(run) days in a row." : nil
-    }
 }
 
 private struct PastLineRow: View {

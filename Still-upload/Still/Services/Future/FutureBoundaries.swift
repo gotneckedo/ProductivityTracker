@@ -4,17 +4,6 @@ import Foundation
 // approval. Each has a real or honest stand-in implementation.
 // See FUTURE_CAPABILITIES.md for the plan behind each one.
 
-// MARK: V2 — AlarmKit wake-up hand-off
-
-/// A true alarm (sound through silent mode) that opens into a Morning Start.
-/// Today, `MorningStartPlan` is delivered as a gentle local notification;
-/// an AlarmKit implementation can adopt this protocol later.
-protocol WakeUpScheduling: AnyObject {
-    var isAvailable: Bool { get }
-    func schedule(_ plan: MorningStartPlan) async throws
-    func cancel() async
-}
-
 // MARK: V3 — Voice task capture
 
 struct CapturedTaskDraft: Hashable {

@@ -56,7 +56,9 @@ struct BlockingSetupView: View {
                 .font(StillTypography.title)
                 .foregroundStyle(StillTheme.textPrimary)
                 .accessibilityAddTraits(.isHeader)
-            Text("Choose a few apps that can wait. The shield stays kind: focus on your task, or take a little break.")
+            Text(isReleaseBoundary
+                 ? "Pick the apps you would want quiet during a session. Nothing is shielded yet \u2014 Still saves the choice for when Screen Time access is available."
+                 : "Choose a few apps that can wait. The shield stays kind: focus on your task, or take a little break.")
                 .font(StillTypography.callout)
                 .foregroundStyle(StillTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
